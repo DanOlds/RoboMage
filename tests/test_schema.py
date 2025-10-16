@@ -1,6 +1,9 @@
 from robomage.config.refinement_schema import (
-    RefinementConfig, InstrumentConfig, PhaseConfig
+    InstrumentConfig,
+    PhaseConfig,
+    RefinementConfig,
 )
+
 
 def test_minimal_config_ok():
     cfg = RefinementConfig(

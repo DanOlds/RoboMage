@@ -25,3 +25,14 @@ where = ["src"]
 
 [project.scripts]
 robomage = "robomage.__main__:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]  # errors, pyflakes, import order, pyupgrade, bugbear
+ignore = ["E203"]                    # keep Black-compatible spacing (Ruff formatter matches it)
+
+[tool.ruff.format]
+docstring-code-format = true
