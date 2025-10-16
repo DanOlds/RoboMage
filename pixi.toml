@@ -1,0 +1,22 @@
+[project]
+name = "RoboMage"
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[dependencies]
+python = ">=3.10"
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+pydantic = ">=2"
+pytest = "*"
+pytest-cov = "*"
+ruff = "*"
+mypy = "*"
+sqlalchemy = "*"
+pip = ">=25.2,<26"
+
+[tasks]
+test = "pytest -q"
+lint = "ruff check src tests"
+typecheck = "mypy src"

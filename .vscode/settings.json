@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": ".pixi/envs/default/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "terminal.integrated.defaultProfile.windows": "PowerShell"
+}
