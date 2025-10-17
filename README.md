@@ -34,10 +34,13 @@ code .
 ```
 
 ### 📈 Status
-Week 1 complete:
+**Week 1** ✅ Complete:
 - Repo scaffolded and tested
 - Schema validated
 - Linting and CI active
+
+**Week 2** 📋 Planned:
+- Data pipeline MVP (see [`docs/sprint-2-data-pipeline.md`](docs/sprint-2-data-pipeline.md))
 
 ---
 > Developed at **Brookhaven National Laboratory (BNL)** at the **NSLS-II**.
