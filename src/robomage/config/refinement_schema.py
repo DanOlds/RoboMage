@@ -17,15 +17,15 @@ class PhaseConfig(BaseModel):
 
 
 class BackgroundModel(BaseModel):
-    model: str = Field("chebyshev")
-    order: int = Field(6, ge=1, le=12)
+    model: str = Field(default="chebyshev")
+    order: int = Field(default=6, ge=1, le=12)
 
 
 class RefinementConfig(BaseModel):
     schema_version: str = "1.0"
     instrument: InstrumentConfig
     phases: list[PhaseConfig]
-    background: BackgroundModel = BackgroundModel()
+    background: BackgroundModel = Field(default_factory=lambda: BackgroundModel())
     q_range: list[float] = Field(..., min_length=2, max_length=2)  # <- updated
     constraints: list[str] | None = None
     engine: str = Field("gsas2")
