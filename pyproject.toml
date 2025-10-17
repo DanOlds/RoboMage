@@ -36,7 +36,7 @@ robomage = "robomage.__main__:main"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]  # errors, pyflakes, import order, pyupgrade, bugbear

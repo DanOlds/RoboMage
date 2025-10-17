@@ -18,6 +18,8 @@ pip = ">=25.2,<26"
 
 [tasks]
 test = "pytest -q"
-lint = "ruff check src tests"
+lint = "ruff check ."
+format = "ruff format ."
+format-check = "ruff format --check ."
 typecheck = "mypy src"
-format = "ruff format src tests"
+check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
