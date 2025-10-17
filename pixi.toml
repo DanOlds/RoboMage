@@ -16,6 +16,9 @@ mypy = "*"
 sqlalchemy = "*"
 pip = ">=25.2,<26"
 
+[pypi-dependencies]
+robomage = { path = ".", editable = true }
+
 [tasks]
 test = "pytest -q"
 lint = "ruff check ."

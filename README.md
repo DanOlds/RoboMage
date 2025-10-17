@@ -22,7 +22,7 @@
 ### 🚀 Quick Start
 
 ```powershell
-git clone https://github.com/<your-username>/RoboMage.git
+git clone https://github.com/DanOlds/RoboMage.git
 cd RoboMage
 pixi install
 pixi run test
