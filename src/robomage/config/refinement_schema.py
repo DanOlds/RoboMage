@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -30,7 +30,9 @@ class RefinementConfig(BaseModel):
     constraints: list[str] | None = None
     engine: str = Field("gsas2")
     max_iterations: int = Field(50, ge=1, le=500)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))  # <- updated
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )  # <- updated
 
     @field_validator("q_range")
     @classmethod
