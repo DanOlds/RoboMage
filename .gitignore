@@ -11,3 +11,23 @@ dist/
 .ipynb_checkpoints/
 .coverage
 htmlcov/
+
+# Data files
+*.chi
+*.dat
+*.xy
+*.txt
+
+# Generated plots and outputs
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+
+# But keep documentation images
+!docs/*.png
+!docs/*.jpg
+!docs/*.jpeg
+!docs/*.pdf
+!docs/*.svg
