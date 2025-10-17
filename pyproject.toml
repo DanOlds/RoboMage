@@ -5,10 +5,18 @@ description = "Automated powder diffraction analysis framework"
 readme = "README.md"
 authors = [{name = "Daniel Olds"}]
 requires-python = ">=3.10"
-dependencies = []
+license = { file = "LICENSE" }
+dependencies = [
+  "pydantic>=2",
+  # Add these when your package starts importing them in src/robomage/*
+  # "numpy",
+  # "pandas",
+  # "matplotlib",
+  # "sqlalchemy",
+]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "ruff", "mypy", "pydantic>=2", "numpy", "pandas", "matplotlib", "sqlalchemy"]
+dev = ["pytest", "pytest-cov", "ruff", "mypy"]
 
 [project.urls]
 Homepage = "https://github.com/DanOlds/RoboMage"

@@ -1,8 +1,6 @@
-
-### `.github/workflows/ci.yml` (simple CI using pip)
-```yaml
 name: CI
 on: [push, pull_request]
+
 jobs:
   test:
     runs-on: windows-latest
