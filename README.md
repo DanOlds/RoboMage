@@ -1,5 +1,10 @@
 # 🧙‍♂️ RoboMage — Automated Powder Diffraction Framework
 
+![CI](https://github.com/DanOlds/RoboMage/workflows/CI/badge.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/github/license/DanOlds/RoboMage)
+![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)
+
 **RoboMage** is a modular Python framework for automating **Rietveld refinement and powder diffraction analysis** across NSLS-II beamlines.
 
 ### 🔍 Key Features
