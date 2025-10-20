@@ -192,9 +192,9 @@ def load_test_data() -> DiffractionData:
         >>> print(f"Q range: {test_data.q_range}")
 
         >>> # Use for development and testing
-        >>> stats = test_data.statistics()
-        >>> print(f"Peak intensity: {stats.max_intensity}")
-        >>> print(f"Quality score: {stats.quality_score:.2f}")
+        >>> stats = test_data.statistics
+        >>> print(f"Peak intensity: {max(test_data.intensity_values)}")
+        >>> print(f"Mean intensity: {stats.intensity_mean:.1f}")
 
     Reference:
         NIST SRM 660b: LaB₆ powder for X-ray diffraction calibration

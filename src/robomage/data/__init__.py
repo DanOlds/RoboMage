@@ -31,7 +31,7 @@ Quick Start:
     >>> print(f"Loaded {len(data.q_values)} data points")
     >>> # Access statistical properties
     >>> stats = data.statistics
-    >>> print(f"Quality score: {stats.quality_score:.2f}")
+    >>> print(f"Mean intensity: {stats.intensity_mean:.1f}")
     >>> print(f"Q range: {stats.q_range}")
     >>> # Create data from arrays
     >>> import numpy as np

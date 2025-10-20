@@ -26,7 +26,7 @@ Quick Start:
     >>> print(f"Loaded {len(data.q_values)} data points")
     >>> # Get statistical summary
     >>> stats = data.statistics
-    >>> print(f"Quality score: {stats.quality_score:.2f}")
+    >>> print(f"Mean intensity: {stats.intensity_mean:.1f}")
     >>> # Load test data for development
     >>> test_data = robomage.load_test_data()
     >>> print(f"Test data Q range: {test_data.statistics.q_range}")
