@@ -15,6 +15,7 @@ ruff = ">=0.14.0,<0.15"
 mypy = "*"
 sqlalchemy = "*"
 pip = ">=25.2,<26"
+scipy = ">=1.16.2,<2"
 
 [pypi-dependencies]
 robomage = { path = ".", editable = true }
