@@ -8,15 +8,21 @@ requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
   "pydantic>=2",
-  # Add these when your package starts importing them in src/robomage/*
-  # "numpy",
-  # "pandas",
-  # "matplotlib",
-  # "sqlalchemy",
+  "numpy",
+  "pandas", 
+  "matplotlib",
+  # "sqlalchemy",  # Keep this commented until needed
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "ruff", "mypy"]
+dev = [
+  "pytest", 
+  "pytest-cov", 
+  "ruff", 
+  "mypy",
+  # Type stubs for mypy
+  "pandas-stubs",
+]
 
 [project.urls]
 Homepage = "https://github.com/DanOlds/RoboMage"

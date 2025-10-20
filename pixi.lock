@@ -123,7 +123,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/xorg-libxau-1.0.12-h0e40799_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/xorg-libxdmcp-1.1.5-h0e40799_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-hbeecb71_2.conda
-      - pypi: .
+      - pypi: ./
 packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-2_gnu.conda
   build_number: 8
@@ -1534,16 +1534,20 @@ packages:
   purls: []
   size: 96316397
   timestamp: 1759254007679
-- pypi: .
+- pypi: ./
   name: robomage
   version: 0.0.1
-  sha256: 4f552a2bb538b73b81c8cb291e646a64d6a6e4738f7401b7bbe3414943a62506
+  sha256: 4755bb5b59c172736e901ad006506a990cb0a9ae0d0b89f75f7d8edfbd0721bc
   requires_dist:
   - pydantic>=2
+  - numpy
+  - pandas
+  - matplotlib
   - pytest ; extra == 'dev'
   - pytest-cov ; extra == 'dev'
   - ruff ; extra == 'dev'
   - mypy ; extra == 'dev'
+  - pandas-stubs ; extra == 'dev'
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.14.0-h3e3edff_0.conda
