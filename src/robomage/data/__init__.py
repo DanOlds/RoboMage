@@ -5,7 +5,7 @@ from .models import DataStatistics, DiffractionData
 
 __all__ = [
     "DiffractionData",
-    "DataStatistics", 
+    "DataStatistics",
     "load_diffraction_file",
     "load_chi_file",
 ]

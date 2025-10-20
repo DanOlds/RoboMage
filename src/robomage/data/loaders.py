@@ -67,13 +67,12 @@ def load_diffraction_file(filepath: str | Path) -> DiffractionData:
         ValueError: If the file format is not supported
     """
     filepath = Path(filepath)
-    
+
     if filepath.suffix.lower() == ".chi":
         return load_chi_file(filepath)
     else:
         raise ValueError(
-            f"Unsupported file format: {filepath.suffix}. "
-            "Supported formats: .chi"
+            f"Unsupported file format: {filepath.suffix}. Supported formats: .chi"
         )
 
 
@@ -87,7 +86,7 @@ def load_test_data() -> DiffractionData:
     # Get the project root directory
     current_file = Path(__file__)
     project_root = current_file.parents[3]  # Go up from src/robomage/data/loaders.py
-    
+
     test_file = project_root / "examples" / "pdf_SRM_660b_q.chi"
 
     if not test_file.exists():
