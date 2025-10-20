@@ -62,7 +62,6 @@ class DiffractionData(BaseModel):
             object.__setattr__(self, "intensities", self.intensities[sort_indices])
 
     @computed_field
-    @property
     def statistics(self) -> DataStatistics:
         """Compute statistical summary of the data."""
         q_diff = np.diff(self.q_values)
@@ -113,8 +112,8 @@ class DiffractionData(BaseModel):
             raise ValueError("DataFrame must contain 'Q' and 'intensity' columns")
 
         return cls(
-            q_values=df["Q"].values,
-            intensities=df["intensity"].values,
+            q_values=np.asarray(df["Q"].values),
+            intensities=np.asarray(df["intensity"].values),
             filename=filename,
             sample_name=sample_name,
             **kwargs,
