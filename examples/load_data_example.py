@@ -119,7 +119,7 @@ def demonstrate_legacy_api():
     print(f"  Number of points: {info['num_points']}")
     print(f"  Q range: {info['q_range'][0]:.3f} - {info['q_range'][1]:.3f} Å⁻¹")
     print(f"  Average Q step: {info['q_step_mean']:.6f} Å⁻¹")
-    int_range = info['intensity_range']
+    int_range = info["intensity_range"]
     print(f"  Intensity range: {int_range[0]:.1f} - {int_range[1]:.1f}")
     print(f"  Mean intensity: {info['intensity_mean']:.1f}")
 
