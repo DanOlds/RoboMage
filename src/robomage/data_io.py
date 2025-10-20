@@ -1,4 +1,45 @@
-"""Data input/output utilities for RoboMage."""
+"""Legacy data input/output utilities for RoboMage.
+
+This module provides pandas DataFrame-based data loading utilities for backward
+compatibility with older code and for use cases where direct DataFrame access
+is preferred over the more structured DiffractionData objects.
+
+Design Notes:
+    - This module returns pandas DataFrames directly
+    - For new code, consider using `robomage.data.loaders` which returns
+      validated DiffractionData objects with richer functionality
+    - Functions here focus on basic I/O operations without validation
+    - Useful for integration with existing pandas-based workflows
+
+Relationship to Other Modules:
+    - `data.loaders`: Modern API returning DiffractionData objects
+    - `data.models`: Data structures and validation
+    - This module: Legacy DataFrame-based API
+
+Supported Formats:
+    - .chi files: Two-column text files with Q (Å⁻¹) and intensity data
+
+Functions:
+    - load_chi_file(): Load chi files into DataFrames
+    - get_data_info(): Extract statistical summaries from DataFrames
+    - load_test_data(): Load SRM 660b test dataset as DataFrame
+
+Migration Path:
+    To migrate from this module to the modern API:
+
+    # Old approach (this module)
+    >>> from robomage.data_io import load_chi_file
+    >>> df = load_chi_file("sample.chi")
+
+    # New approach (recommended)
+    >>> from robomage.data.loaders import load_chi_file
+    >>> data = load_chi_file("sample.chi")
+    >>> df = data.to_dataframe()  # Convert to DataFrame if needed
+
+Warning:
+    This module may be deprecated in future versions. New projects should
+    use `robomage.data.loaders` for enhanced functionality and validation.
+"""
 
 from pathlib import Path
 from typing import Any
@@ -8,18 +49,43 @@ import pandas as pd
 
 
 def load_chi_file(filepath: str | Path) -> pd.DataFrame:
-    """
-    Load a .chi file containing Q and intensity data.
+    """Load a .chi file containing Q and intensity data into a DataFrame.
+
+    This is the legacy DataFrame-based loader for chi files. For new code,
+    consider using `robomage.data.loaders.load_chi_file()` which returns
+    a validated DiffractionData object with additional functionality.
+
+    Chi files are two-column text files containing Q values (scattering vector
+    magnitude in Å⁻¹) and corresponding intensity values. Comment lines
+    starting with '#' are automatically skipped.
 
     Args:
-        filepath: Path to the .chi file
+        filepath: Path to the .chi file to load. Can be a string or Path object.
 
     Returns:
-        DataFrame with columns ['Q', 'intensity']
+        pd.DataFrame: DataFrame with columns ['Q', 'intensity'] containing
+            the loaded diffraction data. No validation or sorting is applied.
 
     Raises:
-        FileNotFoundError: If the file doesn't exist
-        ValueError: If the file format is invalid
+        FileNotFoundError: If the specified file doesn't exist.
+        ValueError: If the file extension is not '.chi', the file doesn't
+            contain exactly 2 columns, or parsing fails for any reason.
+
+    Note:
+        - Comment lines (starting with '#') are automatically ignored
+        - Data is expected in two columns: Q values, then intensities
+        - No data validation or automatic sorting is performed
+        - For validated data objects, use `robomage.data.loaders` instead
+
+    Example:
+        >>> from robomage.data_io import load_chi_file
+        >>> df = load_chi_file("sample.chi")
+        >>> print(df.columns.tolist())
+        ['Q', 'intensity']
+        >>> print(f"Loaded {len(df)} data points")
+
+    See Also:
+        robomage.data.loaders.load_chi_file: Modern API with validation
     """
     filepath = Path(filepath)
 
@@ -46,14 +112,44 @@ def load_chi_file(filepath: str | Path) -> pd.DataFrame:
 
 
 def get_data_info(df: pd.DataFrame) -> dict[str, Any]:
-    """
-    Get summary information about loaded diffraction data.
+    """Get comprehensive summary statistics for diffraction data.
+
+    Extracts key statistical information from a DataFrame containing
+    diffraction data, including data coverage, Q-space sampling, and
+    intensity statistics. Useful for data quality assessment and
+    experimental parameter evaluation.
 
     Args:
-        df: DataFrame containing Q and intensity columns
+        df: DataFrame containing diffraction data with columns 'Q' and
+            'intensity'. Q values should be in Å⁻¹ and intensities in
+            arbitrary units.
 
     Returns:
-        Dictionary with data statistics
+        dict[str, Any]: Dictionary containing statistical summaries:
+            - num_points (int): Total number of data points
+            - q_range (tuple): Min and max Q values (Å⁻¹)
+            - q_step_mean (float): Average Q spacing (Å⁻¹)
+            - q_step_std (float): Standard deviation of Q spacing
+            - intensity_range (tuple): Min and max intensity values
+            - intensity_mean (float): Mean intensity value
+            - intensity_std (float): Standard deviation of intensities
+
+    Note:
+        - Q spacing statistics help assess data quality and uniformity
+        - Large q_step_std indicates non-uniform sampling
+        - For validated data objects with richer statistics, use
+          DiffractionData.statistics property instead
+
+    Example:
+        >>> from robomage.data_io import load_chi_file, get_data_info
+        >>> df = load_chi_file("sample.chi")
+        >>> info = get_data_info(df)
+        >>> print(f"Data points: {info['num_points']}")
+        >>> print(f"Q range: {info['q_range'][0]:.2f} - {info['q_range'][1]:.2f} Å⁻¹")
+        >>> print(f"Average Q step: {info['q_step_mean']:.4f} Å⁻¹")
+
+    See Also:
+        DiffractionData.statistics: Modern API with computed statistics
     """
     return {
         "num_points": len(df),
@@ -67,11 +163,46 @@ def get_data_info(df: pd.DataFrame) -> dict[str, Any]:
 
 
 def load_test_data() -> pd.DataFrame:
-    """
-    Load the standard test dataset (SRM 660b).
+    """Load the standard test dataset (SRM 660b LaB₆) as a DataFrame.
+
+    Loads the SRM 660b (LaB₆) powder diffraction standard from NIST as a
+    pandas DataFrame for backward compatibility with legacy code. This is
+    the same dataset available through the modern API but returned as a
+    raw DataFrame without validation or metadata.
 
     Returns:
-        DataFrame with the test diffraction pattern
+        pd.DataFrame: DataFrame with columns ['Q', 'intensity'] containing
+            the SRM 660b diffraction pattern. Q values are in Å⁻¹ and
+            intensities are in arbitrary units.
+
+    Raises:
+        FileNotFoundError: If the test data file cannot be found in the
+            expected location (examples/pdf_SRM_660b_q.chi).
+
+    Note:
+        - For new code, consider using `robomage.data.loaders.load_test_data()`
+          which returns a validated DiffractionData object
+        - This function provides direct DataFrame access for pandas workflows
+        - No metadata or validation is included with the returned data
+        - Path resolution is relative to the package structure
+
+    Example:
+        >>> from robomage.data_io import load_test_data, get_data_info
+        >>> df = load_test_data()
+        >>> info = get_data_info(df)
+        >>> print(f"Test data: {info['num_points']} points")
+        >>> print(f"Q range: {info['q_range']}")
+
+        >>> # Convert to DiffractionData if needed
+        >>> from robomage.data.models import DiffractionData
+        >>> data = DiffractionData.from_dataframe(df, filename="SRM_660b")
+
+    Reference:
+        NIST SRM 660b: LaB₆ powder for X-ray diffraction calibration
+        https://www.nist.gov/srm
+
+    See Also:
+        robomage.data.loaders.load_test_data: Modern API with validation
     """
     # Get the project root directory
     current_file = Path(__file__)
