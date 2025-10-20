@@ -12,11 +12,16 @@ dist/
 .coverage
 htmlcov/
 
-# Data files
+# Data files (but allow test/example data)
 *.chi
 *.dat
 *.xy
 *.txt
+
+# But keep example/test data files
+!examples/*.chi
+!examples/*.dat  
+!examples/*.xy
 
 # Generated plots and outputs
 *.png
