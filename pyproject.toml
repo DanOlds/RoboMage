@@ -11,6 +11,7 @@ dependencies = [
   "numpy",
   "pandas", 
   "matplotlib",
+  "requests",
   # "sqlalchemy",  # Keep this commented until needed
 ]
 
@@ -22,6 +23,7 @@ dev = [
   "mypy",
   # Type stubs for mypy
   "pandas-stubs",
+  "types-requests",
 ]
 
 [project.urls]
