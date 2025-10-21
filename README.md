@@ -66,7 +66,7 @@ RoboMage provides two complementary APIs to support different use cases:
 - **Type Safety**: Full MyPy compliance for development confidence
 
 ### ⚙️ Core Stack
-- **Python 3.10+ / Pixi** - Modern environment management
+- **Python 3.10+ / Pixi** - Modern environment management and cross-platform dependency resolution
 - **Pydantic v2** - Data validation and settings management
 - **NumPy / Pandas** - Scientific computing foundation
 - **Matplotlib** - Publication-quality plotting
@@ -75,6 +75,22 @@ RoboMage provides two complementary APIs to support different use cases:
 
 ### 🚀 Quick Start
 
+#### Prerequisites
+This project uses **[Pixi](https://pixi.sh)** for environment management - a modern, fast alternative to conda/pip that provides:
+- **Cross-platform compatibility** (Windows, macOS, Linux)
+- **Fast dependency resolution** with conda-forge packages
+- **Reproducible environments** with lockfiles
+- **Simple task management** (no need for separate Makefile/scripts)
+
+Install pixi from [pixi.sh](https://pixi.sh) or using:
+```powershell
+# Windows (PowerShell)
+iwr -useb https://pixi.sh/install.ps1 | iex
+
+# macOS/Linux
+curl -fsSL https://pixi.sh/install.sh | bash
+```
+
 #### Installation
 ```powershell
 git clone https://github.com/DanOlds/RoboMage.git
@@ -82,6 +98,8 @@ cd RoboMage
 pixi install
 pixi run test
 ```
+
+> **Alternative**: If you prefer traditional Python environments, you can use `pip install -e .` after creating a virtual environment, but pixi is recommended for the best development experience and reproducibility.
 
 #### Basic Usage
 ```python
@@ -146,6 +164,12 @@ df.to_csv("filtered_data.csv")
 
 ### 🧪 Development Setup
 
+**Why Pixi?** This project uses pixi instead of traditional pip/conda because:
+- **Faster**: Parallel dependency resolution and caching
+- **Reproducible**: Exact environment recreation across machines
+- **Simple**: Single `pixi.toml` file replaces requirements.txt, environment.yml, and Makefile
+- **Cross-platform**: Identical behavior on Windows, macOS, and Linux
+
 Open the project in VS Code:
 ```powershell
 code .
@@ -153,11 +177,13 @@ code .
 
 Run development tools:
 ```powershell
-pixi run format    # Code formatting
-pixi run lint      # Linting checks  
-pixi run typecheck # Type checking
-pixi run test      # Full test suite
+pixi run format    # Code formatting with ruff
+pixi run lint      # Linting checks with ruff
+pixi run typecheck # Type checking with mypy
+pixi run test      # Full test suite with pytest
 ```
+
+> **Note**: All tasks are defined in `pixi.toml` and run in the isolated pixi environment automatically.
 
 ###  Project Status
 **Current (Week 2)** ✅ **Complete**:
@@ -180,6 +206,8 @@ pixi run test      # Full test suite
 - **[Architecture Overview](docs/README_full.md)** - Detailed technical design
 - **[Sprint Planning](docs/sprint-2-data-pipeline.md)** - Development roadmap
 - **[Examples](examples/)** - Working code samples and tutorials
+- **[Environment Config](pixi.toml)** - Pixi environment and task definitions
+- **[LLM Context Guide](.llm-context.md)** - Quick start guide for AI assistants
 
 ---
 > Developed at **Brookhaven National Laboratory (BNL)** at the **NSLS-II**.
