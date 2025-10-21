@@ -1,9 +1,70 @@
 """
-Core peak analysis engine with scipy-based algorithms.
+Peak Analysis Engine - Scientific Computing Core
 
-This module implements the scientific peak detection and fitting algorithms
-using scipy and numpy. It provides the computational backbone for the
-peak analysis service.
+A comprehensive peak analysis engine implementing state-of-the-art algorithms for
+automated peak detection, fitting, and statistical analysis of powder diffraction data.
+
+Scientific Algorithms:
+    Peak Detection:
+        - scipy.signal.find_peaks for robust peak identification
+        - Configurable height, prominence, and distance thresholds
+        - Noise filtering and signal preprocessing
+
+    Peak Fitting:
+        - Gaussian profiles: Standard normal distribution fitting
+        - Lorentzian profiles: Cauchy distribution for natural line broadening
+        - Voigt profiles: Convolution of Gaussian and Lorentzian for
+          instrument/natural broadening
+        - Non-linear least squares optimization via scipy.optimize.curve_fit
+
+    Background Subtraction:
+        - Polynomial baseline fitting and removal
+        - Iterative background estimation
+        - Configurable polynomial orders (1-5)
+
+    Statistical Analysis:
+        - R² goodness-of-fit calculation for individual peaks
+        - Overall model quality assessment
+        - Peak quality filtering based on fit statistics
+
+Mathematical Framework:
+    Peak Profiles:
+        Gaussian: f(x) = A * exp(-((x-μ)/σ)²/2)
+        Lorentzian: f(x) = A / (1 + ((x-μ)/γ)²)
+        Voigt: f(x) = convolution(Gaussian, Lorentzian)
+
+    Q-space to d-spacing conversion: d = 2π/Q
+
+    R² calculation: R² = 1 - (SS_res / SS_tot)
+        where SS_res = Σ(y_obs - y_fit)²
+              SS_tot = Σ(y_obs - y_mean)²
+
+Performance Characteristics:
+    - Vectorized NumPy operations for computational efficiency
+    - Optimized scipy algorithms with sub-second processing
+    - Memory-efficient processing of large datasets (>10k points)
+    - Robust convergence criteria for fitting algorithms
+
+Data Validation:
+    - Input sanitization and range checking
+    - NaN/infinity detection and handling
+    - Monotonic Q-value validation
+    - Physical constraints (positive intensities, valid Q-range)
+
+Integration:
+    - Designed for both standalone and service-based deployment
+    - Thread-safe for concurrent analysis requests
+    - Comprehensive error handling with scientific context
+    - Full compatibility with RoboMage data models
+
+Usage:
+    engine = PeakAnalysisEngine()
+    result = engine.analyze(q_values, intensities, config)
+
+    # Access results
+    print(f"Detected {result.peaks_detected} peaks")
+    for peak in result.peak_list:
+        print(f"Peak at Q={peak.position:.3f} (d={peak.d_spacing:.3f}Å)")
 """
 
 import time

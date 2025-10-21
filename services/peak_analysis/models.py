@@ -1,9 +1,58 @@
 """
-Data models for the peak analysis service.
+Pydantic Data Models for Peak Analysis Service
 
-This module defines Pydantic models for request/response structures used in the
-peak analysis REST API. Models follow RoboMage patterns for validation and
-JSON schema generation.
+This module defines comprehensive data models for the peak analysis REST API using
+Pydantic v2. All models provide JSON schema generation, field validation, and
+seamless integration with FastAPI for automatic API documentation.
+
+Model Architecture:
+    - Request Models: Validate incoming API requests with scientific constraints
+    - Response Models: Structure analysis results with statistical metadata
+    - Configuration Models: Hierarchical settings for analysis parameters
+    - Utility Models: Service health, errors, and metadata structures
+
+Key Features:
+    - Field-level validation with custom validators for scientific data
+    - Automatic JSON schema generation for OpenAPI documentation
+    - Type safety with full mypy compatibility
+    - Performance optimization with Pydantic v2 core validation
+    - Seamless numpy array handling with custom serialization
+
+Scientific Validation:
+    - Q-value monotonicity and physical range checking (0.1-50 Å⁻¹)
+    - Intensity positivity and finite value constraints
+    - Peak detection parameter validation (height, prominence, distance)
+    - Fitting parameter bounds and convergence criteria
+    - Statistical threshold validation (R² ∈ [0,1])
+
+Data Flow:
+    PeakAnalysisRequest → Engine Processing → PeakAnalysisResponse
+    ↓
+    - Input validation and sanitization
+    - Scientific parameter checking
+    - Analysis execution with error handling
+    - Statistical result compilation
+    - Response serialization and validation
+
+Integration:
+    - RoboMage DiffractionData compatibility
+    - FastAPI automatic request/response validation
+    - JSON schema export for client code generation
+    - Error handling with detailed scientific context
+
+Usage:
+    # Request validation
+    request = PeakAnalysisRequest(
+        q_values=[1.0, 1.1, 1.2],
+        intensities=[100, 150, 120],
+        config=AnalysisConfig(...)
+    )
+
+    # Response generation
+    response = PeakAnalysisResponse(
+        peaks_detected=5,
+        peak_list=[PeakInfo(...), ...]
+    )
 """
 
 from enum import Enum

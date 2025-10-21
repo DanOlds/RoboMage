@@ -1,9 +1,78 @@
 """
-HTTP client for the peak analysis service.
+Peak Analysis HTTP Client - RoboMage Integration Library
 
-This module provides a Python client for communicating with the peak analysis
-service through HTTP/JSON. It handles serialization, error handling, and
-connection management.
+A robust HTTP client library for seamless integration with the peak analysis
+microservice. This client provides a Pythonic interface for scientific peak
+analysis workflows within the RoboMage framework.
+
+Architecture:
+    - HTTP/JSON communication with the peak analysis REST API
+    - Type-safe request/response handling with Pydantic validation
+    - Automatic retry logic with exponential backoff for reliability
+    - Connection pooling and session management for performance
+    - Comprehensive error handling with scientific context
+
+Key Features:
+    Data Integration:
+        - Native support for RoboMage DiffractionData objects
+        - Automatic data serialization and validation
+        - Seamless conversion between Q-space and d-spacing
+        - Preservation of metadata throughout analysis pipeline
+
+    Service Communication:
+        - RESTful API client with requests library
+        - JSON serialization optimized for scientific data
+        - Configurable timeouts and retry policies
+        - Service health monitoring and status checks
+
+    Error Handling:
+        - Custom exception hierarchy for different error types
+        - Detailed error messages with scientific context
+        - Connection error recovery and graceful degradation
+        - Validation error reporting with field-level details
+
+    Performance:
+        - Connection reuse for multiple analysis requests
+        - Efficient memory usage for large datasets
+        - Concurrent request support for batch processing
+        - Configurable timeout and retry parameters
+
+Usage Patterns:
+    Basic Analysis:
+        client = PeakAnalysisClient("http://localhost:8001")
+        response = client.analyze_peaks(q_values, intensities)
+
+    RoboMage Integration:
+        data = load_diffraction_file("sample.chi")
+        response = client.analyze_diffraction_data(data)
+
+    Service Management:
+        if client.check_service_health():
+            results = client.analyze_peaks(q, intensity)
+
+    Configuration:
+        client = PeakAnalysisClient(
+            base_url="http://analysis-server:8001",
+            timeout=30.0,
+            max_retries=3
+        )
+
+Scientific Workflow:
+    This client is designed for crystallographic analysis workflows where peak
+    detection and fitting are critical steps in structure determination. It
+    maintains full scientific metadata and provides statistical validation of
+    analysis results.
+
+Integration Points:
+    - RoboMage data pipeline: Direct integration with loaders and models
+    - CLI tools: Backend for peak_analyzer.py command-line interface
+    - Jupyter notebooks: Interactive scientific analysis workflows
+    - Automated pipelines: High-throughput crystallographic processing
+
+Error Recovery:
+    The client implements robust error handling for distributed scientific
+    computing environments, including network failures, service unavailability,
+    and data validation errors with appropriate retry strategies.
 """
 
 import json
