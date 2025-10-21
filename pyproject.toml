@@ -12,6 +12,7 @@ dependencies = [
   "pandas", 
   "matplotlib",
   "requests",
+  "scipy>=1.10.0",
   # "sqlalchemy",  # Keep this commented until needed
 ]
 
@@ -24,6 +25,10 @@ dev = [
   # Type stubs for mypy
   "pandas-stubs",
   "types-requests",
+]
+peak-analysis = [
+  "fastapi>=0.100.0",
+  "uvicorn>=0.20.0",
 ]
 
 [project.urls]

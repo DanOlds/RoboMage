@@ -2031,19 +2031,22 @@ packages:
 - pypi: ./
   name: robomage
   version: 0.0.1
-  sha256: 1ee92eb26c40004559487dcb9d35ca849ee9c7322a4e658578598a1f334ea6a8
+  sha256: e35be5a68b4d7de872ee15111fc302fea5955865321d4c5c858ffd6651dfa8a4
   requires_dist:
   - pydantic>=2
   - numpy
   - pandas
   - matplotlib
   - requests
+  - scipy>=1.10.0
   - pytest ; extra == 'dev'
   - pytest-cov ; extra == 'dev'
   - ruff ; extra == 'dev'
   - mypy ; extra == 'dev'
   - pandas-stubs ; extra == 'dev'
   - types-requests ; extra == 'dev'
+  - fastapi>=0.100.0 ; extra == 'peak-analysis'
+  - uvicorn>=0.20.0 ; extra == 'peak-analysis'
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.14.0-h3e3edff_0.conda
