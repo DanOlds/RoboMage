@@ -5,7 +5,14 @@ Build a **Dash-based visualization dashboard** for interactive analysis, publica
 
 **Target Duration:** 2 weeks  
 **Start Date:** November 1, 2025  
+**Target Branch:** `sprint-4-visualization-dashboard`  
 **Architecture Focus:** Standalone → Service Integration → Advanced Features
+
+## Prerequisites
+- ✅ **Sprint 3 Complete**: Peak analysis microservice fully functional
+- ✅ **Microservices Architecture**: Established service communication patterns
+- ✅ **RoboMage Core**: Data loaders and models ready for integration
+- 🔄 **Branch Setup**: Create new branch from `sprint-3-independent-engine`
 
 ## Strategic Value
 
@@ -290,26 +297,67 @@ python -m robomage.dashboard
 # → Integration with external databases
 ```
 
-## Development Workflow
+## Development Workflow & Branching Strategy
+
+### Branch Management
+```bash
+# 1. Complete current Sprint 3 work
+git commit -m "docs: Update copilot instructions and add Sprint 4 plan"
+
+# 2. Create and switch to Sprint 4 branch
+git checkout -b sprint-4-visualization-dashboard
+
+# 3. Start Sprint 4 development
+# All dashboard development happens on this branch
+```
+
+### Dependency Setup
+```bash
+# Add to pixi.toml (these additions needed)
+dash = ">=2.14.0"                    # Core dashboard framework
+plotly = ">=5.17.0"                  # Interactive plotting
+dash-bootstrap-components = ">=1.5.0" # UI components
+dash-uploader = ">=0.6.0"            # File upload functionality
+kaleido = ">=0.2.1"                  # Static image export (matplotlib integration)
+
+# Optional advanced features
+redis = ">=4.5.0"                    # Caching (Phase 4)
+selenium = ">=4.15.0"                # Dashboard testing (Phase 4)
+```
 
 ### Daily Development Targets
-- **Day 1-2**: Dash app framework + file loading interface
-- **Day 3**: Basic plotting and multi-dataset visualization
-- **Day 4-5**: Peak analysis service integration + real-time analysis
-- **Day 6**: Enhanced peak visualization with fits and annotations
-- **Day 7-8**: Publication-quality matplotlib integration + export
-- **Day 9-10**: Advanced plot types + report generation
-- **Day 11-12**: Performance optimization + caching
-- **Day 13-14**: Advanced features + extensibility framework
 
-### Testing Strategy
+### Daily Development Targets
+- **Day 1**: Project setup + basic Dash app framework
+- **Day 2**: File upload interface + directory browser
+- **Day 3**: Basic diffraction pattern plotting + multi-file overlay
+- **Day 4**: Peak analysis service integration + HTTP client
+- **Day 5**: Peak visualization with overlays + fit display
+- **Day 6**: Analysis parameter controls + real-time updates
+- **Day 7**: Publication-quality matplotlib integration
+- **Day 8**: Export functionality (PNG/SVG/PDF) + styling controls
+- **Day 9**: Advanced plot types + report generation
+- **Day 10**: Performance optimization + caching
+- **Day 11-12**: Advanced features + extensibility framework
+- **Day 13-14**: Testing + documentation + deployment preparation
+
+### Validation & Testing Strategy
 ```bash
-# Integration tests
+# Unit tests for dashboard components
+pixi run python -m pytest tests/test_dashboard_components.py
+
+# Integration tests with peak analysis service  
 pixi run python -m pytest tests/test_dashboard_integration.py
 
-# Dashboard testing with selenium (optional)
-# Visual regression testing for plot outputs
+# Visual regression testing (optional)
+pixi run python -m pytest tests/test_dashboard_visual.py
+
 # Performance testing with large datasets
+pixi run python -m pytest tests/test_dashboard_performance.py
+
+# Manual testing workflow
+python -m robomage.dashboard  # → http://localhost:8050
+# → Load test files, verify all functionality
 ```
 
 ## Future Integration Points
@@ -329,18 +377,115 @@ Dashboard (8050) ←→ Peak Analysis (8001)
                  ←→ Database Service (8004)
 ```
 
-## 🎯 SPRINT 4 VALUE PROPOSITION
+## 🎯 SPRINT 4 SUCCESS CRITERIA
 
-### Immediate Scientific Impact
-- **Visual Analysis Validation**: Researchers can immediately see and verify peak analysis results
-- **Publication Workflow**: Complete pipeline from data → analysis → publication figures
-- **Batch Processing**: Efficient analysis of large experimental datasets
-- **Interactive Exploration**: Real-time parameter tuning with visual feedback
+### ✅ Phase 1: Standalone Dashboard (Days 1-3)
+```bash
+# Dashboard startup
+python -m robomage.dashboard
+# → Dash app running on http://localhost:8050
+# → Professional UI with file upload interface
 
-### Technical Foundation
-- **Dashboard Architecture**: Establishes patterns for scientific web applications
-- **Service Integration**: Demonstrates robust RoboMage ecosystem usage
-- **Visualization Standards**: Professional scientific plotting infrastructure
-- **Extensibility**: Framework for future analysis dashboards and tools
+# File loading workflow
+# → Drag/drop .chi/.dat/.xy files or browse directories
+# → Multiple file selection and batch loading
+# → Interactive diffraction pattern plots displayed
+# → Multi-file overlay comparison working
+# → Responsive design on desktop and mobile
+```
 
-**SPRINT 4 COMPLETION TARGET:** December 1, 2025 - Complete visualization ecosystem for production scientific workflows** 🚀
+### ✅ Phase 2: Service Integration (Days 4-6)
+```bash
+# Integrated analysis workflow
+# → Load diffraction file in dashboard
+# → Click "Analyze Peaks" button
+# → Peak analysis service (port 8001) called automatically
+# → Real-time progress indicators during analysis
+# → Results displayed with peak overlays and fit statistics
+# → Interactive peak tables with filtering and sorting
+```
+
+### ✅ Phase 3: Publication Features (Days 7-10)
+```bash
+# Publication workflow
+# → Generate high-quality plots with custom styling
+# → Export PNG/SVG/PDF with 300+ DPI resolution
+# → Customizable fonts, colors, and figure dimensions
+# → Generate analysis reports with figures and tables
+# → Batch process entire directories with consistent formatting
+# → Professional figure legends and annotations
+```
+
+### ✅ Phase 4: Advanced Features (Days 11-14)
+```bash
+# Performance and extensibility
+# → Handle 100+ file datasets efficiently with lazy loading
+# → Session persistence and analysis history tracking
+# → Redis-based caching for analysis results
+# → Plugin framework for custom visualizations
+# → Search and filter capabilities for large datasets
+# → Export results to multiple formats (JSON, CSV, HDF5)
+```
+
+## 📊 DELIVERABLES & DOCUMENTATION
+
+### Code Deliverables
+1. **Dashboard Package**: Complete `src/robomage/dashboard/` implementation
+2. **Visualization Module**: Implemented `src/robomage/visualization.py`
+3. **Test Suite**: Comprehensive dashboard testing (unit + integration)
+4. **Documentation**: User guide and developer documentation
+5. **Examples**: Tutorial notebooks and example workflows
+
+### Documentation Updates
+1. **README.md**: Updated with dashboard usage examples
+2. **API Documentation**: Dashboard component documentation
+3. **Installation Guide**: Setup instructions for dashboard dependencies
+4. **User Tutorial**: Step-by-step dashboard usage guide
+5. **Developer Guide**: Extension and customization documentation
+
+## 🔄 FUTURE SPRINT INTEGRATION
+
+### Immediate Extensions (Sprint 5 candidates)
+1. **Database Integration**: Connect dashboard to analysis result databases
+2. **Beamline Streaming**: Real-time data streaming from NSLS-II beamlines
+3. **Machine Learning Dashboard**: AI-enhanced analysis visualization
+4. **Collaborative Features**: Multi-user sessions and result sharing
+
+### Service Ecosystem Evolution
+```
+┌─────────────────────┐
+│   Dash Dashboard    │ ← Sprint 4 Focus
+│   (Port 8050)       │
+└─────────────────────┘
+           │
+    ┌──────┼──────┐
+    ▼      ▼      ▼
+┌─────┐ ┌─────┐ ┌─────┐
+│Peak │ │GSAS │ │ DB  │ ← Future Services
+│8001 │ │8002 │ │8004 │
+└─────┘ └─────┘ └─────┘
+```
+
+## 🚨 RISK MITIGATION
+
+### Technical Risks
+- **Plotly Performance**: Large datasets may cause browser lag
+  - *Mitigation*: Implement data decimation and lazy loading
+- **Service Dependencies**: Dashboard depends on peak analysis service
+  - *Mitigation*: Graceful degradation when services unavailable
+- **Browser Compatibility**: Dash apps may have browser-specific issues
+  - *Mitigation*: Test on Chrome, Firefox, Safari; document requirements
+
+### Timeline Risks
+- **Feature Scope Creep**: Advanced features may expand beyond 2 weeks
+  - *Mitigation*: Strict phase gating; Phase 4 features are optional
+- **Integration Complexity**: Service integration may be more complex than expected
+  - *Mitigation*: Start with simple HTTP client; expand gradually
+
+### User Adoption Risks
+- **Learning Curve**: Scientists may prefer CLI tools
+  - *Mitigation*: Maintain CLI compatibility; dashboard as enhancement
+- **Performance Expectations**: Users may expect instant analysis
+  - *Mitigation*: Clear progress indicators; educate on analysis complexity
+
+**SPRINT 4 COMPLETION TARGET:** November 15, 2025 - Production-ready visualization dashboard for scientific workflows** 🚀

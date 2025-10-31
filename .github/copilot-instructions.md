@@ -61,6 +61,10 @@ python peak_analyzer.py client file.chi        # Client mode
 pixi run python -m robomage test --plot --info    # Test built-in data
 pixi run python -m robomage --help                # CLI options
 python peak_analyzer.py --help                    # Peak analysis CLI
+
+# Dashboard Development (Sprint 4)
+python -m robomage.dashboard                       # Start Dash app (port 8050)
+pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 ```
 
 ## Code Conventions
@@ -70,6 +74,8 @@ python peak_analyzer.py --help                    # Peak analysis CLI
 - `src/robomage/data_io.py`: Legacy pandas-based API
 - `src/robomage/__main__.py`: CLI implementation for data loading/testing
 - `src/robomage/clients/`: HTTP clients for microservice communication
+- `src/robomage/dashboard/`: Dash-based visualization dashboard (Sprint 4)
+- `src/robomage/visualization.py`: Publication-quality plotting utilities (Sprint 4)
 - `services/peak_analysis/`: Independent FastAPI microservice
 - `peak_analyzer.py`: Standalone CLI tool for peak analysis workflows
 - `src/robomage/orchestrator.py`: Service coordination (planned)
@@ -99,6 +105,8 @@ python peak_analyzer.py --help                    # Peak analysis CLI
 - **MyPy**: Type checking with strict compliance
 - **FastAPI**: Microservice framework for independent analysis engines
 - **SciPy**: Scientific algorithms for peak detection and fitting
+- **Dash**: Interactive web dashboard framework (Sprint 4)
+- **Plotly**: Interactive scientific plotting (Sprint 4)
 
 ## Integration Points
 - **File formats**: Currently .chi files (Q, intensity columns)
@@ -118,4 +126,5 @@ python peak_analyzer.py --help                    # Peak analysis CLI
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
 - `docs/sprint-3-peak-analysis-plan.md` - Service architecture implementation details
+- `docs/sprint-4-visualization-dashboard.md` - Dashboard development plan and architecture
 - `README.md` - User-facing project overview and API documentation
