@@ -103,7 +103,9 @@ def create_import_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-folder-open me-2"),
+                                                    html.I(
+                                                        className="fas fa-folder-open me-2"
+                                                    ),
                                                     "File Upload",
                                                 ]
                                             )
@@ -117,14 +119,18 @@ def create_import_tab() -> html.Div:
                                                 children=html.Div(
                                                     [
                                                         html.I(
-                                                            className=(
-                                                                "fas fa-cloud-upload-alt fa-3x mb-3"
-                                                            )
+                                                                className=(
+                                                                    "fas fa-cloud-upload-alt "
+                                                                    "fa-3x mb-3"
+                                                                ),
                                                         ),
                                                         html.Br(),
-                                                        html.H5("Drag & Drop or Select Files"),
+                                                        html.H5(
+                                                                "Drag & Drop or Select Files"
+                                                        ),
                                                         html.P(
-                                                            "Supported formats: .chi, .dat, .xy",
+                                                                "Supported formats: .chi, .dat, "
+                                                                ".xy",
                                                             className="text-muted",
                                                         ),
                                                     ],
@@ -158,7 +164,9 @@ def create_import_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-wave-square me-2"),
+                                                    html.I(
+                                                        className="fas fa-wave-square me-2"
+                                                    ),
                                                     "Wavelength Settings",
                                                 ]
                                             )
@@ -174,19 +182,31 @@ def create_import_tab() -> html.Div:
                                                 id="wavelength-selector",
                                                 options=[
                                                     {
-                                                        "label": "Synchrotron (0.1665 Å) - 74.5 keV",
+                                                        "label": (
+                                                                "Synchrotron (0.1665 Å) - "
+                                                                "74.5 keV"
+                                                        ),
                                                         "value": 0.1665,
                                                     },
                                                     {
-                                                        "label": "Cu Kα (1.5406 Å) - 8.05 keV",
+                                                        "label": (
+                                                                "Cu Kα (1.5406 Å) - "
+                                                                "8.05 keV"
+                                                        ),
                                                         "value": 1.5406,
                                                     },
                                                     {
-                                                        "label": "Mo Kα (0.7107 Å) - 17.44 keV",
+                                                        "label": (
+                                                                "Mo Kα (0.7107 Å) - "
+                                                                "17.44 keV"
+                                                        ),
                                                         "value": 0.7107,
                                                     },
                                                     {
-                                                        "label": "Cr Kα (2.2897 Å) - 5.41 keV",
+                                                        "label": (
+                                                                "Cr Kα (2.2897 Å) - "
+                                                                "5.41 keV"
+                                                        ),
                                                         "value": 2.2897,
                                                     },
                                                     {"label": "Custom...", "value": "custom"},
@@ -218,9 +238,17 @@ def create_import_tab() -> html.Div:
                                             # Current wavelength display
                                             dbc.Alert(
                                                 [
-                                                    html.I(className="fas fa-info-circle me-2"),
-                                                    html.Span("Current wavelength: ", className="fw-bold"),
-                                                    html.Span("0.1665 Å", id="current-wavelength-display"),
+                                                    html.I(
+                                                        className="fas fa-info-circle me-2",
+                                                    ),
+                                                    html.Span(
+                                                        "Current wavelength: ",
+                                                        className="fw-bold",
+                                                    ),
+                                                    html.Span(
+                                                        "0.1665 Å",
+                                                        id="current-wavelength-display",
+                                                    ),
                                                 ],
                                                 color="info",
                                                 className="mb-0",
@@ -228,10 +256,12 @@ def create_import_tab() -> html.Div:
                                         ]
                                     ),
                                 ]
-                            )
+                                                                        "Current wavelength: ",
+                                                                        className="fw-bold"
                         ],
                         width=6,
-                    ),
+                                                                        "0.1665 Å",
+                                                                        id="current-wavelength-display"
                 ]
             ),
             html.Br(),
@@ -246,7 +276,9 @@ def create_import_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-files me-2"),
+                                                    html.I(
+                                                        className="fas fa-files me-2"
+                                                    ),
                                                     "Loaded Files",
                                                 ]
                                             )
@@ -278,7 +310,9 @@ def create_import_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-info-circle me-2"),
+                                                    html.I(
+                                                        className="fas fa-info-circle me-2"
+                                                    ),
                                                     "File Information",
                                                 ]
                                             )

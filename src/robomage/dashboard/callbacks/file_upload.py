@@ -9,11 +9,11 @@ import base64
 import io
 from typing import Any
 
+import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import Input, Output, State, html
 from dash.dependencies import ALL
-import dash
 
 
 def register_callbacks(app):
@@ -38,7 +38,12 @@ def register_file_upload_callbacks(app):
         [State("upload-data", "filename"), State("file-data-store", "data")],
         prevent_initial_call=True,
     )
-    def handle_file_upload_and_remove(list_of_contents, remove_clicks, list_of_names, existing_data):
+    def handle_file_upload_and_remove(
+        list_of_contents,
+        remove_clicks,
+        list_of_names,
+        existing_data,
+    ):
         ctx = dash.callback_context
         if not existing_data:
             existing_data = {}
@@ -48,8 +53,9 @@ def register_file_upload_callbacks(app):
         if ctx.triggered:
             prop_id = ctx.triggered[0]["prop_id"]
             if prop_id.startswith('{') and 'remove-file-btn' in prop_id:
-                # Find which button was clicked by comparing remove_clicks to previous state
-                # The order of remove_clicks matches the order of files in new_data
+                # Find which button was clicked by comparing remove_clicks to previous
+                # state. The order of remove_clicks matches the order of files in
+                # new_data
                 filenames = list(new_data.keys())
                 for idx, n in enumerate(remove_clicks):
                     if n and n > 0 and idx < len(filenames):
@@ -60,7 +66,7 @@ def register_file_upload_callbacks(app):
             elif list_of_contents:
                 for content, name in zip(list_of_contents, list_of_names, strict=False):
                     try:
-                        file_data = parse_uploaded_file(content, name)
+                    # new_data
                         if file_data:
                             new_data[name] = file_data
                     except Exception as e:
@@ -68,15 +74,15 @@ def register_file_upload_callbacks(app):
                         continue
             else:
                 from dash import no_update
-                return no_update, no_update, no_update, no_update
-
-        # Create updated UI components
-        file_list = create_file_list(new_data)
-        file_info = create_file_info(new_data)
-        num_files = len(new_data)
-        if num_files == 0:
-            status = "No files loaded"
-        elif num_files == 1:
+                elif list_of_contents:
+                    for content, name in zip(list_of_contents, list_of_names, strict=False):
+                        try:
+                            parsed = parse_uploaded_file(content, name)
+                            if parsed:
+                                new_data[name] = parsed
+                        except Exception as e:
+                            print(f"Error processing file {name}: {e}")
+                            continue
             status = "Loaded 1 file"
         else:
             status = f"Loaded {num_files} files"
