@@ -20,6 +20,9 @@ fastapi = ">=0.104.0"
 uvicorn = ">=0.24.0"
 requests = "*"
 types-requests = "*"
+dash = ">=2.14.0"
+plotly = ">=5.17.0"
+dash-bootstrap-components = ">=1.5.0"
 
 [pypi-dependencies]
 robomage = { path = ".", editable = true }

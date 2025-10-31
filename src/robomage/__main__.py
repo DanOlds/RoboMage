@@ -330,8 +330,35 @@ def main():
         metavar="FILENAME",
         help="Save plot to file with custom filename (no interactive display)",
     )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Launch interactive dashboard (default port 8050)",
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8050,
+        help="Port for dashboard server (default: 8050)",
+    )
 
     args = parser.parse_args()
+
+    # Handle dashboard mode
+    if args.dashboard:
+        try:
+            from robomage.dashboard.app import run_dashboard
+
+            print("🚀 Starting RoboMage Dashboard...")
+            run_dashboard(port=args.dashboard_port, debug=False)
+            return 0
+        except ImportError:
+            print("❌ Dashboard dependencies not available.")
+            print("Install dashboard dependencies with: pixi install")
+            return 1
+        except KeyboardInterrupt:
+            print("\n✅ Dashboard stopped.")
+            return 0
 
     # Determine which files to process
     if args.files:
