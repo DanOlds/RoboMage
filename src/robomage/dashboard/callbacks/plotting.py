@@ -10,27 +10,35 @@ from typing import Any
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Input, Output
+from dash import Input, Output, html
 
 
 def register_callbacks(app):
     """Register all plotting related callbacks."""
+    register_main_plot_callback(app)
+    register_plot_statistics_callback(app)
+
+
+def register_main_plot_callback(app):
+    """Register the main plot callback."""
 
     @app.callback(
         Output("main-plot", "figure"),
         [
             Input("file-data-store", "data"),
+            Input("wavelength-store", "data"),
             Input("x-axis-selector", "value"),
             Input("y-axis-selector", "value"),
             Input("plot-type-selector", "value"),
         ],
     )
-    def update_main_plot(file_data, x_axis, y_axis, plot_type):
+    def update_main_plot(file_data, wavelength_data, x_axis, y_axis, plot_type):
         """
         Update the main diffraction pattern plot.
 
         Args:
             file_data: Dictionary of loaded file data
+            wavelength_data: Current wavelength settings
             x_axis: X-axis selection (q, two_theta, d_spacing)
             y_axis: Y-axis selection (raw, normalized, log)
             plot_type: Plot type (line, scatter, area)
@@ -50,7 +58,7 @@ def register_callbacks(app):
             color = colors[i % len(colors)]
 
             # Get x and y data
-            x_data, x_label = get_x_data(data, x_axis)
+            x_data, x_label = get_x_data(data, x_axis, wavelength_data)
             y_data, y_label = get_y_data(data, y_axis)
 
             # Add trace based on plot type
@@ -81,6 +89,21 @@ def register_callbacks(app):
                     )
                 )
             elif plot_type == "area":
+                # Helper function to convert color to rgba with alpha
+                def color_to_rgba(color_str, alpha=0.3):
+                    """Convert color to rgba format with specified alpha."""
+                    if color_str.startswith('#'):
+                        # Hex color
+                        rgb_tuple = px.colors.hex_to_rgb(color_str)
+                        return f"rgba({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]}, {alpha})"
+                    elif color_str.startswith('rgb('):
+                        # RGB color - extract numbers and add alpha
+                        rgb_values = color_str[4:-1]  # Remove 'rgb(' and ')'
+                        return f"rgba({rgb_values}, {alpha})"
+                    else:
+                        # Fallback to a default color
+                        return f"rgba(128, 128, 128, {alpha})"
+
                 fig.add_trace(
                     go.Scatter(
                         x=x_data,
@@ -89,9 +112,7 @@ def register_callbacks(app):
                         fill="tonexty" if i > 0 else "tozeroy",
                         name=filename,
                         line=dict(color=color, width=1),
-                        fillcolor=(
-                            f"rgba{tuple(list(px.colors.hex_to_rgb(color)) + [0.3])}"
-                        ),
+                        fillcolor=color_to_rgba(color, 0.3),
                         hovertemplate=f"<b>{filename}</b><br>"
                         + f"{x_label}: %{{x:.3f}}<br>"
                         + f"{y_label}: %{{y:.0f}}<extra></extra>",
@@ -146,13 +167,14 @@ def register_callbacks(app):
         return fig
 
 
-def get_x_data(data: dict[str, Any], x_axis: str) -> tuple[list[float], str]:
+def get_x_data(data: dict[str, Any], x_axis: str, wavelength_data: dict = None) -> tuple[list[float], str]:
     """
     Get X-axis data and label.
 
     Args:
         data: File data dictionary
         x_axis: X-axis selection
+        wavelength_data: Wavelength settings from store
 
     Returns:
         Tuple of (x_data, x_label)
@@ -162,9 +184,20 @@ def get_x_data(data: dict[str, Any], x_axis: str) -> tuple[list[float], str]:
     if x_axis == "q":
         return q_data.tolist(), "Q (Å⁻¹)"
     elif x_axis == "two_theta":
-        # Convert Q to 2θ (assuming Cu Kα radiation, λ = 1.5406 Å)
-        wavelength = 1.5406
-        two_theta = 2 * np.arcsin(q_data * wavelength / (4 * np.pi)) * 180 / np.pi
+        # Get wavelength from store or use default
+        if wavelength_data and "current_wavelength" in wavelength_data:
+            wavelength = wavelength_data["current_wavelength"]
+        else:
+            wavelength = 0.1665  # Default to synchrotron as specified
+            
+        # Convert Q to 2θ using actual wavelength
+        # Formula: Q = 4π sin(θ) / λ, so θ = arcsin(Q λ / 4π)
+        sin_theta = q_data * wavelength / (4 * np.pi)
+        
+        # Clip values to valid range for arcsin to avoid warnings
+        sin_theta = np.clip(sin_theta, -1.0, 1.0)
+        
+        two_theta = 2 * np.arcsin(sin_theta) * 180 / np.pi
         return two_theta.tolist(), "2θ (degrees)"
     elif x_axis == "d_spacing":
         # Convert Q to d-spacing: d = 2π/Q
@@ -262,3 +295,51 @@ def create_empty_plot() -> go.Figure:
     )
 
     return fig
+
+
+def register_plot_statistics_callback(app):
+    """Register plot statistics callback."""
+    
+    @app.callback(
+        Output("plot-statistics", "children"),
+        [Input("file-data-store", "data")],
+    )
+    def update_plot_statistics(file_data):
+        """
+        Update plot statistics display.
+        
+        Args:
+            file_data: Dictionary of loaded file data
+            
+        Returns:
+            Updated statistics components
+        """
+        if not file_data:
+            return [html.P("Load data to view statistics", className="text-muted")]
+        
+        stats_items = []
+        
+        for filename, data in file_data.items():
+            q_data = np.array(data["q"])
+            intensity_data = np.array(data["intensity"])
+            
+            # Calculate statistics
+            num_points = len(q_data)
+            q_min, q_max = q_data.min(), q_data.max()
+            intensity_min, intensity_max = intensity_data.min(), intensity_data.max()
+            intensity_mean = intensity_data.mean()
+            
+            stats_items.extend([
+                html.H6(filename, className="fw-bold text-primary"),
+                html.P([
+                    html.Strong("Points: "), f"{num_points:,}"
+                ], className="mb-1"),
+                html.P([
+                    html.Strong("Q range: "), f"{q_min:.3f} - {q_max:.3f} Å⁻¹"
+                ], className="mb-1"),
+                html.P([
+                    html.Strong("Intensity: "), f"{intensity_min:.0f} - {intensity_max:.0f} (avg: {intensity_mean:.0f})"
+                ], className="mb-3"),
+            ])
+        
+        return stats_items

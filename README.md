@@ -196,6 +196,27 @@ pixi run python peak_analyzer.py sample.chi --verbose --plot
 pixi run python peak_analyzer.py --help
 ```
 
+
+### 🖥️ Dashboard Visualization & Analysis (NEW)
+
+RoboMage now includes a professional Dash-based dashboard for interactive powder diffraction analysis:
+
+- **3-tab interface**: Data Import, Visualization, and Analysis tabs for streamlined workflows
+- **Wavelength management**: Assign and display per-file wavelength (default: 0.1665 Å synchrotron)
+- **Robust file handling**: Upload, validate, and remove files with a single click (red 'X' button)
+- **Accurate Q→2θ conversion**: Uses file-specific wavelength for scientific correctness
+- **Publication-quality plots**: Line, scatter, and filled area types with export options
+- **State management**: Seamless inter-tab data flow and persistent user selections
+
+**To launch the dashboard:**
+```powershell
+pixi run python -m robomage --dashboard
+# or
+python -m robomage.dashboard
+```
+
+See [docs/sprint-4-visualization-dashboard.md](docs/sprint-4-visualization-dashboard.md) for full details.
+
 ### 📊 Examples & Tutorials
 
 **Quick Example**:

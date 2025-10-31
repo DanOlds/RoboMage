@@ -1,3 +1,23 @@
+## 🏁 Phase 1.5 Complete: Tab UI, Wavelength, File Removal
+
+**Date:** October 31, 2025
+
+**Key Achievements:**
+- Professional 3-tab dashboard UI (Data Import, Visualization, Analysis)
+- Per-file wavelength management (default 0.1665 Å synchrotron)
+- Accurate Q→2θ conversion using file-specific wavelength
+- Robust file upload and instant file removal (red 'X' button)
+- Improved plotting (line, scatter, filled area, export)
+- Enhanced state management and inter-tab communication
+- All dashboard and integration tests passing
+
+**Bug Fixes & UX Improvements:**
+- Fixed energy display math and Q→2θ conversion
+- Fixed filled area plot color handling
+- Refactored file removal callback for reliability
+- Improved error handling and validation
+
+**Ready for Phase 2:** Analysis tab and service integration framework in place.
 # Sprint 4 Plan: Advanced Visualization & Publication Dashboard
 
 ## 🎯 SPRINT OBJECTIVE

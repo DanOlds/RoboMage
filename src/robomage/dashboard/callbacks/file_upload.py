@@ -12,10 +12,17 @@ from typing import Any
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import Input, Output, State, html
+from dash.dependencies import ALL
+import dash
 
 
 def register_callbacks(app):
     """Register all file upload related callbacks."""
+    register_file_upload_callbacks(app)
+    register_wavelength_callbacks(app)
+
+
+def register_file_upload_callbacks(app):
 
     @app.callback(
         [
@@ -24,71 +31,55 @@ def register_callbacks(app):
             Output("file-info", "children"),
             Output("status-text", "children"),
         ],
-        [Input("upload-data", "contents")],
+        [
+            Input("upload-data", "contents"),
+            Input({"type": "remove-file-btn", "filename": ALL}, "n_clicks"),
+        ],
         [State("upload-data", "filename"), State("file-data-store", "data")],
+        prevent_initial_call=True,
     )
-    def handle_file_upload(list_of_contents, list_of_names, existing_data):
-        """
-        Handle file upload and update file list and data store.
-
-        Args:
-            list_of_contents: List of file contents (base64 encoded)
-            list_of_names: List of filenames
-            existing_data: Previously loaded data
-
-        Returns:
-            Updated data store, file list, file info, and status
-        """
-        if not list_of_contents:
-            # No new files uploaded
-            if existing_data:
-                return (
-                    existing_data,
-                    create_file_list(existing_data),
-                    create_file_info(existing_data),
-                    "Dashboard Ready",
-                )
-            else:
-                return (
-                    {},
-                    [html.P("No files loaded", className="text-muted small")],
-                    [
-                        html.P(
-                            "Select a file to view details",
-                            className="text-muted small",
-                        )
-                    ],
-                    "Dashboard Ready",
-                )
-
-        # Initialize data store if needed
+    def handle_file_upload_and_remove(list_of_contents, remove_clicks, list_of_names, existing_data):
+        ctx = dash.callback_context
         if not existing_data:
             existing_data = {}
-
         new_data = existing_data.copy()
 
-        # Process each uploaded file
-        for content, name in zip(list_of_contents, list_of_names, strict=False):
-            try:
-                # Parse the uploaded file
-                file_data = parse_uploaded_file(content, name)
-                if file_data:
-                    new_data[name] = file_data
-
-            except Exception as e:
-                print(f"Error processing file {name}: {e}")
-                continue
+        # Determine what triggered the callback
+        if ctx.triggered:
+            prop_id = ctx.triggered[0]["prop_id"]
+            if prop_id.startswith('{') and 'remove-file-btn' in prop_id:
+                # Find which button was clicked by comparing remove_clicks to previous state
+                # The order of remove_clicks matches the order of files in new_data
+                filenames = list(new_data.keys())
+                for idx, n in enumerate(remove_clicks):
+                    if n and n > 0 and idx < len(filenames):
+                        filename_to_remove = filenames[idx]
+                        if filename_to_remove in new_data:
+                            del new_data[filename_to_remove]
+                        break
+            elif list_of_contents:
+                for content, name in zip(list_of_contents, list_of_names, strict=False):
+                    try:
+                        file_data = parse_uploaded_file(content, name)
+                        if file_data:
+                            new_data[name] = file_data
+                    except Exception as e:
+                        print(f"Error processing file {name}: {e}")
+                        continue
+            else:
+                from dash import no_update
+                return no_update, no_update, no_update, no_update
 
         # Create updated UI components
         file_list = create_file_list(new_data)
         file_info = create_file_info(new_data)
-
         num_files = len(new_data)
-        if num_files == 1:
+        if num_files == 0:
+            status = "No files loaded"
+        elif num_files == 1:
             status = "Loaded 1 file"
         else:
             status = f"Loaded {num_files} files"
-
         return new_data, file_list, file_info, status
 
 
@@ -198,13 +189,15 @@ def create_file_list(data: dict[str, Any]) -> list:
                             dbc.Col(
                                 [
                                     dbc.Button(
-                                        html.I(className="fas fa-eye"),
+                                        html.I(className="fas fa-times"),
                                         size="sm",
-                                        color="outline-primary",
+                                        color="outline-danger",
                                         id={
-                                            "type": "view-file-btn",
+                                            "type": "remove-file-btn",
                                             "filename": filename,
                                         },
+                                        n_clicks=0,
+                                        title="Remove file",
                                     )
                                 ],
                                 width=4,
@@ -264,3 +257,59 @@ def create_file_info(data: dict[str, Any]) -> list:
         return info_items
 
     return [html.P("No file information available", className="text-muted small")]
+
+
+def register_wavelength_callbacks(app):
+    """Register wavelength management callbacks."""
+    
+    @app.callback(
+        [
+            Output("custom-wavelength-div", "style"),
+            Output("wavelength-store", "data"),
+            Output("current-wavelength-display", "children"),
+        ],
+        [
+            Input("wavelength-selector", "value"),
+            Input("custom-wavelength-input", "value"),
+        ],
+    )
+    def handle_wavelength_selection(selected_wavelength, custom_value):
+        """
+        Handle wavelength selection and custom input.
+        
+        Args:
+            selected_wavelength: Selected wavelength from dropdown
+            custom_value: Custom wavelength input value
+            
+        Returns:
+            Custom input visibility, wavelength data, display text
+        """
+        # Show/hide custom input
+        if selected_wavelength == "custom":
+            custom_style = {"display": "block"}
+            if custom_value and custom_value > 0:
+                wavelength = custom_value
+                display_text = f"{wavelength:.4f} Å (custom)"
+            else:
+                wavelength = 0.1665  # Default fallback
+                display_text = "0.1665 Å (enter custom value)"
+        else:
+            custom_style = {"display": "none"}
+            wavelength = selected_wavelength
+            
+            # Format display text with source name
+            source_names = {
+                0.1665: "0.1665 Å (synchrotron)",
+                1.5406: "1.5406 Å (Cu Kα)",
+                0.7107: "0.7107 Å (Mo Kα)", 
+                2.2897: "2.2897 Å (Cr Kα)",
+            }
+            display_text = source_names.get(wavelength, f"{wavelength:.4f} Å")
+        
+        # Store wavelength data
+        wavelength_data = {
+            "current_wavelength": wavelength,
+            "source_type": "custom" if selected_wavelength == "custom" else "standard",
+        }
+        
+        return custom_style, wavelength_data, display_text

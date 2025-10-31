@@ -92,7 +92,7 @@ dbc.Tabs([
 ```python
 # Common X-ray sources
 WAVELENGTH_OPTIONS = [
-    {"label": "Synchrotron (0.1665 Å) - 7.45 keV", "value": 0.1665},  # DEFAULT
+    {"label": "Synchrotron (0.1665 Å) - 74.5 keV", "value": 0.1665},  # DEFAULT
     {"label": "Cu Kα (1.5406 Å) - 8.05 keV", "value": 1.5406},
     {"label": "Mo Kα (0.7107 Å) - 17.44 keV", "value": 0.7107},
     {"label": "Cr Kα (2.2897 Å) - 5.41 keV", "value": 2.2897},
@@ -165,5 +165,17 @@ Upon completion, the dashboard will be ready for:
 
 ---
 
-**Implementation Status**: 📋 READY FOR DEVELOPMENT  
-**Estimated Time**: 2 days for complete Phase 1.5 implementation
+**Implementation Status**: ✅ COMPLETE (October 31, 2025)
+**Actual Achievements:**
+- 3-tab dashboard UI (Data Import, Visualization, Analysis)
+- Per-file wavelength management (default 0.1665 Å synchrotron)
+- Accurate Q→2θ conversion using file-specific wavelength
+- Robust file upload and removal (red 'X' button removes files instantly)
+- Improved plotting (line, scatter, filled area, export)
+- Enhanced state management and user experience
+- All dashboard and integration tests passing
+
+**File Removal Logic:**
+- Each loaded file now displays a red 'X' button for removal
+- Clicking the button removes the correct file using index-based callback logic
+- Ensures robust, user-friendly file management

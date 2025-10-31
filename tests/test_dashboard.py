@@ -27,9 +27,10 @@ def test_main_layout_creation():
     # Check that layout contains expected components
     layout_str = str(layout)
     assert "RoboMage Dashboard" in layout_str
-    assert "File Management" in layout_str
-    assert "Diffraction Pattern" in layout_str
-    assert "Analysis Controls" in layout_str
+    assert "Phase 1.5" in layout_str  # Updated badge text
+    assert "Data Import" in layout_str  # Tab structure
+    assert "Visualization" in layout_str  # Tab structure
+    assert "Analysis" in layout_str  # Tab structure
 
 
 def test_file_parsing():

@@ -66,11 +66,13 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 **Dashboard Architecture (Phase 1.5):**
 - **Tab Structure**: 3-tab layout (Data Import, Visualization, Analysis)
-- **Wavelength System**: Common X-ray sources with 0.1665 Å synchrotron default
+- **Wavelength System**: Per-file assignment, 0.1665 Å synchrotron default, accurate Q→2θ conversion
+- **File Removal**: Red 'X' button for instant file removal, robust index-based callback logic
+- **Plotting**: Line, scatter, filled area, export options, improved color handling
 - **State Management**: Inter-tab communication via dcc.Store
 - **File Structure**: 
   - `src/robomage/dashboard/layouts/`: Tab-specific layouts
-  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions
+  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting)
   - `src/robomage/dashboard/components/`: Reusable UI components
 
 ## Code Conventions

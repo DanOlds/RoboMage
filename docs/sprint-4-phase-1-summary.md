@@ -1,3 +1,12 @@
+## 🏁 Phase 1.5 Achievements (October 31, 2025)
+
+- 3-tab dashboard UI (Data Import, Visualization, Analysis)
+- Per-file wavelength management (default 0.1665 Å synchrotron)
+- Accurate Q→2θ conversion using file-specific wavelength
+- Robust file upload and file removal (red 'X' button)
+- Improved plotting and state management
+- All dashboard and integration tests passing
+
 # Sprint 4 Phase 1 - Implementation Summary
 
 ## ✅ COMPLETED - Phase 1: Standalone Dashboard Foundation
