@@ -90,6 +90,8 @@ def create_header() -> dbc.Row:
 
 def create_import_tab() -> html.Div:
     """Create the Data Import tab content."""
+    _icon_class = "fas fa-cloud-upload-alt fa-3x mb-3"
+    _text_class = "text-muted"
     return html.Div(
         [
             dbc.Row(
@@ -104,7 +106,10 @@ def create_import_tab() -> html.Div:
                                             html.H5(
                                                 [
                                                     html.I(
-                                                        className="fas fa-folder-open me-2"
+                                                        className=(
+                                                            "fas fa-folder-open "
+                                                            "me-2"
+                                                        )
                                                     ),
                                                     "File Upload",
                                                 ]
@@ -113,25 +118,25 @@ def create_import_tab() -> html.Div:
                                     ),
                                     dbc.CardBody(
                                         [
-                                            # File upload component
                                             dcc.Upload(
                                                 id="upload-data",
                                                 children=html.Div(
                                                     [
                                                         html.I(
-                                                                className=(
-                                                                    "fas fa-cloud-upload-alt "
-                                                                    "fa-3x mb-3"
-                                                                ),
+                                                            className=_icon_class
                                                         ),
                                                         html.Br(),
                                                         html.H5(
-                                                                "Drag & Drop or Select Files"
+                                                            "Drag & Drop or "
+                                                            "Select Files",
                                                         ),
                                                         html.P(
-                                                                "Supported formats: .chi, .dat, "
-                                                                ".xy",
-                                                            className="text-muted",
+                                                            [
+                                                                "Supported formats:",
+                                                                html.Br(),
+                                                                ".chi, .dat, .xy",
+                                                            ],
+                                                            className=_text_class,
                                                         ),
                                                     ],
                                                     className="text-center p-4",
@@ -155,7 +160,7 @@ def create_import_tab() -> html.Div:
                         ],
                         width=6,
                     ),
-                    # Wavelength selection section  
+                    # Wavelength selection section
                     dbc.Col(
                         [
                             dbc.Card(
@@ -165,7 +170,9 @@ def create_import_tab() -> html.Div:
                                             html.H5(
                                                 [
                                                     html.I(
-                                                        className="fas fa-wave-square me-2"
+                                                        className=(
+                                                            "fas fa-wave-square me-2"
+                                                        ),
                                                     ),
                                                     "Wavelength Settings",
                                                 ]
@@ -175,7 +182,7 @@ def create_import_tab() -> html.Div:
                                     dbc.CardBody(
                                         [
                                             html.Label(
-                                                "X-ray Source:", 
+                                                "X-ray Source:",
                                                 className="fw-bold mb-2"
                                             ),
                                             dcc.Dropdown(
@@ -183,49 +190,56 @@ def create_import_tab() -> html.Div:
                                                 options=[
                                                     {
                                                         "label": (
-                                                                "Synchrotron (0.1665 Å) - "
-                                                                "74.5 keV"
+                                                            "Synchrotron (0.1665 Å) - "
+                                                            "74.5 keV"
                                                         ),
                                                         "value": 0.1665,
                                                     },
                                                     {
                                                         "label": (
-                                                                "Cu Kα (1.5406 Å) - "
-                                                                "8.05 keV"
+                                                            "Cu Kα (1.5406 Å) - "
+                                                            "8.05 keV"
                                                         ),
                                                         "value": 1.5406,
                                                     },
                                                     {
                                                         "label": (
-                                                                "Mo Kα (0.7107 Å) - "
-                                                                "17.44 keV"
+                                                            "Mo Kα (0.7107 Å) - "
+                                                            "17.44 keV"
                                                         ),
                                                         "value": 0.7107,
                                                     },
                                                     {
                                                         "label": (
-                                                                "Cr Kα (2.2897 Å) - "
-                                                                "5.41 keV"
+                                                            "Cr Kα (2.2897 Å) - "
+                                                            "5.41 keV"
                                                         ),
                                                         "value": 2.2897,
                                                     },
-                                                    {"label": "Custom...", "value": "custom"},
+                                                    {
+                                                        "label": "Custom...",
+                                                        "value": "custom",
+                                                    },
                                                 ],
-                                                value=0.1665,  # Default to synchrotron as specified
+                                                value=0.1665,
+                                                # Default to synchrotron as specified
                                                 clearable=False,
                                                 className="mb-3",
                                             ),
-                                            # Custom wavelength input (hidden by default)
+                                                # Custom wavelength input
+                                                # (hidden by default)
                                             html.Div(
                                                 [
                                                     html.Label(
-                                                        "Custom Wavelength (Å):", 
-                                                        className="fw-bold mb-2"
+                                                        "Custom Wavelength (Å):",
+                                                        className="fw-bold mb-2",
                                                     ),
                                                     dbc.Input(
                                                         id="custom-wavelength-input",
                                                         type="number",
-                                                        placeholder="Enter wavelength in Å",
+                                                        placeholder=(
+                                                            "Enter wavelength in Å"
+                                                        ),
                                                         step=0.0001,
                                                         min=0.1,
                                                         max=10.0,
@@ -239,7 +253,9 @@ def create_import_tab() -> html.Div:
                                             dbc.Alert(
                                                 [
                                                     html.I(
-                                                        className="fas fa-info-circle me-2",
+                                                        className=(
+                                                            "fas fa-info-circle me-2"
+                                                        ),
                                                     ),
                                                     html.Span(
                                                         "Current wavelength: ",
@@ -256,12 +272,10 @@ def create_import_tab() -> html.Div:
                                         ]
                                     ),
                                 ]
-                                                                        "Current wavelength: ",
-                                                                        className="fw-bold"
+                            )
                         ],
                         width=6,
-                                                                        "0.1665 Å",
-                                                                        id="current-wavelength-display"
+                    ),
                 ]
             ),
             html.Br(),
@@ -291,7 +305,9 @@ def create_import_tab() -> html.Div:
                                                 children=[
                                                     html.P(
                                                         "No files loaded",
-                                                        className="text-muted text-center",
+                                                        className=(
+                                                            "text-muted text-center"
+                                                        ),
                                                     )
                                                 ],
                                             )
@@ -311,7 +327,9 @@ def create_import_tab() -> html.Div:
                                             html.H5(
                                                 [
                                                     html.I(
-                                                        className="fas fa-info-circle me-2"
+                                                        className=(
+                                                            "fas fa-info-circle me-2"
+                                                        ),
                                                     ),
                                                     "File Information",
                                                 ]
@@ -325,7 +343,9 @@ def create_import_tab() -> html.Div:
                                                 children=[
                                                     html.P(
                                                         "Select a file to view details",
-                                                        className="text-muted text-center",
+                                                        className=(
+                                                            "text-muted text-center"
+                                                        ),
                                                     )
                                                 ],
                                             )
@@ -361,13 +381,19 @@ def create_visualization_tab() -> html.Div:
                             dbc.ButtonGroup(
                                 [
                                     dbc.Button(
-                                        [html.I(className="fas fa-expand me-1"), "Fullscreen"],
+                                        [
+                                            html.I(className="fas fa-expand me-1"),
+                                            "Fullscreen",
+                                        ],
                                         size="sm",
                                         color="outline-secondary",
                                         id="fullscreen-btn",
                                     ),
                                     dbc.Button(
-                                        [html.I(className="fas fa-download me-1"), "Export"],
+                                        [
+                                            html.I(className="fas fa-download me-1"),
+                                            "Export",
+                                        ],
                                         size="sm",
                                         color="outline-primary",
                                         id="export-btn",
@@ -448,12 +474,18 @@ def create_visualization_tab() -> html.Div:
                                             dcc.Dropdown(
                                                 id="y-axis-selector",
                                                 options=[
-                                                    {"label": "Raw Intensity", "value": "raw"},
+                                                    {
+                                                        "label": "Raw Intensity",
+                                                        "value": "raw",
+                                                    },
                                                     {
                                                         "label": "Normalized",
                                                         "value": "normalized",
                                                     },
-                                                    {"label": "Log Scale", "value": "log"},
+                                                    {
+                                                        "label": "Log Scale",
+                                                        "value": "log",
+                                                    },
                                                 ],
                                                 value="raw",
                                                 clearable=False,
@@ -463,13 +495,26 @@ def create_visualization_tab() -> html.Div:
                                     ),
                                     dbc.Col(
                                         [
-                                            html.Label("Plot Type:", className="fw-bold"),
+                                            html.Label(
+                                                "Plot Type:", className="fw-bold"
+                                            ),
                                             dcc.Dropdown(
                                                 id="plot-type-selector",
                                                 options=[
-                                                    {"label": "Line Plot", "value": "line"},
-                                                    {"label": "Scatter Points", "value": "scatter"},
-                                                    {"label": "Filled Area (Stacked)", "value": "area"},
+                                                    {
+                                                        "label": "Line Plot",
+                                                        "value": "line",
+                                                    },
+                                                    {
+                                                        "label": "Scatter Points",
+                                                        "value": "scatter",
+                                                    },
+                                                    {
+                                                        "label": (
+                                                            "Filled Area (Stacked)"
+                                                        ),
+                                                        "value": "area",
+                                                    },
                                                 ],
                                                 value="line",
                                                 clearable=False,
@@ -485,7 +530,9 @@ def create_visualization_tab() -> html.Div:
                                 [
                                     dbc.Col(
                                         [
-                                            html.H6("Plot Statistics", className="fw-bold"),
+                                            html.H6(
+                                                "Plot Statistics", className="fw-bold"
+                                            ),
                                             html.Div(
                                                 id="plot-statistics",
                                                 children=[
@@ -524,7 +571,9 @@ def create_analysis_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-mountain me-2"),
+                                                    html.I(
+                                                        className="fas fa-mountain me-2"
+                                                    ),
                                                     "Peak Analysis",
                                                 ]
                                             )
@@ -535,13 +584,20 @@ def create_analysis_tab() -> html.Div:
                                             # Service status
                                             dbc.Alert(
                                                 [
-                                                    html.I(className="fas fa-info-circle me-2"),
-                                                    "Service integration coming in Phase 2",
+                                                    html.I(
+                                                        className=(
+                                                            "fas fa-info-circle me-2"
+                                                        )
+                                                    ),
+                                                    (
+                                                        "Service integration coming in "
+                                                        "Phase 2"
+                                                    ),
                                                 ],
                                                 color="info",
                                                 className="mb-3",
                                             ),
-                                            # Analysis parameters (disabled for Phase 1.5)
+                                        # Analysis parameters (disabled for Phase 1.5)
                                             html.Label(
                                                 "Detection Sensitivity:",
                                                 className="fw-bold",
@@ -553,7 +609,8 @@ def create_analysis_tab() -> html.Div:
                                                 step=0.1,
                                                 value=1.0,
                                                 marks={
-                                                    i / 10: str(i / 10) for i in range(1, 21, 5)
+                                                    i / 10: str(i / 10)
+                                                    for i in range(1, 21, 5)
                                                 },
                                                 disabled=True,
                                                 className="mb-3",
@@ -564,12 +621,18 @@ def create_analysis_tab() -> html.Div:
                                             dcc.Dropdown(
                                                 id="profile-selector",
                                                 options=[
-                                                    {"label": "Gaussian", "value": "gaussian"},
+                                                    {
+                                                        "label": "Gaussian",
+                                                        "value": "gaussian",
+                                                    },
                                                     {
                                                         "label": "Lorentzian",
                                                         "value": "lorentzian",
                                                     },
-                                                    {"label": "Voigt", "value": "voigt"},
+                                                    {
+                                                        "label": "Voigt",
+                                                        "value": "voigt",
+                                                    },
                                                 ],
                                                 value="gaussian",
                                                 disabled=True,
@@ -577,7 +640,9 @@ def create_analysis_tab() -> html.Div:
                                             ),
                                             dbc.Button(
                                                 [
-                                                    html.I(className="fas fa-play me-1"),
+                                                    html.I(
+                                                        className="fas fa-play me-1"
+                                                    ),
                                                     "Run Analysis",
                                                 ],
                                                 color="primary",
@@ -600,7 +665,11 @@ def create_analysis_tab() -> html.Div:
                                         [
                                             html.H5(
                                                 [
-                                                    html.I(className="fas fa-chart-bar me-2"),
+                                                    html.I(
+                                                        className=(
+                                                            "fas fa-chart-bar me-2"
+                                                        )
+                                                    ),
                                                     "Analysis Results",
                                                 ]
                                             )
@@ -613,7 +682,9 @@ def create_analysis_tab() -> html.Div:
                                                 children=[
                                                     html.P(
                                                         "No analysis results available",
-                                                        className="text-muted text-center",
+                                                        className=(
+                                                            "text-muted text-center"
+                                                        ),
                                                     )
                                                 ],
                                             )
@@ -646,10 +717,19 @@ def create_analysis_tab() -> html.Div:
                                 [
                                     dbc.Col(
                                         [
-                                            html.P("Peak Analysis Service:", className="fw-bold mb-1"),
+                                            html.P(
+                                                "Peak Analysis Service:",
+                                                className=(
+                                                    "fw-bold mb-1"
+                                                ),
+                                            ),
                                             dbc.Badge(
                                                 [
-                                                    html.I(className="fas fa-times-circle me-1"),
+                                                    html.I(
+                                                        className=(
+                                                            "fas fa-times-circle me-1"
+                                                        )
+                                                    ),
                                                     "Not Connected",
                                                 ],
                                                 color="warning",
@@ -662,7 +742,11 @@ def create_analysis_tab() -> html.Div:
                                         [
                                             dbc.Button(
                                                 [
-                                                    html.I(className="fas fa-sync me-1"),
+                                                    html.I(
+                                                        className=(
+                                                            "fas fa-sync me-1"
+                                                        )
+                                                    ),
                                                     "Check Connection",
                                                 ],
                                                 color="outline-primary",

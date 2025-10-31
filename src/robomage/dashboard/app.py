@@ -5,11 +5,15 @@ Interactive visualization dashboard for powder diffraction analysis.
 Supports standalone file loading and service integration for peak analysis.
 """
 
+
 import os
 import sys
 
 import dash
 import dash_bootstrap_components as dbc
+
+from robomage.dashboard.callbacks import file_upload, plotting
+from robomage.dashboard.layouts.main_layout import create_main_layout
 
 # Add the project root to Python path for imports
 project_root = os.path.dirname(
@@ -17,9 +21,6 @@ project_root = os.path.dirname(
 )
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-
-from robomage.dashboard.callbacks import file_upload, plotting
-from robomage.dashboard.layouts.main_layout import create_main_layout
 
 
 def create_app(debug: bool = False) -> dash.Dash:

@@ -53,9 +53,7 @@ def register_file_upload_callbacks(app):
         if ctx.triggered:
             prop_id = ctx.triggered[0]["prop_id"]
             if prop_id.startswith('{') and 'remove-file-btn' in prop_id:
-                # Find which button was clicked by comparing remove_clicks to previous
-                # state. The order of remove_clicks matches the order of files in
-                # new_data
+                # Remove file logic
                 filenames = list(new_data.keys())
                 for idx, n in enumerate(remove_clicks):
                     if n and n > 0 and idx < len(filenames):
@@ -66,23 +64,23 @@ def register_file_upload_callbacks(app):
             elif list_of_contents:
                 for content, name in zip(list_of_contents, list_of_names, strict=False):
                     try:
-                    # new_data
-                        if file_data:
-                            new_data[name] = file_data
+                        parsed = parse_uploaded_file(content, name)
+                        if parsed:
+                            new_data[name] = parsed
                     except Exception as e:
                         print(f"Error processing file {name}: {e}")
                         continue
-            else:
-                from dash import no_update
-                elif list_of_contents:
-                    for content, name in zip(list_of_contents, list_of_names, strict=False):
-                        try:
-                            parsed = parse_uploaded_file(content, name)
-                            if parsed:
-                                new_data[name] = parsed
-                        except Exception as e:
-                            print(f"Error processing file {name}: {e}")
-                            continue
+        else:
+            from dash import no_update
+            return no_update, no_update, no_update, no_update
+
+        # Create updated UI components
+        file_list = create_file_list(new_data)
+        file_info = create_file_info(new_data)
+        num_files = len(new_data)
+        if num_files == 0:
+            status = "No files loaded"
+        elif num_files == 1:
             status = "Loaded 1 file"
         else:
             status = f"Loaded {num_files} files"

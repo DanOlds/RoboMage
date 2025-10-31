@@ -95,7 +95,10 @@ def register_main_plot_callback(app):
                     if color_str.startswith('#'):
                         # Hex color
                         rgb_tuple = px.colors.hex_to_rgb(color_str)
-                        return f"rgba({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]}, {alpha})"
+                        return (
+                            f"rgba({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]}, "
+                            f"{alpha})"
+                        )
                     elif color_str.startswith('rgb('):
                         # RGB color - extract numbers and add alpha
                         rgb_values = color_str[4:-1]  # Remove 'rgb(' and ')'
@@ -167,7 +170,11 @@ def register_main_plot_callback(app):
         return fig
 
 
-def get_x_data(data: dict[str, Any], x_axis: str, wavelength_data: dict = None) -> tuple[list[float], str]:
+def get_x_data(
+    data: dict[str, Any],
+    x_axis: str,
+    wavelength_data: dict = None,
+) -> tuple[list[float], str]:
     """
     Get X-axis data and label.
 
@@ -330,16 +337,31 @@ def register_plot_statistics_callback(app):
             intensity_mean = intensity_data.mean()
             
             stats_items.extend([
-                html.H6(filename, className="fw-bold text-primary"),
-                html.P([
-                    html.Strong("Points: "), f"{num_points:,}"
-                ], className="mb-1"),
-                html.P([
-                    html.Strong("Q range: "), f"{q_min:.3f} - {q_max:.3f} Å⁻¹"
-                ], className="mb-1"),
-                html.P([
-                    html.Strong("Intensity: "), f"{intensity_min:.0f} - {intensity_max:.0f} (avg: {intensity_mean:.0f})"
-                ], className="mb-3"),
+                html.H6(
+                    filename, className="fw-bold text-primary"
+                ),
+                html.P(
+                    [
+                        html.Strong("Points: "),
+                        f"{num_points:,}"
+                    ],
+                    className="mb-1",
+                ),
+                html.P(
+                    [
+                        html.Strong("Q range: "),
+                        f"{q_min:.3f} - {q_max:.3f} Å⁻¹"
+                    ],
+                    className="mb-1",
+                ),
+                html.P(
+                    [
+                        html.Strong("Intensity: "),
+                        f"{intensity_min:.0f} - {intensity_max:.0f} "
+                        f"(avg: {intensity_mean:.0f})"
+                    ],
+                    className="mb-3",
+                ),
             ])
         
         return stats_items
