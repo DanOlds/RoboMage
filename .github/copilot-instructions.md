@@ -56,16 +56,22 @@ python peak_analyzer.py service --port 8001    # Service mode
 python peak_analyzer.py client file.chi        # Client mode
 ```
 
-### CLI Testing
+### Dashboard Development (Sprint 4)
 ```bash
-pixi run python -m robomage test --plot --info    # Test built-in data
-pixi run python -m robomage --help                # CLI options
-python peak_analyzer.py --help                    # Peak analysis CLI
-
 # Dashboard Development (Sprint 4)
-python -m robomage.dashboard                       # Start Dash app (port 8050)
+python -m robomage.dashboard                       # Start dashboard (port 8050)
+python -m robomage --dashboard --dashboard-port 8051  # Custom port
 pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 ```
+
+**Dashboard Architecture (Phase 1.5):**
+- **Tab Structure**: 3-tab layout (Data Import, Visualization, Analysis)
+- **Wavelength System**: Common X-ray sources with 0.1665 Å synchrotron default
+- **State Management**: Inter-tab communication via dcc.Store
+- **File Structure**: 
+  - `src/robomage/dashboard/layouts/`: Tab-specific layouts
+  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions
+  - `src/robomage/dashboard/components/`: Reusable UI components
 
 ## Code Conventions
 
@@ -107,6 +113,14 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **SciPy**: Scientific algorithms for peak detection and fitting
 - **Dash**: Interactive web dashboard framework (Sprint 4)
 - **Plotly**: Interactive scientific plotting (Sprint 4)
+- **Dash Bootstrap Components**: Professional UI components for dashboard
+
+## Current Sprint Status
+**Sprint 4 - Phase 1.5: Tab-Based UI and Wavelength Management (IN PROGRESS)**
+- Phase 1 Complete: Basic dashboard with file upload and plotting
+- Phase 1.5 Goals: Implement tab-based architecture and wavelength system
+- Target: 3-tab layout (Data Import, Visualization, Analysis) with wavelength dropdown
+- Key Requirements: 0.1665 Å synchrotron default, proper Q→2θ conversion
 
 ## Integration Points
 - **File formats**: Currently .chi files (Q, intensity columns)

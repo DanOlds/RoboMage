@@ -122,8 +122,72 @@ src/robomage/dashboard/
 - **Background Options**: Background subtraction configuration
 - **Real-time Updates**: Immediate reanalysis with parameter changes
 
+### Phase 1.5: Foundation Improvements (Days 3-4) 🔄 ADDED
+**Architecture: Tab-based UI and wavelength management**
+
+#### 1.5.1 Tab-Based UI Architecture ✋ TODO
+**Files:** `src/robomage/dashboard/layouts/` (restructure)
+- **Tab Structure**: Implement 3-tab layout (Data Import, Visualization, Analysis)
+- **State Management**: Inter-tab communication via dcc.Store components
+- **Workflow Separation**: Clear import → plot → analyze user workflow
+- **Scalable Design**: Foundation for Phase 2 service integration
+
+#### 1.5.2 Wavelength Management System ✋ TODO
+**Features:**
+- **Common Sources**: Dropdown with synchrotron (0.1665 Å default), Cu Kα, Mo Kα, Cr Kα
+- **Custom Wavelength**: User-defined wavelength input option
+- **File-Specific**: Wavelength stored per dataset in metadata
+- **Conversion Accuracy**: Fix Q→2θ conversion with proper source wavelength
+- **UI Display**: Show current wavelength/energy in status and file info
+
+#### 1.5.3 Enhanced Data Import Tab ✋ TODO
+**Features:**
+- **Dedicated Import Interface**: Clean, focused file upload area
+- **Wavelength Selection**: Per-file wavelength assignment
+- **Validation Feedback**: Better error reporting and file validation
+- **Metadata Display**: Enhanced file information and statistics
+- **Loading States**: Progress indicators for file operations
+
+#### 1.5.4 Improved Visualization Tab ✋ TODO
+**Features:**
+- **Enhanced Plot Controls**: Better axis range controls and plot customization
+- **Export Options**: Multiple format support with proper controls
+- **Plot Toolbar**: Professional plotting interface
+- **State Persistence**: Maintain plot settings between interactions
+
+#### 1.5.5 Analysis Tab Skeleton ✋ TODO
+**Features:**
+- **Service Ready**: Prepared structure for Phase 2 integration
+- **Parameter Layout**: Framework for analysis controls
+- **Results Display**: Areas for analysis output and visualization
+- **Status Indicators**: Service connection and analysis progress
+
+### Phase 2: Service Integration (Days 5-6)
+**Integration: Peak analysis service connectivity with enhanced UI**
+
+#### 2.1 Peak Analysis Integration ✋ TODO
+**Files:** `src/robomage/dashboard/callbacks/analysis.py`
+- **Service Communication**: HTTP client integration with peak analysis service
+- **Real-time Analysis**: Trigger analysis from dashboard interface
+- **Progress Indicators**: Analysis progress and status display
+- **Result Caching**: Cache analysis results for performance
+
+#### 2.2 Enhanced Peak Visualization ✋ TODO
+**Features:**
+- **Peak Annotations**: Overlay detected peaks on diffraction patterns
+- **Fitted Curves**: Display Gaussian/Lorentzian/Voigt fits
+- **Peak Tables**: Interactive tables with peak positions, intensities, FWHM
+- **Quality Metrics**: R² values and fit quality indicators
+- **Peak Filtering**: Show/hide peaks based on quality thresholds
+
+#### 2.3 Analysis Parameter Controls ✋ TODO
+**Features:**
+- **Parameter Sliders**: Interactive controls for peak detection sensitivity
+- **Profile Selection**: Choose fitting profiles (Gaussian, Lorentzian, Voigt)
+- **Background Options**: Background subtraction configuration
+- **Real-time Updates**: Immediate reanalysis with parameter changes
+
 ### Phase 3: Publication Features (Days 7-10)
-**Publication: Professional-quality output generation**
 
 #### 3.1 Publication-Quality Plotting ✋ TODO
 **Files:** `src/robomage/visualization.py` (implement empty file)
