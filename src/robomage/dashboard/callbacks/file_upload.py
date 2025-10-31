@@ -23,7 +23,6 @@ def register_callbacks(app):
 
 
 def register_file_upload_callbacks(app):
-
     @app.callback(
         [
             Output("file-data-store", "data"),
@@ -52,7 +51,7 @@ def register_file_upload_callbacks(app):
         # Determine what triggered the callback
         if ctx.triggered:
             prop_id = ctx.triggered[0]["prop_id"]
-            if prop_id.startswith('{') and 'remove-file-btn' in prop_id:
+            if prop_id.startswith("{") and "remove-file-btn" in prop_id:
                 # Remove file logic
                 filenames = list(new_data.keys())
                 for idx, n in enumerate(remove_clicks):
@@ -72,6 +71,7 @@ def register_file_upload_callbacks(app):
                         continue
         else:
             from dash import no_update
+
             return no_update, no_update, no_update, no_update
 
         # Create updated UI components
@@ -206,8 +206,7 @@ def create_file_list(data: dict[str, Any]) -> list:
                                 ],
                                 width=4,
                                 className=(
-                                    "d-flex align-items-center "
-                                    "justify-content-end"
+                                    "d-flex align-items-center justify-content-end"
                                 ),
                             ),
                         ]
@@ -265,7 +264,7 @@ def create_file_info(data: dict[str, Any]) -> list:
 
 def register_wavelength_callbacks(app):
     """Register wavelength management callbacks."""
-    
+
     @app.callback(
         [
             Output("custom-wavelength-div", "style"),
@@ -280,11 +279,11 @@ def register_wavelength_callbacks(app):
     def handle_wavelength_selection(selected_wavelength, custom_value):
         """
         Handle wavelength selection and custom input.
-        
+
         Args:
             selected_wavelength: Selected wavelength from dropdown
             custom_value: Custom wavelength input value
-            
+
         Returns:
             Custom input visibility, wavelength data, display text
         """
@@ -300,20 +299,20 @@ def register_wavelength_callbacks(app):
         else:
             custom_style = {"display": "none"}
             wavelength = selected_wavelength
-            
+
             # Format display text with source name
             source_names = {
                 0.1665: "0.1665 Å (synchrotron)",
                 1.5406: "1.5406 Å (Cu Kα)",
-                0.7107: "0.7107 Å (Mo Kα)", 
+                0.7107: "0.7107 Å (Mo Kα)",
                 2.2897: "2.2897 Å (Cr Kα)",
             }
             display_text = source_names.get(wavelength, f"{wavelength:.4f} Å")
-        
+
         # Store wavelength data
         wavelength_data = {
             "current_wavelength": wavelength,
             "source_type": "custom" if selected_wavelength == "custom" else "standard",
         }
-        
+
         return custom_style, wavelength_data, display_text

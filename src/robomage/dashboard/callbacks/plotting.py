@@ -92,14 +92,14 @@ def register_main_plot_callback(app):
                 # Helper function to convert color to rgba with alpha
                 def color_to_rgba(color_str, alpha=0.3):
                     """Convert color to rgba format with specified alpha."""
-                    if color_str.startswith('#'):
+                    if color_str.startswith("#"):
                         # Hex color
                         rgb_tuple = px.colors.hex_to_rgb(color_str)
                         return (
                             f"rgba({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]}, "
                             f"{alpha})"
                         )
-                    elif color_str.startswith('rgb('):
+                    elif color_str.startswith("rgb("):
                         # RGB color - extract numbers and add alpha
                         rgb_values = color_str[4:-1]  # Remove 'rgb(' and ')'
                         return f"rgba({rgb_values}, {alpha})"
@@ -196,14 +196,14 @@ def get_x_data(
             wavelength = wavelength_data["current_wavelength"]
         else:
             wavelength = 0.1665  # Default to synchrotron as specified
-            
+
         # Convert Q to 2θ using actual wavelength
         # Formula: Q = 4π sin(θ) / λ, so θ = arcsin(Q λ / 4π)
         sin_theta = q_data * wavelength / (4 * np.pi)
-        
+
         # Clip values to valid range for arcsin to avoid warnings
         sin_theta = np.clip(sin_theta, -1.0, 1.0)
-        
+
         two_theta = 2 * np.arcsin(sin_theta) * 180 / np.pi
         return two_theta.tolist(), "2θ (degrees)"
     elif x_axis == "d_spacing":
@@ -306,7 +306,7 @@ def create_empty_plot() -> go.Figure:
 
 def register_plot_statistics_callback(app):
     """Register plot statistics callback."""
-    
+
     @app.callback(
         Output("plot-statistics", "children"),
         [Input("file-data-store", "data")],
@@ -314,54 +314,48 @@ def register_plot_statistics_callback(app):
     def update_plot_statistics(file_data):
         """
         Update plot statistics display.
-        
+
         Args:
             file_data: Dictionary of loaded file data
-            
+
         Returns:
             Updated statistics components
         """
         if not file_data:
             return [html.P("Load data to view statistics", className="text-muted")]
-        
+
         stats_items = []
-        
+
         for filename, data in file_data.items():
             q_data = np.array(data["q"])
             intensity_data = np.array(data["intensity"])
-            
+
             # Calculate statistics
             num_points = len(q_data)
             q_min, q_max = q_data.min(), q_data.max()
             intensity_min, intensity_max = intensity_data.min(), intensity_data.max()
             intensity_mean = intensity_data.mean()
-            
-            stats_items.extend([
-                html.H6(
-                    filename, className="fw-bold text-primary"
-                ),
-                html.P(
-                    [
-                        html.Strong("Points: "),
-                        f"{num_points:,}"
-                    ],
-                    className="mb-1",
-                ),
-                html.P(
-                    [
-                        html.Strong("Q range: "),
-                        f"{q_min:.3f} - {q_max:.3f} Å⁻¹"
-                    ],
-                    className="mb-1",
-                ),
-                html.P(
-                    [
-                        html.Strong("Intensity: "),
-                        f"{intensity_min:.0f} - {intensity_max:.0f} "
-                        f"(avg: {intensity_mean:.0f})"
-                    ],
-                    className="mb-3",
-                ),
-            ])
-        
+
+            stats_items.extend(
+                [
+                    html.H6(filename, className="fw-bold text-primary"),
+                    html.P(
+                        [html.Strong("Points: "), f"{num_points:,}"],
+                        className="mb-1",
+                    ),
+                    html.P(
+                        [html.Strong("Q range: "), f"{q_min:.3f} - {q_max:.3f} Å⁻¹"],
+                        className="mb-1",
+                    ),
+                    html.P(
+                        [
+                            html.Strong("Intensity: "),
+                            f"{intensity_min:.0f} - {intensity_max:.0f} "
+                            f"(avg: {intensity_mean:.0f})",
+                        ],
+                        className="mb-3",
+                    ),
+                ]
+            )
+
         return stats_items

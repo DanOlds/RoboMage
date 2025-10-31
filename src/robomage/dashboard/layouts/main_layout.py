@@ -1,7 +1,7 @@
 """
 Main Dashboard Layout
 
-Phase 1.5: Professional tab-based layout for the RoboMage dashboard 
+Phase 1.5: Professional tab-based layout for the RoboMage dashboard
 with Data Import, Visualization, and Analysis tabs.
 """
 
@@ -107,8 +107,7 @@ def create_import_tab() -> html.Div:
                                                 [
                                                     html.I(
                                                         className=(
-                                                            "fas fa-folder-open "
-                                                            "me-2"
+                                                            "fas fa-folder-open me-2"
                                                         )
                                                     ),
                                                     "File Upload",
@@ -122,9 +121,7 @@ def create_import_tab() -> html.Div:
                                                 id="upload-data",
                                                 children=html.Div(
                                                     [
-                                                        html.I(
-                                                            className=_icon_class
-                                                        ),
+                                                        html.I(className=_icon_class),
                                                         html.Br(),
                                                         html.H5(
                                                             "Drag & Drop or "
@@ -183,7 +180,7 @@ def create_import_tab() -> html.Div:
                                         [
                                             html.Label(
                                                 "X-ray Source:",
-                                                className="fw-bold mb-2"
+                                                className="fw-bold mb-2",
                                             ),
                                             dcc.Dropdown(
                                                 id="wavelength-selector",
@@ -226,8 +223,8 @@ def create_import_tab() -> html.Div:
                                                 clearable=False,
                                                 className="mb-3",
                                             ),
-                                                # Custom wavelength input
-                                                # (hidden by default)
+                                            # Custom wavelength input
+                                            # (hidden by default)
                                             html.Div(
                                                 [
                                                     html.Label(
@@ -597,7 +594,8 @@ def create_analysis_tab() -> html.Div:
                                                 color="info",
                                                 className="mb-3",
                                             ),
-                                        # Analysis parameters (disabled for Phase 1.5)
+                                            # Analysis parameters
+                                            # (disabled for Phase 1.5)
                                             html.Label(
                                                 "Detection Sensitivity:",
                                                 className="fw-bold",
@@ -719,9 +717,7 @@ def create_analysis_tab() -> html.Div:
                                         [
                                             html.P(
                                                 "Peak Analysis Service:",
-                                                className=(
-                                                    "fw-bold mb-1"
-                                                ),
+                                                className=("fw-bold mb-1"),
                                             ),
                                             dbc.Badge(
                                                 [
@@ -743,9 +739,7 @@ def create_analysis_tab() -> html.Div:
                                             dbc.Button(
                                                 [
                                                     html.I(
-                                                        className=(
-                                                            "fas fa-sync me-1"
-                                                        )
+                                                        className=("fas fa-sync me-1")
                                                     ),
                                                     "Check Connection",
                                                 ],

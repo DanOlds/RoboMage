@@ -5,7 +5,6 @@ Interactive visualization dashboard for powder diffraction analysis.
 Supports standalone file loading and service integration for peak analysis.
 """
 
-
 import os
 import sys
 
