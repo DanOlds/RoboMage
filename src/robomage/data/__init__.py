@@ -16,6 +16,7 @@ Key Components:
     - DataStatistics: Computed statistical properties and quality metrics
     - load_diffraction_file(): Smart file loader with format auto-detection
     - load_chi_file(): Specialized loader for .chi format files
+    - load_xy_file(): Specialized loader for .xy format files
 
 Design Philosophy:
     - **Validation First**: All data is validated upon loading using Pydantic
@@ -72,7 +73,7 @@ See Also:
 # Import core data structures from models
 # Import file loading utilities from loaders
 # Also import the test data loader for convenience
-from .loaders import load_chi_file, load_diffraction_file, load_test_data
+from .loaders import load_chi_file, load_diffraction_file, load_test_data, load_xy_file
 from .models import DataStatistics, DiffractionData
 
 # Public API - these are the recommended imports for users
@@ -83,5 +84,6 @@ __all__ = [
     # File loading functions (primary interface)
     "load_diffraction_file",  # Smart loader with format auto-detection
     "load_chi_file",  # Specialized .chi file loader
+    "load_xy_file",  # Specialized .xy file loader
     "load_test_data",  # Built-in SRM 660b test dataset
 ]

@@ -18,9 +18,11 @@ Relationship to Other Modules:
 
 Supported Formats:
     - .chi files: Two-column text files with Q (Å⁻¹) and intensity data
+    - .xy files: Two-column text files with Q (Å⁻¹) and intensity data
 
 Functions:
-    - load_chi_file(): Load chi files into DataFrames
+    - load_diffraction_file_df(): Load .chi/.xy files into DataFrames
+    - load_chi_file(): Backward-compatible wrapper for chi files
     - get_data_info(): Extract statistical summaries from DataFrames
     - load_test_data(): Load SRM 660b test dataset as DataFrame
 
@@ -48,19 +50,23 @@ import numpy as np
 import pandas as pd
 
 
-def load_chi_file(filepath: str | Path) -> pd.DataFrame:
-    """Load a .chi file containing Q and intensity data into a DataFrame.
+def load_diffraction_file_df(filepath: str | Path) -> pd.DataFrame:
+    """Load a diffraction data file (.chi or .xy) into a DataFrame.
 
-    This is the legacy DataFrame-based loader for chi files. For new code,
-    consider using `robomage.data.loaders.load_chi_file()` which returns
+    This is the legacy DataFrame-based loader for diffraction files. For new code,
+    consider using `robomage.data.loaders.load_diffraction_file()` which returns
     a validated DiffractionData object with additional functionality.
 
-    Chi files are two-column text files containing Q values (scattering vector
-    magnitude in Å⁻¹) and corresponding intensity values. Comment lines
-    starting with '#' are automatically skipped.
+    Supported formats:
+    - .chi files: Two-column text files (Q, intensity)
+    - .xy files: Two-column text files (Q, intensity)
+
+    Both formats contain Q values (scattering vector magnitude in Å⁻¹) and
+    corresponding intensity values. Comment lines starting with '#' are
+    automatically skipped.
 
     Args:
-        filepath: Path to the .chi file to load. Can be a string or Path object.
+        filepath: Path to the diffraction file to load. Can be a string or Path object.
 
     Returns:
         pd.DataFrame: DataFrame with columns ['Q', 'intensity'] containing
@@ -68,29 +74,30 @@ def load_chi_file(filepath: str | Path) -> pd.DataFrame:
 
     Raises:
         FileNotFoundError: If the specified file doesn't exist.
-        ValueError: If the file extension is not '.chi', the file doesn't
+        ValueError: If the file extension is not '.chi' or '.xy', the file doesn't
             contain exactly 2 columns, or parsing fails for any reason.
 
     Note:
         - Comment lines (starting with '#') are automatically ignored
         - Data is expected in two columns: Q values, then intensities
         - No data validation or automatic sorting is performed
+        - Supports both .chi and .xy formats
         - For validated data objects, use `robomage.data.loaders` instead
 
     Example:
-        >>> from robomage.data_io import load_chi_file
-        >>> df = load_chi_file("sample.chi")
+        >>> from robomage.data_io import load_diffraction_file_df
+        >>> df = load_diffraction_file_df("sample.chi")  # or "sample.xy"
         >>> print(df.columns.tolist())
         ['Q', 'intensity']
         >>> print(f"Loaded {len(df)} data points")
 
     See Also:
-        robomage.data.loaders.load_chi_file: Modern API with validation
+        robomage.data.loaders.load_diffraction_file: Modern API with validation
     """
     filepath = Path(filepath)
 
-    if not filepath.suffix.lower() == ".chi":
-        raise ValueError(f"Expected .chi file, got: {filepath.suffix}")
+    if filepath.suffix.lower() not in [".chi", ".xy"]:
+        raise ValueError(f"Expected .chi or .xy file, got: {filepath.suffix}")
 
     if not filepath.exists():
         raise FileNotFoundError(f"File not found: {filepath}")
@@ -109,6 +116,24 @@ def load_chi_file(filepath: str | Path) -> pd.DataFrame:
 
     except Exception as e:
         raise ValueError(f"Failed to parse {filepath}: {e}") from e
+
+
+def load_chi_file(filepath: str | Path) -> pd.DataFrame:
+    """Load a .chi file containing Q and intensity data into a DataFrame.
+
+    Backward compatibility wrapper for load_diffraction_file_df().
+
+    Args:
+        filepath: Path to the .chi file to load.
+
+    Returns:
+        pd.DataFrame: DataFrame with columns ['Q', 'intensity'].
+
+    Note:
+        This function now supports both .chi and .xy files for convenience.
+        For new code, consider using robomage.data.loaders instead.
+    """
+    return load_diffraction_file_df(filepath)
 
 
 def get_data_info(df: pd.DataFrame) -> dict[str, Any]:

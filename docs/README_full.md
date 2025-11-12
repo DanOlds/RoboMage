@@ -118,13 +118,18 @@ code .
 
 ---
 
-## 🧪 Current Status (Week 1 Deliverable)
 
-- ✅ **Repository scaffolding** with Pixi environment
-- ✅ **Validated Pydantic schema** (`RefinementConfig`)
-- ✅ **Initial test suite** passing
-- ✅ **Linting and formatting** integrated via Ruff
-- ✅ **Architecture documentation** (this README + figure)
+## 🧪 Current Status (Sprint 4, Phase 1.5)
+
+- ✅ **Dash-based dashboard** with 3-tab interface (Data Import, Visualization, Analysis)
+- ✅ **Wavelength management system** (per-file, default 0.1665 Å synchrotron)
+- ✅ **Robust file upload and removal** (red 'X' button for file removal)
+- ✅ **Accurate Q→2θ conversion** using file-specific wavelength
+- ✅ **Publication-quality plotting** (line, scatter, filled area)
+- ✅ **State management** with dcc.Store for inter-tab communication
+- ✅ **All tests passing and scientific validation**
+
+**Ready for Phase 2:** Analysis tab and service integration framework in place.
 
 ---
 

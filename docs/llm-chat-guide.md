@@ -9,9 +9,11 @@ Hi! I'm working on the RoboMage project - a Python framework for automated powde
 
 Please read these key files to understand the project:
 1. README.md - Project overview and API documentation
-2. .llm-context.md - Quick context guide for AI assistants  
+2. .llm-context.md - Complete technical reference for AI assistants  
 3. src/robomage/__init__.py - Main package API
 4. src/robomage/data/models.py - Core data structures
+
+Note: For GitHub Copilot users, see .github/copilot-instructions.md for development-focused guidance.
 
 Key context:
 - Python 3.10+ with Pixi environment management

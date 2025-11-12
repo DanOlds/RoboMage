@@ -8,18 +8,20 @@
 **RoboMage** is a modular Python framework for automating **powder diffraction analysis and Rietveld refinement** across NSLS-II beamlines.
 
 ### 🔍 Key Features
-- **Robust Data Loading**: Support for .chi files with automatic validation and error handling
+- **Peak Analysis Tool**: Advanced automated peak detection and fitting with multiple profile types
+- **Robust Data Loading**: Support for .chi and .xy files with automatic validation and error handling
 - **Modern Python APIs**: Pydantic-based data models with type safety and validation
 - **Statistical Analysis**: Built-in quality metrics and data summarization
 - **Dual API Design**: Modern object-oriented interface + legacy pandas compatibility
 - **Command-Line Tools**: Batch processing and visualization via CLI
 - **Publication-Quality Plots**: Matplotlib integration for scientific visualization
+- **Microservice Architecture**: Scalable peak analysis service with REST API
 
 ### 📖 API Overview
 
 #### Data Loading
 - **`load_diffraction_file(filename)`** - Auto-detect format and load data with validation
-- **`load_chi_file(filename)`** - Load .chi files specifically with error handling  
+- **`load_chi_file(filename)`** - Load .chi/.xy files specifically with error handling  
 - **`load_test_data()`** - Load built-in SRM 660b LaB₆ test dataset
 
 #### Data Models
@@ -33,6 +35,40 @@
   - `.q_range`, `.intensity_range` - Data ranges
   - `.num_points` - Number of data points
   - `.q_step_mean`, `.intensity_mean` - Statistical summaries
+
+#### Peak Analysis Tool
+RoboMage includes a comprehensive peak analysis system for automated crystallographic peak detection and fitting:
+
+```python
+# CLI Analysis (Recommended)
+# Analyze single file
+python peak_analyzer.py sample.chi --output results/
+
+# Batch processing
+python peak_analyzer.py "data/*.chi" --batch --parallel
+
+# Service Mode (High-throughput workflows)
+python peak_analyzer.py --service --port 8001
+
+# Python API Integration
+from robomage.clients.peak_analysis_client import PeakAnalysisClient
+
+client = PeakAnalysisClient("http://localhost:8001")
+data = robomage.load_diffraction_file("sample.chi")
+response = client.analyze_diffraction_data(data)
+
+print(f"Found {response.peaks_detected} peaks")
+for peak in response.peak_list:
+    print(f"Peak at Q={peak.position:.3f} (d={peak.d_spacing:.3f}Å)")
+```
+
+**Key Features:**
+- **Automated Detection**: SciPy-based peak identification with configurable parameters
+- **Multi-Profile Fitting**: Gaussian, Lorentzian, and Voigt peak profiles
+- **Statistical Analysis**: R² goodness-of-fit metrics and quality assessment
+- **Background Subtraction**: Polynomial baseline fitting and normalization
+- **Multiple Interfaces**: CLI, REST API, and Python client library
+- **High Performance**: Sub-second analysis for typical datasets
 
 #### Legacy Compatibility
 ```python
@@ -69,6 +105,8 @@ RoboMage provides two complementary APIs to support different use cases:
 - **Python 3.10+ / Pixi** - Modern environment management and cross-platform dependency resolution
 - **Pydantic v2** - Data validation and settings management
 - **NumPy / Pandas** - Scientific computing foundation
+- **SciPy** - Advanced scientific algorithms for peak analysis
+- **FastAPI + Uvicorn** - High-performance REST API services
 - **Matplotlib** - Publication-quality plotting
 - **Ruff + MyPy** - Code formatting and type checking
 - **Pytest** - Comprehensive testing framework
@@ -127,16 +165,58 @@ test_data = robomage.load_test_data()  # Built-in SRM 660b dataset
 ```
 
 #### Command Line Interface
+
+**Data Visualization and Analysis:**
 ```powershell
 # Analyze single file with interactive plot
 pixi run python -m robomage sample.chi --plot --info
 
 # Batch process multiple files
 pixi run python -m robomage --files *.chi --output plots/
+pixi run python -m robomage --files *.xy --info
 
 # Get help
 pixi run python -m robomage --help
 ```
+
+**Peak Analysis Tool:**
+```powershell
+# Analyze single file for peaks
+pixi run python peak_analyzer.py sample.chi --output results/
+
+# Batch processing with parallel execution
+pixi run python peak_analyzer.py "data/*.chi" --batch --parallel
+
+# Start peak analysis service
+pixi run python peak_analyzer.py --service --port 8001
+
+# Verbose analysis with detailed output
+pixi run python peak_analyzer.py sample.chi --verbose --plot
+
+# Get peak analyzer help
+pixi run python peak_analyzer.py --help
+```
+
+
+### 🖥️ Dashboard Visualization & Analysis (NEW)
+
+RoboMage now includes a professional Dash-based dashboard for interactive powder diffraction analysis:
+
+- **3-tab interface**: Data Import, Visualization, and Analysis tabs for streamlined workflows
+- **Wavelength management**: Assign and display per-file wavelength (default: 0.1665 Å synchrotron)
+- **Robust file handling**: Upload, validate, and remove files with a single click (red 'X' button)
+- **Accurate Q→2θ conversion**: Uses file-specific wavelength for scientific correctness
+- **Publication-quality plots**: Line, scatter, and filled area types with export options
+- **State management**: Seamless inter-tab data flow and persistent user selections
+
+**To launch the dashboard:**
+```powershell
+pixi run python -m robomage --dashboard
+# or
+python -m robomage.dashboard
+```
+
+See [docs/sprint-4-visualization-dashboard.md](docs/sprint-4-visualization-dashboard.md) for full details.
 
 ### 📊 Examples & Tutorials
 

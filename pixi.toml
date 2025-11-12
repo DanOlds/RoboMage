@@ -1,7 +1,7 @@
 [project]
 name = "RoboMage"
 channels = ["conda-forge"]
-platforms = ["win-64"]
+platforms = ["win-64", "linux-64"]
 
 [dependencies]
 python = ">=3.10"
@@ -16,6 +16,14 @@ mypy = "*"
 sqlalchemy = "*"
 pip = ">=25.2,<26"
 scipy = ">=1.16.2,<2"
+fastapi = ">=0.104.0"
+uvicorn = ">=0.24.0"
+requests = "*"
+types-requests = "*"
+pandas-stubs = "*"
+dash = ">=2.14.0"
+plotly = ">=5.17.0"
+dash-bootstrap-components = ">=1.5.0"
 
 [pypi-dependencies]
 robomage = { path = ".", editable = true }
@@ -27,3 +35,5 @@ format = "ruff format ."
 format-check = "ruff format --check ."
 typecheck = "mypy src"
 check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
+dashboard = "python -m robomage --dashboard"
+dashboard-debug = "python -m robomage --dashboard --debug"

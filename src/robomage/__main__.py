@@ -6,7 +6,7 @@ the terminal. It supports both single-file and multi-file processing workflows
 with flexible plotting and analysis options.
 
 Key Features:
-    - Load diffraction data from .chi files or use built-in test data
+    - Load diffraction data from .chi/.xy files or use built-in test data
     - Generate publication-quality plots with matplotlib
     - Compare multiple datasets with overlay plots
     - Extract and display statistical summaries
@@ -20,8 +20,9 @@ Usage Examples:
     # Process a single file with statistics
     python -m robomage sample.chi --info --save-plot plot.png
 
-    # Compare multiple files
+    # Compare multiple files (supports .chi and .xy)
     python -m robomage --files *.chi --plot
+    python -m robomage --files *.xy --plot
 
     # Batch processing with verbose output
     python -m robomage --files data/*.chi --output results/ --verbose
@@ -37,7 +38,7 @@ Command-line Arguments:
     --config/-c: Configuration file (planned feature)
 
 File Formats:
-    - .chi files: Two-column text files (Q in Å⁻¹, intensity)
+    - .chi/.xy files: Two-column text files (Q in Å⁻¹, intensity)
     - Test data: Built-in SRM 660b LaB₆ standard
 
 Output:
@@ -280,6 +281,7 @@ def main():
         Command-line usage examples:
         $ python -m robomage test --info --plot
         $ python -m robomage sample.chi --save-plot result.png
+        $ python -m robomage sample.xy --info
         $ python -m robomage --files *.chi --output plots/ --verbose
 
     Note:
@@ -294,7 +296,7 @@ def main():
         "input_file",
         nargs="?",  # Single optional file
         help=(
-            "Input data file to process (.chi format), or 'test' to use "
+            "Input data file to process (.chi/.xy format), or 'test' to use "
             "built-in test data"
         ),
     )
@@ -303,7 +305,8 @@ def main():
         "-f",
         nargs="+",  # One or more files required when used
         help=(
-            "Process multiple files for comparison. Supports glob patterns like '*.chi'"
+            "Process multiple files for comparison. "
+            "Supports glob patterns like '*.chi' or '*.xy'"
         ),
     )
     parser.add_argument(
@@ -330,8 +333,35 @@ def main():
         metavar="FILENAME",
         help="Save plot to file with custom filename (no interactive display)",
     )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Launch interactive dashboard (default port 8050)",
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8050,
+        help="Port for dashboard server (default: 8050)",
+    )
 
     args = parser.parse_args()
+
+    # Handle dashboard mode
+    if args.dashboard:
+        try:
+            from robomage.dashboard.app import run_dashboard
+
+            print("🚀 Starting RoboMage Dashboard...")
+            run_dashboard(port=args.dashboard_port, debug=False)
+            return 0
+        except ImportError:
+            print("❌ Dashboard dependencies not available.")
+            print("Install dashboard dependencies with: pixi install")
+            return 1
+        except KeyboardInterrupt:
+            print("\n✅ Dashboard stopped.")
+            return 0
 
     # Determine which files to process
     if args.files:
