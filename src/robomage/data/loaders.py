@@ -6,6 +6,7 @@ file format detection, data validation, and metadata extraction.
 
 Supported Formats:
     - .chi files: Two-column text files with Q (Å⁻¹) and intensity data
+    - .xy files: Generic two-column text files with Q (Å⁻¹) and intensity data
     - More formats planned for future releases
 
 Key Features:
@@ -112,6 +113,72 @@ def load_chi_file(filepath: str | Path) -> DiffractionData:
         raise ValueError(f"Failed to parse {filepath}: {e}") from e
 
 
+def load_xy_file(filepath: str | Path) -> DiffractionData:
+    """Load a .xy file containing Q and intensity data.
+
+    XY files are a common two-column format for diffraction data, similar to
+    .chi files but often used by different instruments or analysis software.
+    The format consists of tab or space-separated columns with Q values
+    (scattering vector magnitude in Å⁻¹) in the first column and intensity
+    values in the second column.
+
+    Args:
+        filepath: Path to the .xy file to load. Can be a string or Path object.
+
+    Returns:
+        DiffractionData: A validated DiffractionData instance containing the
+            Q values, intensities, and extracted metadata.
+
+    Raises:
+        ValueError: If the file cannot be parsed or contains invalid data.
+        FileNotFoundError: If the specified file doesn't exist.
+
+    Example:
+        >>> from robomage.data.loaders import load_xy_file
+        >>> data = load_xy_file("detector_data.xy")
+        >>> print(f"Loaded {data.num_points} data points from {data.filename}")
+        >>> print(f"Q range: {data.q_range[0]:.3f} to {data.q_range[1]:.3f} Å⁻¹")
+
+    Note:
+        - Assumes Q values are in Å⁻¹ (standard for powder diffraction)
+        - Handles both tab-separated and space-separated values
+        - Skips comment lines starting with '#'
+        - Validates data for NaN/infinity values
+    """
+    filepath = Path(filepath)
+
+    if not filepath.exists():
+        raise FileNotFoundError(f"File not found: {filepath}")
+
+    try:
+        # Load the data using numpy, handling various delimiters
+        # Skip comment lines and handle both tab and space separation
+        data = np.loadtxt(filepath, delimiter=None, comments="#")
+
+        if data.ndim != 2 or data.shape[1] != 2:
+            raise ValueError(
+                f"Expected 2-column data, got shape {data.shape}. "
+                "XY files should contain Q and intensity columns."
+            )
+
+        # Validate data quality
+        if not np.isfinite(data).all():
+            raise ValueError("Data contains NaN or infinity values")
+
+        # Extract filename for metadata
+        filename = filepath.name
+
+        # Create DiffractionData with metadata
+        return DiffractionData(
+            q_values=data[:, 0],
+            intensities=data[:, 1],
+            filename=filename,
+        )
+
+    except Exception as e:
+        raise ValueError(f"Failed to parse {filepath}: {e}") from e
+
+
 def load_diffraction_file(filepath: str | Path) -> DiffractionData:
     """Load a diffraction data file with automatic format detection.
 
@@ -121,9 +188,9 @@ def load_diffraction_file(filepath: str | Path) -> DiffractionData:
 
     Currently Supported Formats:
         - .chi: Two-column text files (Q, intensity)
+        - .xy: Generic two-column data files (Q, intensity)
 
     Planned Future Support:
-        - .xy: Generic two-column data files
         - .dat: Various instrument-specific formats
         - .xye: Three-column files with error values
 
@@ -156,9 +223,11 @@ def load_diffraction_file(filepath: str | Path) -> DiffractionData:
 
     if filepath.suffix.lower() == ".chi":
         return load_chi_file(filepath)
+    elif filepath.suffix.lower() == ".xy":
+        return load_xy_file(filepath)
     else:
         raise ValueError(
-            f"Unsupported file format: {filepath.suffix}. Supported formats: .chi"
+            f"Unsupported file format: {filepath.suffix}. Supported formats: .chi, .xy"
         )
 
 

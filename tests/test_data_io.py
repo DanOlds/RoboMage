@@ -74,5 +74,5 @@ def test_load_nonexistent_file():
 
 def test_load_wrong_extension():
     """Test that loading a file with wrong extension raises error."""
-    with pytest.raises(ValueError, match="Expected .chi file"):
+    with pytest.raises(ValueError, match="Expected .chi or .xy file"):
         load_chi_file("somefile.txt")

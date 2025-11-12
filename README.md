@@ -9,7 +9,7 @@
 
 ### 🔍 Key Features
 - **Peak Analysis Tool**: Advanced automated peak detection and fitting with multiple profile types
-- **Robust Data Loading**: Support for .chi files with automatic validation and error handling
+- **Robust Data Loading**: Support for .chi and .xy files with automatic validation and error handling
 - **Modern Python APIs**: Pydantic-based data models with type safety and validation
 - **Statistical Analysis**: Built-in quality metrics and data summarization
 - **Dual API Design**: Modern object-oriented interface + legacy pandas compatibility
@@ -21,7 +21,7 @@
 
 #### Data Loading
 - **`load_diffraction_file(filename)`** - Auto-detect format and load data with validation
-- **`load_chi_file(filename)`** - Load .chi files specifically with error handling  
+- **`load_chi_file(filename)`** - Load .chi/.xy files specifically with error handling  
 - **`load_test_data()`** - Load built-in SRM 660b LaB₆ test dataset
 
 #### Data Models
@@ -173,6 +173,7 @@ pixi run python -m robomage sample.chi --plot --info
 
 # Batch process multiple files
 pixi run python -m robomage --files *.chi --output plots/
+pixi run python -m robomage --files *.xy --info
 
 # Get help
 pixi run python -m robomage --help

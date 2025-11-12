@@ -34,3 +34,5 @@ format = "ruff format ."
 format-check = "ruff format --check ."
 typecheck = "mypy src"
 check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
+dashboard = "python -m robomage --dashboard"
+dashboard-debug = "python -m robomage --dashboard --debug"
