@@ -6,6 +6,11 @@ Tests the dashboard components, callbacks, and basic functionality.
 
 import pytest
 
+# Skip all dashboard tests if dashboard dependencies are not available
+dash = pytest.importorskip("dash")
+plotly = pytest.importorskip("plotly")
+pytest.importorskip("dash_bootstrap_components")
+
 
 def test_dashboard_imports():
     """Test that dashboard components can be imported successfully."""
