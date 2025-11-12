@@ -66,10 +66,18 @@ import argparse
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 from .data_io import get_data_info, load_chi_file, load_test_data
 
 
-def plot_data(df, output_dir=".", filename=None, show=True, save=True):
+def plot_data(
+    df: pd.DataFrame,
+    output_dir: str = ".",
+    filename: str | None = None,
+    show: bool = True,
+    save: bool = True,
+) -> bool:
     """Create a publication-quality plot of diffraction data.
 
     Generates a matplotlib figure showing the diffraction pattern with
@@ -147,8 +155,13 @@ def plot_data(df, output_dir=".", filename=None, show=True, save=True):
 
 
 def plot_multiple_data(
-    datasets, labels, output_dir=".", filename=None, show=True, save=True
-):
+    datasets: list[pd.DataFrame],
+    labels: list[str],
+    output_dir: str = ".",
+    filename: str | None = None,
+    show: bool = True,
+    save: bool = True,
+) -> bool:
     """Create overlay plots comparing multiple diffraction datasets.
 
     Generates a single matplotlib figure showing multiple diffraction patterns
@@ -197,6 +210,7 @@ def plot_multiple_data(
         - Colors automatically cycle for up to 10 datasets
     """
     try:
+        import matplotlib.cm as cm  # type: ignore[import-untyped]
         import matplotlib.pyplot as plt
         import numpy as np
     except ImportError:
@@ -210,7 +224,7 @@ def plot_multiple_data(
     plt.figure(figsize=(12, 8))
 
     # Color cycle for different datasets
-    colors = plt.cm.tab10(np.linspace(0, 1, len(datasets)))
+    colors = cm.tab10(np.linspace(0, 1, len(datasets)))  # type: ignore[attr-defined]
 
     for _i, (df, label, color) in enumerate(
         zip(datasets, labels, colors, strict=False)
@@ -243,7 +257,7 @@ def plot_multiple_data(
     return True
 
 
-def main():
+def main() -> int:
     """Main entry point for the RoboMage command-line interface.
 
     Parses command-line arguments, loads diffraction data files, performs

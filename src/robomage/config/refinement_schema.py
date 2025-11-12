@@ -125,7 +125,7 @@ class RefinementConfig(BaseModel):
 
     @field_validator("q_range")
     @classmethod
-    def _validate_qrange(cls, v: list[float]):
+    def _validate_qrange(cls, v: list[float]) -> list[float]:
         if v[1] <= v[0]:
             raise ValueError("q_range must be [Qmin, Qmax] with Qmax > Qmin")
         return v

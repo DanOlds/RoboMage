@@ -77,7 +77,7 @@ Error Recovery:
 
 import json
 import time
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -154,7 +154,7 @@ class PeakAnalysisClient:
         try:
             response = self.session.get(f"{self.base_url}/health", timeout=self.timeout)
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
 
         except requests.exceptions.RequestException as e:
             raise PeakAnalysisServiceError(
@@ -176,7 +176,7 @@ class PeakAnalysisClient:
         try:
             response = self.session.get(f"{self.base_url}/schema", timeout=self.timeout)
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
 
         except requests.exceptions.RequestException as e:
             raise PeakAnalysisServiceError(
@@ -267,7 +267,7 @@ class PeakAnalysisClient:
         )
 
     def _make_request_with_retry(
-        self, method: str, url: str, **kwargs
+        self, method: str, url: str, **kwargs: Any
     ) -> dict[str, Any]:
         """
         Make HTTP request with retry logic.
@@ -308,7 +308,7 @@ class PeakAnalysisClient:
                     response.raise_for_status()
 
                 # Success - return JSON data
-                return response.json()
+                return cast(dict[str, Any], response.json())
 
             except requests.exceptions.RequestException as e:
                 last_exception = e

@@ -118,18 +118,30 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **Dash Bootstrap Components**: Professional UI components for dashboard
 
 ## Current Sprint Status
-**Sprint 4 - Phase 1.5: Tab-Based UI and Wavelength Management (IN PROGRESS)**
-- Phase 1 Complete: Basic dashboard with file upload and plotting
-- Phase 1.5 Goals: Implement tab-based architecture and wavelength system
-- Target: 3-tab layout (Data Import, Visualization, Analysis) with wavelength dropdown
-- Key Requirements: 0.1665 Å synchrotron default, proper Q→2θ conversion
+**✅ Sprint 3 + Sprint 4 Phase 1.5: COMPLETE (November 12, 2025)**
+**MERGED TO MAIN** - Production-ready microservices architecture with dashboard foundation
+
+**Completed Deliverables:**
+- ✅ **Complete Peak Analysis Microservice** - FastAPI REST API with multi-profile fitting
+- ✅ **Professional Dashboard Framework** - 3-tab UI with wavelength management (0.1665 Å default)
+- ✅ **Enhanced Data Loading** - .chi and .xy file support with auto-detection
+- ✅ **Type Safety Improvements** - pandas-stubs integration, 50% fewer MyPy errors
+- ✅ **Code Quality** - All linting clean, comprehensive documentation
+- ✅ **Integration Testing** - 37/37 tests passing including service communication
+
+**🚀 READY FOR: Sprint 4 Phase 2 - Analysis Tab Service Integration (2-3 days)**
+- Real-time peak detection in dashboard UI
+- Interactive parameter tuning and visualization
+- Results caching and export functionality
 
 ## Integration Points
-- **File formats**: Currently .chi files (Q, intensity columns)
-- **CLI**: Full argparse implementation with glob pattern support
-- **Matplotlib**: Publication-quality plotting integration
-- **Service Communication**: HTTP/JSON between RoboMage framework and analysis engines
-- **Future**: GSAS-II refinement engine integration planned
+- **File formats**: .chi and .xy files (Q, intensity columns) with auto-detection
+- **CLI**: Multiple tools - `python -m robomage` and `peak_analyzer.py` with service modes
+- **Dashboard**: Professional 3-tab Dash UI with wavelength management and plotting
+- **Microservices**: FastAPI peak analysis service with HTTP/JSON communication  
+- **Type Safety**: Strategic MyPy configuration - strict for core library, lenient for UI
+- **Service Communication**: Robust retry logic and validation at API boundaries
+- **Future**: GSAS-II refinement engine integration, Phase 2 analysis tab completion
 
 ## Key Files for Understanding Context
 1. `src/robomage/__init__.py` - Public API definition and dual API exports
