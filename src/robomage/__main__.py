@@ -305,7 +305,8 @@ def main():
         "-f",
         nargs="+",  # One or more files required when used
         help=(
-            "Process multiple files for comparison. Supports glob patterns like '*.chi' or '*.xy'"
+            "Process multiple files for comparison. "
+            "Supports glob patterns like '*.chi' or '*.xy'"
         ),
     )
     parser.add_argument(

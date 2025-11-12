@@ -61,8 +61,8 @@ def load_diffraction_file_df(filepath: str | Path) -> pd.DataFrame:
     - .chi files: Two-column text files (Q, intensity)
     - .xy files: Two-column text files (Q, intensity)
 
-    Both formats contain Q values (scattering vector magnitude in Å⁻¹) and 
-    corresponding intensity values. Comment lines starting with '#' are 
+    Both formats contain Q values (scattering vector magnitude in Å⁻¹) and
+    corresponding intensity values. Comment lines starting with '#' are
     automatically skipped.
 
     Args:
@@ -120,15 +120,15 @@ def load_diffraction_file_df(filepath: str | Path) -> pd.DataFrame:
 
 def load_chi_file(filepath: str | Path) -> pd.DataFrame:
     """Load a .chi file containing Q and intensity data into a DataFrame.
-    
+
     Backward compatibility wrapper for load_diffraction_file_df().
-    
+
     Args:
         filepath: Path to the .chi file to load.
-        
+
     Returns:
         pd.DataFrame: DataFrame with columns ['Q', 'intensity'].
-        
+
     Note:
         This function now supports both .chi and .xy files for convenience.
         For new code, consider using robomage.data.loaders instead.
