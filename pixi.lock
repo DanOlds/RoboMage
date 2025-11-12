@@ -4063,7 +4063,7 @@ packages:
 - pypi: ./
   name: robomage
   version: 0.0.1
-  sha256: 5624f12bc5e7ca4749eb70a66555f22640c2c2e00edf8233a0a679459b0e671c
+  sha256: 6d4394d795609530f42857882672f275153a983b23e1a710b0d02f2bc50ea2f1
   requires_dist:
   - pydantic>=2
   - numpy
@@ -4079,6 +4079,9 @@ packages:
   - types-requests ; extra == 'dev'
   - fastapi>=0.100.0 ; extra == 'peak-analysis'
   - uvicorn>=0.20.0 ; extra == 'peak-analysis'
+  - dash>=2.14.0 ; extra == 'dashboard'
+  - plotly>=5.17.0 ; extra == 'dashboard'
+  - dash-bootstrap-components>=1.5.0 ; extra == 'dashboard'
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.14.3-h813ae00_1.conda

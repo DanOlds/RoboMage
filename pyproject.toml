@@ -30,6 +30,11 @@ peak-analysis = [
   "fastapi>=0.100.0",
   "uvicorn>=0.20.0",
 ]
+dashboard = [
+  "dash>=2.14.0",
+  "plotly>=5.17.0", 
+  "dash-bootstrap-components>=1.5.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/DanOlds/RoboMage"
