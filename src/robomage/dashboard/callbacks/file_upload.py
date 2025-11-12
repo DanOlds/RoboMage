@@ -16,7 +16,7 @@ from dash import Input, Output, State, html
 from dash.dependencies import ALL
 
 
-def register_callbacks(app):
+def register_callbacks(app: dash.Dash) -> None:
     """Register all file upload related callbacks."""
     register_file_upload_callbacks(app)
     register_wavelength_callbacks(app)
@@ -38,11 +38,11 @@ def register_file_upload_callbacks(app):
         prevent_initial_call=True,
     )
     def handle_file_upload_and_remove(
-        list_of_contents,
-        remove_clicks,
-        list_of_names,
-        existing_data,
-    ):
+        list_of_contents: list[str] | None,
+        remove_clicks: list[int | None],
+        list_of_names: list[str] | None,
+        existing_data: dict[str, Any] | None,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         ctx = dash.callback_context
         if not existing_data:
             existing_data = {}
@@ -111,8 +111,8 @@ def parse_uploaded_file(content: str, filename: str) -> dict[str, Any] | None:
         lines = file_obj.getvalue().strip().split("\n")
 
         # Skip comment lines and parse data
-        data_lines = []
-        metadata = {"filename": filename, "comments": []}
+        data_lines: list[list[float]] = []
+        metadata: dict[str, Any] = {"filename": filename, "comments": []}
 
         for line in lines:
             line = line.strip()
@@ -262,7 +262,7 @@ def create_file_info(data: dict[str, Any]) -> list:
     return [html.P("No file information available", className="text-muted small")]
 
 
-def register_wavelength_callbacks(app):
+def register_wavelength_callbacks(app: dash.Dash) -> None:
     """Register wavelength management callbacks."""
 
     @app.callback(

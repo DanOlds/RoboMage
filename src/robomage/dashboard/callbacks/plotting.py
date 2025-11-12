@@ -173,7 +173,7 @@ def register_main_plot_callback(app):
 def get_x_data(
     data: dict[str, Any],
     x_axis: str,
-    wavelength_data: dict = None,
+    wavelength_data: dict[str, Any] | None = None,
 ) -> tuple[list[float], str]:
     """
     Get X-axis data and label.

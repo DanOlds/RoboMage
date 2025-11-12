@@ -40,6 +40,7 @@ Design Philosophy:
 """
 
 from datetime import datetime, timezone
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -190,7 +191,7 @@ class DiffractionData(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context: Any) -> None:
         """Validate data after initialization."""
         if len(self.q_values) != len(self.intensities):
             raise ValueError("Q values and intensities must have the same length")
@@ -280,7 +281,7 @@ class DiffractionData(BaseModel):
         df: pd.DataFrame,
         filename: str | None = None,
         sample_name: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "DiffractionData":
         """Create DiffractionData from pandas DataFrame.
 
@@ -317,7 +318,7 @@ class DiffractionData(BaseModel):
 
     @classmethod
     def from_arrays(
-        cls, q_values: np.ndarray, intensities: np.ndarray, **kwargs
+        cls, q_values: np.ndarray, intensities: np.ndarray, **kwargs: Any
     ) -> "DiffractionData":
         """Create DiffractionData from numpy arrays.
 
