@@ -4063,7 +4063,7 @@ packages:
 - pypi: ./
   name: robomage
   version: 0.0.1
-  sha256: 6d4394d795609530f42857882672f275153a983b23e1a710b0d02f2bc50ea2f1
+  sha256: 78e5496ce3dabdae7e929684f92c7f3e2dd25b70e3dadceb3bb86ad30d672553
   requires_dist:
   - pydantic>=2
   - numpy
