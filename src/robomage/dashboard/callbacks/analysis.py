@@ -161,7 +161,8 @@ def register_analysis_callback(app):
             for filename, data in file_data.items():
                 try:
                     # Extract Q and intensity arrays
-                    # Note: file_data uses 'q' and 'intensity' keys (from file_upload.py)
+                    # Note: file_data uses 'q' and 'intensity' keys
+                    # (from file_upload.py)
                     q_values = data.get("q", [])
                     intensities = data.get("intensity", [])
 
@@ -195,6 +196,7 @@ def register_analysis_callback(app):
                 except Exception as e:
                     print(f"Error analyzing {filename}: {e}")
                     import traceback
+
                     traceback.print_exc()
                     continue
 
