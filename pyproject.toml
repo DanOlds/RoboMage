@@ -70,14 +70,24 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 # Exclude dashboard files from strict type checking (complex Dash component types)
-exclude = ["src/robomage/dashboard/.*"]
+exclude = [
+    "src/robomage/dashboard/",
+]
 
 # Ignore missing imports for libraries without stubs  
 [[tool.mypy.overrides]]
 module = [
+    "dash.*",
     "dash_bootstrap_components.*",
     "plotly.*", 
     "plotly.express.*",
     "plotly.graph_objects.*"
 ]
 ignore_missing_imports = true
+
+# Dashboard files - allow untyped definitions due to complex Dash types
+[[tool.mypy.overrides]]
+module = [
+    "robomage.dashboard.*",
+]
+ignore_errors = true
