@@ -9,17 +9,18 @@ Hi! I'm working on the RoboMage project - a microservices-based framework for au
 
 Please read these key files to understand the project:
 1. README.md - Project overview and comprehensive API documentation
-2. .llm-context.md - Complete technical reference for AI assistants (UPDATED Nov 2025)
-3. .github/copilot-instructions.md - **CRITICAL**: Current architecture guide for developers
-4. src/robomage/__init__.py - Main package API with dual design
-5. services/peak_analysis/main.py - FastAPI microservice architecture
+2. .github/copilot-instructions.md - **CRITICAL**: Architecture, pixi usage, current sprint status
+3. src/robomage/__init__.py - Main package API with dual design
+4. services/peak_analysis/main.py - FastAPI microservice architecture
 
 Key context:
+- **Environment**: Uses **Pixi EXCLUSIVELY** (NOT pip/conda) for dependencies and task management
 - **Architecture**: Production-ready microservices with FastAPI + Dash dashboard
-- **Current Status**: Sprint 3 + Sprint 4 Phase 1.5 COMPLETE (merged to main Nov 12, 2025)
-- **Features**: Peak analysis service, 3-tab dashboard, .chi/.xy file support
-- **Next**: Dashboard Phase 2 - service integration in analysis tab (2-3 days)
-- **Tech Stack**: Python 3.10+, Pixi, Pydantic v2, FastAPI, Dash, pytest (37/37 tests passing)
+- **Current Status**: Sprint 3 + Sprint 4 Phase 2 COMPLETE (merged to main Nov 13, 2025)
+- **Features**: Peak analysis service, 3-tab dashboard, real-time analysis integration
+- **Next**: Sprint 4 Phase 3 - publication features and advanced export
+- **Tech Stack**: Python 3.10+, Pixi, Pydantic v2, FastAPI, Dash, pytest (51/51 tests passing)
+- **Commands**: Use `pixi install`, `pixi run test`, `pixi run check` (see copilot-instructions.md)
 
 [Your specific question or task here...]
 ```
@@ -29,8 +30,8 @@ Key context:
 **For New Features:**
 "I want to add [feature] to RoboMage. Please review the current microservices architecture in the context files and suggest how to implement this while maintaining compatibility with existing services and the dual API design."
 
-**For Dashboard Phase 2 Work:**
-"I'm working on Dashboard Phase 2 - integrating the peak analysis service into the dashboard analysis tab. Please review the current dashboard framework and service client architecture to understand the integration patterns."
+**For Dashboard Phase 3 Work:**
+"I'm working on Dashboard Phase 3 - adding publication-quality plotting and advanced export features. Please review the current dashboard framework and analysis integration to understand the architecture patterns."
 
 **For Bug Fixes:**
 "I'm seeing [error] in RoboMage. Please check the relevant test files and data models to understand the expected behavior."
@@ -47,9 +48,9 @@ If your LLM interface supports file attachments, these provide the most comprehe
 
 **Essential (attach these):**
 - `README.md` 
-- `.llm-context.md`
+- `.github/copilot-instructions.md` (includes sprint status and pixi usage)
 - `src/robomage/__init__.py`
-- `pyproject.toml`
+- `pixi.toml` (environment configuration)
 
 **For specific work:**
 - Data models: `src/robomage/data/models.py`

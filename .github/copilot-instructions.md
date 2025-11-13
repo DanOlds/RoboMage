@@ -32,15 +32,25 @@ RoboMage is a powder diffraction analysis framework with a **microservices archi
 
 ## Essential Development Commands
 
-### Pixi Workflow (NOT pip/conda)
+### ⚠️ CRITICAL: Use Pixi for Environment Management
+**This project EXCLUSIVELY uses Pixi (NOT pip/conda/venv)** for dependency and task management. All development commands must use pixi.
+
+### Pixi Workflow
 ```bash
-pixi install                    # Setup environment (replaces pip install)
+pixi install                    # Setup environment (replaces pip install/conda create)
 pixi run test                   # Run pytest suite (includes integration tests)
-pixi run check                  # Format + lint + typecheck + test
+pixi run check                  # Format + lint + typecheck + test (recommended before commits)
 pixi run format                 # ruff format .
 pixi run lint                   # ruff check .
 pixi run typecheck              # mypy src
 ```
+
+**Why Pixi?**
+- ✅ Fast cross-platform dependency resolution
+- ✅ Reproducible environments with lockfiles
+- ✅ Integrated task management (no separate Makefile)
+- ✅ conda-forge package ecosystem
+- ✅ All dependencies defined in `pixi.toml`
 
 ### Service Development
 ```bash
@@ -64,15 +74,19 @@ python -m robomage --dashboard --dashboard-port 8051  # Custom port
 pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 ```
 
-**Dashboard Architecture (Phase 1.5):**
+**Dashboard Architecture (Phase 2):**
 - **Tab Structure**: 3-tab layout (Data Import, Visualization, Analysis)
 - **Wavelength System**: Per-file assignment, 0.1665 Å synchrotron default, accurate Q→2θ conversion
 - **File Removal**: Red 'X' button for instant file removal, robust index-based callback logic
-- **Plotting**: Line, scatter, filled area, export options, improved color handling
+- **Plotting**: Line, scatter, filled area, export options, peak overlays with tooltips
+- **Analysis Integration**: Real-time peak detection with FastAPI service integration
+- **Interactive Controls**: Profile selection (Gaussian/Lorentzian/Voigt), prominence, distance, sensitivity sliders
+- **Results Display**: Professional tables with fit quality metrics, scrollable per-file results
+- **Service Monitoring**: Health check indicators with startup instructions
 - **State Management**: Inter-tab communication via dcc.Store
 - **File Structure**: 
   - `src/robomage/dashboard/layouts/`: Tab-specific layouts
-  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting)
+  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting, analysis)
   - `src/robomage/dashboard/components/`: Reusable UI components
 
 ## Code Conventions
@@ -118,30 +132,34 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **Dash Bootstrap Components**: Professional UI components for dashboard
 
 ## Current Sprint Status
-**✅ Sprint 3 + Sprint 4 Phase 1.5: COMPLETE (November 12, 2025)**
-**MERGED TO MAIN** - Production-ready microservices architecture with dashboard foundation
+**✅ Sprint 3 + Sprint 4 Phase 2: COMPLETE (November 13, 2025)**
+**MERGED TO MAIN** - Full-featured dashboard with integrated peak analysis
 
 **Completed Deliverables:**
 - ✅ **Complete Peak Analysis Microservice** - FastAPI REST API with multi-profile fitting
 - ✅ **Professional Dashboard Framework** - 3-tab UI with wavelength management (0.1665 Å default)
+- ✅ **Analysis Tab Integration** - Real-time peak detection with interactive parameter controls
+- ✅ **Peak Visualization** - Automatic peak annotation on diffraction plots with tooltips
+- ✅ **Service Health Monitoring** - Connection status indicators and startup guidance
 - ✅ **Enhanced Data Loading** - .chi and .xy file support with auto-detection
-- ✅ **Type Safety Improvements** - pandas-stubs integration, 50% fewer MyPy errors
-- ✅ **Code Quality** - All linting clean, comprehensive documentation
-- ✅ **Integration Testing** - 37/37 tests passing including service communication
+- ✅ **Type Safety** - Strategic MyPy configuration with dashboard exclusion
+- ✅ **Code Quality** - All linting/formatting/type checks passing
+- ✅ **Comprehensive Testing** - 51/51 tests passing including analysis tab integration
 
-**🚀 READY FOR: Sprint 4 Phase 2 - Analysis Tab Service Integration (2-3 days)**
-- Real-time peak detection in dashboard UI
-- Interactive parameter tuning and visualization
-- Results caching and export functionality
+**🚀 READY FOR: Sprint 4 Phase 3 - Publication Features**
+- Advanced export options (CSV, JSON, publication plots)
+- Batch processing and analysis comparison
+- Enhanced visualization features
 
 ## Integration Points
+- **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
 - **File formats**: .chi and .xy files (Q, intensity columns) with auto-detection
 - **CLI**: Multiple tools - `python -m robomage` and `peak_analyzer.py` with service modes
 - **Dashboard**: Professional 3-tab Dash UI with wavelength management and plotting
 - **Microservices**: FastAPI peak analysis service with HTTP/JSON communication  
 - **Type Safety**: Strategic MyPy configuration - strict for core library, lenient for UI
 - **Service Communication**: Robust retry logic and validation at API boundaries
-- **Future**: GSAS-II refinement engine integration, Phase 2 analysis tab completion
+- **Future**: GSAS-II refinement engine integration, Phase 3 publication features
 
 ## Key Files for Understanding Context
 1. `src/robomage/__init__.py` - Public API definition and dual API exports

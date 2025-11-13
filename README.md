@@ -178,6 +178,8 @@ pixi install
 pixi run test
 ```
 
+> **⚠️ IMPORTANT**: This project uses Pixi exclusively for environment and task management. Do NOT use `pip install`, `conda install`, or traditional virtual environments. All dependencies and tasks are managed through `pixi.toml`. See below for common pixi commands.
+
 > **Alternative**: If you prefer traditional Python environments, you can use `pip install -e .` after creating a virtual environment, but pixi is recommended for the best development experience and reproducibility.
 
 #### Basic Usage
@@ -239,15 +241,18 @@ pixi run python peak_analyzer.py --help
 ```
 
 
-### 🖥️ Dashboard Visualization & Analysis (NEW)
+### 🖥️ Dashboard Visualization & Analysis
 
-RoboMage now includes a professional Dash-based dashboard for interactive powder diffraction analysis:
+RoboMage includes a professional Dash-based dashboard for interactive powder diffraction analysis:
 
 - **3-tab interface**: Data Import, Visualization, and Analysis tabs for streamlined workflows
 - **Wavelength management**: Assign and display per-file wavelength (default: 0.1665 Å synchrotron)
 - **Robust file handling**: Upload, validate, and remove files with a single click (red 'X' button)
 - **Accurate Q→2θ conversion**: Uses file-specific wavelength for scientific correctness
 - **Publication-quality plots**: Line, scatter, and filled area types with export options
+- **Real-time peak analysis**: Interactive parameter controls with live peak detection service integration
+- **Peak visualization**: Automatic peak annotation on plots with detailed tooltips (Q, d-spacing, intensity, FWHM)
+- **Service monitoring**: Connection status indicators with helpful startup instructions
 - **State management**: Seamless inter-tab data flow and persistent user selections
 
 **To launch the dashboard:**
@@ -307,28 +312,36 @@ pixi run test      # Full test suite with pytest
 > **Note**: All tasks are defined in `pixi.toml` and run in the isolated pixi environment automatically.
 
 ###  Project Status
-**Current (Week 2)** ✅ **Complete**:
+**Sprint 3 + Sprint 4 Phase 2** ✅ **COMPLETE (Nov 13, 2025)**:
 - ✅ Robust data loading and validation system
 - ✅ Modern Pydantic-based data models with statistical analysis
+- ✅ Peak analysis microservice (FastAPI) with multi-profile fitting
+- ✅ Interactive dashboard with real-time analysis integration
 - ✅ Command-line interface for batch processing
 - ✅ Comprehensive documentation and examples
-- ✅ Full test coverage with CI/CD pipeline
+- ✅ Full test coverage (51 tests) with CI/CD pipeline
 - ✅ Type-safe codebase with MyPy compliance
 
-**Future Development** 📋 **Planned**:
+**Sprint 4 Phase 3** 📋 **Planned**:
+- 🔄 Publication-quality plot export and formatting
+- 🔄 Advanced export options (CSV, JSON, combined results)
+- 🔄 Batch processing and analysis comparison tools
+- 🔄 Enhanced visualization features
+
+**Future Development** 📋 **Roadmap**:
 - 🔄 GSAS-II integration for automated Rietveld refinement
 - 🔄 Advanced data pipeline with Tiled/Databroker integration
-- 🔄 Web interface and workflow automation
 - 🔄 Machine learning-guided parameter optimization
 
 ### 📚 Documentation
 
+- **[Development Guide](docs/DEVELOPMENT.md)** - **START HERE**: Pixi commands, workflow, best practices
 - **[Complete API Documentation](src/robomage/)** - Detailed docstrings in source code
-- **[Architecture Overview](docs/README_full.md)** - Detailed technical design
-- **[Sprint Planning](docs/sprint-2-data-pipeline.md)** - Development roadmap
+- **[Architecture & Dev Guide](.github/copilot-instructions.md)** - Architecture patterns, pixi usage, sprint status
+- **[LLM Chat Guide](docs/llm-chat-guide.md)** - Quick start template for AI assistant conversations
+- **[Sprint 4 Dashboard Plan](docs/sprint-4-visualization-dashboard.md)** - Dashboard implementation phases
 - **[Examples](examples/)** - Working code samples and tutorials
 - **[Environment Config](pixi.toml)** - Pixi environment and task definitions
-- **[LLM Context Guide](.llm-context.md)** - Quick start guide for AI assistants
 
 ---
 > Developed at **Brookhaven National Laboratory (BNL)** at the **NSLS-II**.
