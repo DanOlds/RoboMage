@@ -161,10 +161,12 @@ def register_analysis_callback(app):
             for filename, data in file_data.items():
                 try:
                     # Extract Q and intensity arrays
-                    q_values = data.get("q_values", [])
-                    intensities = data.get("intensities", [])
+                    # Note: file_data uses 'q' and 'intensity' keys (from file_upload.py)
+                    q_values = data.get("q", [])
+                    intensities = data.get("intensity", [])
 
                     if not q_values or not intensities:
+                        print(f"Skipping {filename}: missing data arrays")
                         continue
 
                     # Build analysis configuration
@@ -180,10 +182,11 @@ def register_analysis_callback(app):
                     }
 
                     # Call analysis service
-                    response = client.analyze_peaks(
+                    response = client.analyze_peaks_raw(
                         q_values=q_values,
                         intensities=intensities,
                         config=config,
+                        filename=filename,
                     )
 
                     # Store results
@@ -191,6 +194,8 @@ def register_analysis_callback(app):
 
                 except Exception as e:
                     print(f"Error analyzing {filename}: {e}")
+                    import traceback
+                    traceback.print_exc()
                     continue
 
             if not results:
@@ -251,22 +256,24 @@ def create_analysis_summary_ui(results: dict[str, Any]) -> html.Div:
     summary_cards = []
 
     for filename, result in results.items():
-        peaks_detected = result.get("peaks_detected", 0)
-        peak_list = result.get("peak_list", [])
-        fit_quality = result.get("fit_quality", {})
+        # Handle response structure: result has 'peaks', 'metadata', etc.
+        peaks = result.get("peaks", [])
+        metadata = result.get("metadata", {})
+        peaks_detected = metadata.get("num_peaks_detected", len(peaks))
+        fit_quality = metadata.get("overall_r_squared", 0)
 
         # Build peak table
-        if peak_list:
+        if peaks:
             peak_rows = []
-            for i, peak in enumerate(peak_list[:10], 1):  # Show first 10 peaks
+            for i, peak in enumerate(peaks[:10], 1):  # Show first 10 peaks
                 peak_rows.append(
                     html.Tr(
                         [
                             html.Td(str(i)),
                             html.Td(f"{peak.get('position', 0):.3f}"),
                             html.Td(f"{peak.get('d_spacing', 0):.3f}"),
-                            html.Td(f"{peak.get('intensity', 0):.0f}"),
-                            html.Td(f"{peak.get('fwhm', 0):.3f}"),
+                            html.Td(f"{peak.get('height', 0):.0f}"),
+                            html.Td(f"{peak.get('width', 0):.3f}"),
                         ]
                     )
                 )
@@ -279,8 +286,8 @@ def create_analysis_summary_ui(results: dict[str, Any]) -> html.Div:
                                 html.Th("#"),
                                 html.Th("Q (Å⁻¹)"),
                                 html.Th("d (Å)"),
-                                html.Th("Intensity"),
-                                html.Th("FWHM"),
+                                html.Th("Height"),
+                                html.Th("Width"),
                             ]
                         )
                     ),
@@ -323,10 +330,10 @@ def create_analysis_summary_ui(results: dict[str, Any]) -> html.Div:
                                     [
                                         html.Strong("Fit Quality (R²): "),
                                         html.Span(
-                                            f"{fit_quality.get('r_squared', 0):.3f}",
+                                            f"{fit_quality:.3f}",
                                             className=(
                                                 "text-success"
-                                                if fit_quality.get("r_squared", 0) > 0.9
+                                                if fit_quality > 0.9
                                                 else "text-warning"
                                             ),
                                         ),

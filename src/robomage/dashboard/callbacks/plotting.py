@@ -132,12 +132,14 @@ def register_main_plot_callback(app):
             for filename, result in analysis_results.items():
                 if filename in file_data:
                     data = file_data[filename]
-                    peak_list = result.get("peak_list", [])
+                    # Updated: use 'peaks' key from service response
+                    peak_list = result.get("peaks", [])
 
                     for peak in peak_list:
                         # Get peak position in current x-axis units
                         peak_q = peak.get("position", 0)
-                        peak_intensity = peak.get("intensity", 0)
+                        # Updated: use 'height' instead of 'intensity'
+                        peak_height = peak.get("height", 0)
 
                         # Convert to appropriate x-axis
                         if x_axis == "q":
@@ -167,13 +169,11 @@ def register_main_plot_callback(app):
                                 intensity_data.max(),
                             )
                             if max_val > min_val:
-                                peak_y = (peak_intensity - min_val) / (
-                                    max_val - min_val
-                                )
+                                peak_y = (peak_height - min_val) / (max_val - min_val)
                             else:
-                                peak_y = peak_intensity
+                                peak_y = peak_height
                         else:
-                            peak_y = peak_intensity
+                            peak_y = peak_height
 
                         # Add peak marker
                         fig.add_trace(
@@ -193,8 +193,8 @@ def register_main_plot_callback(app):
                                     f"<b>Peak</b><br>"
                                     f"Q: {peak_q:.3f} Å⁻¹<br>"
                                     f"d: {peak.get('d_spacing', 0):.3f} Å<br>"
-                                    f"Intensity: {peak_intensity:.0f}<br>"
-                                    f"FWHM: {peak.get('fwhm', 0):.3f}<br>"
+                                    f"Height: {peak_height:.0f}<br>"
+                                    f"Width: {peak.get('width', 0):.3f}<br>"
                                     "<extra></extra>"
                                 ),
                             )
