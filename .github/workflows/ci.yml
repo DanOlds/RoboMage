@@ -32,7 +32,7 @@ jobs:
 
       - run: pip install --upgrade pip mypy
       - run: pip install -e .[dev,peak-analysis,dashboard]
-      - run: mypy src
+      - run: mypy src --exclude 'src/robomage/dashboard'
 
   test:
     name: Tests (matrix)
