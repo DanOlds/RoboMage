@@ -17,6 +17,7 @@ def register_callbacks(app):
     """Register all plotting related callbacks."""
     register_main_plot_callback(app)
     register_plot_statistics_callback(app)
+    register_peak_overlay_callback(app)
 
 
 def register_main_plot_callback(app):
@@ -30,11 +31,14 @@ def register_main_plot_callback(app):
             Input("x-axis-selector", "value"),
             Input("y-axis-selector", "value"),
             Input("plot-type-selector", "value"),
+            Input("analysis-results-store", "data"),
         ],
     )
-    def update_main_plot(file_data, wavelength_data, x_axis, y_axis, plot_type):
+    def update_main_plot(
+        file_data, wavelength_data, x_axis, y_axis, plot_type, analysis_results
+    ):
         """
-        Update the main diffraction pattern plot.
+        Update the main diffraction pattern plot with optional peak overlays.
 
         Args:
             file_data: Dictionary of loaded file data
@@ -42,6 +46,7 @@ def register_main_plot_callback(app):
             x_axis: X-axis selection (q, two_theta, d_spacing)
             y_axis: Y-axis selection (raw, normalized, log)
             plot_type: Plot type (line, scatter, area)
+            analysis_results: Peak analysis results from service
 
         Returns:
             Updated plotly figure
@@ -121,6 +126,79 @@ def register_main_plot_callback(app):
                         + f"{y_label}: %{{y:.0f}}<extra></extra>",
                     )
                 )
+
+        # Add peak annotations if analysis results available
+        if analysis_results:
+            for filename, result in analysis_results.items():
+                if filename in file_data:
+                    data = file_data[filename]
+                    peak_list = result.get("peak_list", [])
+
+                    for peak in peak_list:
+                        # Get peak position in current x-axis units
+                        peak_q = peak.get("position", 0)
+                        peak_intensity = peak.get("intensity", 0)
+
+                        # Convert to appropriate x-axis
+                        if x_axis == "q":
+                            peak_x = peak_q
+                        elif x_axis == "two_theta":
+                            if (
+                                wavelength_data
+                                and "current_wavelength" in wavelength_data
+                            ):
+                                wavelength = wavelength_data["current_wavelength"]
+                            else:
+                                wavelength = 0.1665
+                            sin_theta = np.clip(
+                                peak_q * wavelength / (4 * np.pi), -1.0, 1.0
+                            )
+                            peak_x = 2 * np.arcsin(sin_theta) * 180 / np.pi
+                        elif x_axis == "d_spacing":
+                            peak_x = 2 * np.pi / peak_q
+                        else:
+                            peak_x = peak_q
+
+                        # Convert y-axis for peak position
+                        if y_axis == "normalized":
+                            intensity_data = np.array(data["intensity"])
+                            min_val, max_val = (
+                                intensity_data.min(),
+                                intensity_data.max(),
+                            )
+                            if max_val > min_val:
+                                peak_y = (peak_intensity - min_val) / (
+                                    max_val - min_val
+                                )
+                            else:
+                                peak_y = peak_intensity
+                        else:
+                            peak_y = peak_intensity
+
+                        # Add peak marker
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[peak_x],
+                                y=[peak_y],
+                                mode="markers",
+                                marker=dict(
+                                    symbol="triangle-up",
+                                    size=10,
+                                    color="red",
+                                    line=dict(width=1, color="darkred"),
+                                ),
+                                name=f"Peak {peak.get('d_spacing', 0):.2f}Å",
+                                showlegend=False,
+                                hovertemplate=(
+                                    f"<b>Peak</b><br>"
+                                    f"Q: {peak_q:.3f} Å⁻¹<br>"
+                                    f"d: {peak.get('d_spacing', 0):.3f} Å<br>"
+                                    f"Intensity: {peak_intensity:.0f}<br>"
+                                    f"FWHM: {peak.get('fwhm', 0):.3f}<br>"
+                                    "<extra></extra>"
+                                ),
+                            )
+                        )
 
         # Update layout
         fig.update_layout(
@@ -359,3 +437,18 @@ def register_plot_statistics_callback(app):
             )
 
         return stats_items
+
+
+def register_peak_overlay_callback(app):
+    """
+    Register callback for toggling peak overlays on visualization.
+
+    This is a placeholder for future peak display controls.
+    Peak overlays are currently integrated into the main plot callback.
+    """
+    # Peak overlays are handled in register_main_plot_callback
+    # This function is here for future enhancements like:
+    # - Toggle peak visibility
+    # - Peak labeling options
+    # - Fitted curve display
+    pass

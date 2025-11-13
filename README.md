@@ -9,6 +9,9 @@
 
 ### 🔍 Key Features
 - **Peak Analysis Tool**: Advanced automated peak detection and fitting with multiple profile types
+- **Interactive Dashboard**: Professional 3-tab Dash UI for data import, visualization, and analysis
+- **Real-time Analysis**: Integrated peak analysis service with live parameter tuning
+- **Peak Visualization**: Automatic peak annotation on diffraction plots with detailed tooltips
 - **Robust Data Loading**: Support for .chi and .xy files with automatic validation and error handling
 - **Modern Python APIs**: Pydantic-based data models with type safety and validation
 - **Statistical Analysis**: Built-in quality metrics and data summarization
@@ -69,6 +72,44 @@ for peak in response.peak_list:
 - **Background Subtraction**: Polynomial baseline fitting and normalization
 - **Multiple Interfaces**: CLI, REST API, and Python client library
 - **High Performance**: Sub-second analysis for typical datasets
+
+#### Interactive Dashboard
+RoboMage includes a professional web-based dashboard for interactive data analysis:
+
+```python
+# Start the dashboard
+python -m robomage.dashboard
+
+# Custom port
+python -m robomage.dashboard --port 8051 --debug
+
+# Or via main CLI
+python -m robomage --dashboard
+```
+
+**Dashboard Features:**
+- **📁 Data Import Tab**: 
+  - Drag-and-drop file upload for .chi and .xy files
+  - Per-file wavelength management (0.1665 Å synchrotron default)
+  - File validation and metadata display
+  - Instant file removal with visual feedback
+
+- **📊 Visualization Tab**:
+  - Interactive Plotly plots with zoom, pan, and export
+  - Multiple plot types (line, scatter, filled area)
+  - Flexible axis options (Q, 2θ, d-spacing)
+  - Normalization and log scale support
+  - Multi-file overlay comparison
+
+- **🔬 Analysis Tab**:
+  - Real-time peak analysis service integration
+  - Interactive parameter controls (prominence, distance, sensitivity)
+  - Profile selection (Gaussian, Lorentzian, Voigt)
+  - Automatic peak annotation on plots
+  - Detailed results tables with fit quality metrics
+  - Service connection status monitoring
+
+Access dashboard at: `http://localhost:8050`
 
 #### Legacy Compatibility
 ```python

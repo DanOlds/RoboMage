@@ -554,7 +554,7 @@ def create_visualization_tab() -> html.Div:
 
 
 def create_analysis_tab() -> html.Div:
-    """Create the Analysis tab content (Phase 2 preparation)."""
+    """Create the Analysis tab content with peak analysis integration."""
     return html.Div(
         [
             dbc.Row(
@@ -571,81 +571,114 @@ def create_analysis_tab() -> html.Div:
                                                     html.I(
                                                         className="fas fa-mountain me-2"
                                                     ),
-                                                    "Peak Analysis",
+                                                    "Peak Analysis Controls",
                                                 ]
                                             )
                                         ]
                                     ),
                                     dbc.CardBody(
                                         [
-                                            # Service status
-                                            dbc.Alert(
-                                                [
-                                                    html.I(
-                                                        className=(
-                                                            "fas fa-info-circle me-2"
-                                                        )
-                                                    ),
-                                                    (
-                                                        "Service integration coming in "
-                                                        "Phase 2"
-                                                    ),
-                                                ],
-                                                color="info",
-                                                className="mb-3",
-                                            ),
                                             # Analysis parameters
-                                            # (disabled for Phase 1.5)
-                                            html.Label(
-                                                "Detection Sensitivity:",
-                                                className="fw-bold",
-                                            ),
-                                            dcc.Slider(
-                                                id="sensitivity-slider",
-                                                min=0.1,
-                                                max=2.0,
-                                                step=0.1,
-                                                value=1.0,
-                                                marks={
-                                                    i / 10: str(i / 10)
-                                                    for i in range(1, 21, 5)
-                                                },
-                                                disabled=True,
-                                                className="mb-3",
-                                            ),
-                                            html.Label(
-                                                "Profile Type:", className="fw-bold"
-                                            ),
-                                            dcc.Dropdown(
-                                                id="profile-selector",
-                                                options=[
-                                                    {
-                                                        "label": "Gaussian",
-                                                        "value": "gaussian",
-                                                    },
-                                                    {
-                                                        "label": "Lorentzian",
-                                                        "value": "lorentzian",
-                                                    },
-                                                    {
-                                                        "label": "Voigt",
-                                                        "value": "voigt",
-                                                    },
-                                                ],
-                                                value="gaussian",
-                                                disabled=True,
-                                                className="mb-3",
-                                            ),
-                                            dbc.Button(
+                                            html.Div(
                                                 [
-                                                    html.I(
-                                                        className="fas fa-play me-1"
+                                                    html.Label(
+                                                        "Profile Type:",
+                                                        className="fw-bold",
                                                     ),
-                                                    "Run Analysis",
-                                                ],
-                                                color="primary",
-                                                className="w-100",
-                                                disabled=True,
+                                                    dcc.Dropdown(
+                                                        id="profile-selector",
+                                                        options=[
+                                                            {
+                                                                "label": "Gaussian",
+                                                                "value": "gaussian",
+                                                            },
+                                                            {
+                                                                "label": "Lorentzian",
+                                                                "value": "lorentzian",
+                                                            },
+                                                            {
+                                                                "label": "Voigt",
+                                                                "value": "voigt",
+                                                            },
+                                                        ],
+                                                        value="gaussian",
+                                                        clearable=False,
+                                                        className="mb-3",
+                                                    ),
+                                                    html.Label(
+                                                        "Minimum Prominence:",
+                                                        className="fw-bold",
+                                                    ),
+                                                    html.Small(
+                                                        (
+                                                            "Relative peak prominence "
+                                                            "(0-1)"
+                                                        ),
+                                                        className=(
+                                                            "text-muted d-block mb-1"
+                                                        ),
+                                                    ),
+                                                    dcc.Input(
+                                                        id="min-prominence-input",
+                                                        type="number",
+                                                        min=0.001,
+                                                        max=1.0,
+                                                        step=0.01,
+                                                        value=0.01,
+                                                        className="form-control mb-3",
+                                                    ),
+                                                    html.Label(
+                                                        "Minimum Distance (Å⁻¹):",
+                                                        className="fw-bold",
+                                                    ),
+                                                    html.Small(
+                                                        "Minimum Q-space between peaks",
+                                                        className=(
+                                                            "text-muted d-block mb-1"
+                                                        ),
+                                                    ),
+                                                    dcc.Input(
+                                                        id="min-distance-input",
+                                                        type="number",
+                                                        min=0.01,
+                                                        max=5.0,
+                                                        step=0.01,
+                                                        value=0.1,
+                                                        className="form-control mb-3",
+                                                    ),
+                                                    html.Label(
+                                                        "Detection Sensitivity:",
+                                                        className="fw-bold",
+                                                    ),
+                                                    dcc.Slider(
+                                                        id="sensitivity-slider",
+                                                        min=0.1,
+                                                        max=2.0,
+                                                        step=0.1,
+                                                        value=1.0,
+                                                        marks={
+                                                            0.5: "0.5",
+                                                            1.0: "1.0",
+                                                            1.5: "1.5",
+                                                            2.0: "2.0",
+                                                        },
+                                                        className="mb-4",
+                                                    ),
+                                                    dbc.Button(
+                                                        [
+                                                            html.I(
+                                                                className=(
+                                                                    "fas fa-play me-2"
+                                                                )
+                                                            ),
+                                                            "Run Analysis",
+                                                        ],
+                                                        id="run-analysis-btn",
+                                                        color="primary",
+                                                        size="lg",
+                                                        className="w-100",
+                                                    ),
+                                                ]
                                             ),
                                         ]
                                     ),
@@ -678,15 +711,37 @@ def create_analysis_tab() -> html.Div:
                                             html.Div(
                                                 id="analysis-summary",
                                                 children=[
-                                                    html.P(
-                                                        "No analysis results available",
-                                                        className=(
-                                                            "text-muted text-center"
-                                                        ),
+                                                    dbc.Alert(
+                                                        [
+                                                            html.I(
+                                                                className=(
+                                                                    "fas "
+                                                                    "fa-info-circle "
+                                                                    "me-2"
+                                                                )
+                                                            ),
+                                                            (
+                                                                "Click 'Run Analysis'"
+                                                                " to detect peaks in"
+                                                                " your data."
+                                                            ),
+                                                            html.Br(),
+                                                            html.Small(
+                                                                "Make sure files are "
+                                                                "loaded in the Data "
+                                                                "Import tab.",
+                                                                className="text-muted",
+                                                            ),
+                                                        ],
+                                                        color="info",
                                                     )
                                                 ],
                                             )
-                                        ]
+                                        ],
+                                        style={
+                                            "maxHeight": "500px",
+                                            "overflowY": "auto",
+                                        },
                                     ),
                                 ]
                             )
@@ -732,24 +787,24 @@ def create_analysis_tab() -> html.Div:
                                                 id="service-status-badge",
                                             ),
                                         ],
-                                        width=6,
+                                        width=8,
                                     ),
                                     dbc.Col(
                                         [
-                                            dbc.Button(
+                                            html.Small(
                                                 [
-                                                    html.I(
-                                                        className=("fas fa-sync me-1")
+                                                    "Start service: ",
+                                                    html.Code(
+                                                        "python services/peak_analysis/"
+                                                        "main.py",
+                                                        className="text-muted",
                                                     ),
-                                                    "Check Connection",
                                                 ],
-                                                color="outline-primary",
-                                                size="sm",
-                                                disabled=True,
+                                                className="text-muted",
                                             ),
                                         ],
-                                        width=6,
-                                        className="d-flex justify-content-end",
+                                        width=4,
+                                        className="d-flex align-items-center",
                                     ),
                                 ]
                             ),
