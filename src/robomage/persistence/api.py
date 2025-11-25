@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from robomage.data.models import DiffractionData
 from robomage.persistence.database import get_db_manager
@@ -93,7 +94,7 @@ class SessionManager:
             session_id: Session ID to retrieve
 
         Returns:
-            Session object or None if not found
+            Session object with files eagerly loaded, or None if not found
 
         Example:
             >>> mgr = SessionManager()
@@ -102,7 +103,12 @@ class SessionManager:
         """
         db = self.db_manager.get_session()
         try:
-            session = db.get(Session, session_id)
+            session = db.execute(
+                select(Session)
+                .options(selectinload(Session.files))
+                .where(Session.id == session_id)
+            ).scalar_one_or_none()
+
             if session:
                 # Update last accessed time
                 session.last_accessed = datetime.now()
@@ -116,7 +122,7 @@ class SessionManager:
         List all sessions, ordered by last accessed (most recent first).
 
         Returns:
-            List of Session objects
+            List of Session objects with files eagerly loaded
 
         Example:
             >>> mgr = SessionManager()
@@ -127,7 +133,11 @@ class SessionManager:
         db = self.db_manager.get_session()
         try:
             sessions = (
-                db.execute(select(Session).order_by(Session.last_accessed.desc()))
+                db.execute(
+                    select(Session)
+                    .options(selectinload(Session.files))
+                    .order_by(Session.last_accessed.desc())
+                )
                 .scalars()
                 .all()
             )

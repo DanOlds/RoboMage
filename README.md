@@ -141,7 +141,12 @@ for file_obj in files:
 
 **Storage Location**: `~/.robomage/` (database + files)
 
-See [`docs/persistence-quick-reference.md`](docs/persistence-quick-reference.md) for usage examples or [`docs/persistence-layer-documentation.md`](docs/persistence-layer-documentation.md) for complete API reference.
+**Documentation**:
+- 📘 **User Guide**: [`docs/dashboard-persistence-guide.md`](docs/dashboard-persistence-guide.md) - Complete workflows and troubleshooting
+- 🔧 **Quick Reference**: [`docs/persistence-quick-reference.md`](docs/persistence-quick-reference.md) - Code examples
+- 📚 **API Reference**: [`docs/persistence-layer-documentation.md`](docs/persistence-layer-documentation.md) - Technical details
+
+**Dashboard Integration**: The dashboard includes Save/Load/Manage buttons for easy session management - no coding required!
 
 #### Legacy Compatibility
 ```python
