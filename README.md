@@ -8,6 +8,7 @@
 **RoboMage** is a modular Python framework for automating **powder diffraction analysis and Rietveld refinement** across NSLS-II beamlines.
 
 ### 🔍 Key Features
+- **Session Persistence**: Save and restore analysis sessions with all files and wavelengths
 - **Peak Analysis Tool**: Advanced automated peak detection and fitting with multiple profile types
 - **Interactive Dashboard**: Professional 3-tab Dash UI for data import, visualization, and analysis
 - **Real-time Analysis**: Integrated peak analysis service with live parameter tuning
@@ -110,6 +111,37 @@ python -m robomage --dashboard
   - Service connection status monitoring
 
 Access dashboard at: `http://localhost:8050`
+
+#### Session Persistence
+RoboMage includes a production-ready persistence layer for saving and restoring analysis sessions:
+
+```python
+from robomage.persistence import SessionManager
+
+mgr = SessionManager()
+
+# Save current work
+session_id = mgr.create_session("November 2025 Analysis", "SRM 660b calibration")
+mgr.add_file_to_session(session_id, "sample.chi", wavelength=0.1665, data=data)
+
+# Load previous session
+files = mgr.get_session_files(session_id)
+for file_obj in files:
+    data = mgr.load_file_data(file_obj.id)
+    wavelength = file_obj.wavelength  # Preserved exactly
+```
+
+**Key Features:**
+- **Session Management**: Create, list, load, and delete analysis sessions
+- **Wavelength Preservation**: Each file stores its wavelength independently
+- **Data Integrity**: Verified roundtrip with numpy.allclose() validation
+- **Automatic Metadata**: Captures Q ranges, data points, timestamps
+- **Concurrent Access**: SQLite WAL mode for multi-window support
+- **Complete Cleanup**: Cascade delete removes both database and physical files
+
+**Storage Location**: `~/.robomage/` (database + files)
+
+See [`docs/persistence-quick-reference.md`](docs/persistence-quick-reference.md) for usage examples or [`docs/persistence-layer-documentation.md`](docs/persistence-layer-documentation.md) for complete API reference.
 
 #### Legacy Compatibility
 ```python
