@@ -47,17 +47,23 @@ def create_main_layout() -> html.Div:
             # Status bar
             html.Hr(),
             create_status_bar(),
+            # Session management modals
+            create_save_session_modal(),
+            create_load_session_modal(),
+            create_manage_sessions_modal(),
             # Data stores for inter-tab communication
             dcc.Store(id="file-data-store"),
             dcc.Store(id="wavelength-store"),
             dcc.Store(id="analysis-results-store"),
+            # Session management stores
+            dcc.Store(id="current-session-id"),
         ],
         fluid=True,
     )
 
 
 def create_header() -> dbc.Row:
-    """Create the dashboard header."""
+    """Create the dashboard header with session management buttons."""
     return dbc.Row(
         [
             dbc.Col(
@@ -74,14 +80,49 @@ def create_header() -> dbc.Row:
                         className="text-muted",
                     ),
                 ],
-                width=8,
+                width=6,
             ),
             dbc.Col(
                 [
-                    dbc.Badge("Sprint 4 - Phase 1.5", color="info", className="me-2"),
-                    dbc.Badge("v0.1.0", color="secondary"),
+                    # Session management buttons
+                    dbc.ButtonGroup(
+                        [
+                            dbc.Button(
+                                [html.I(className="fas fa-save me-2"), "Save Session"],
+                                id="save-session-button",
+                                color="success",
+                                size="sm",
+                                className="me-1",
+                            ),
+                            dbc.Button(
+                                [
+                                    html.I(className="fas fa-folder-open me-2"),
+                                    "Load Session",
+                                ],
+                                id="load-session-button",
+                                color="primary",
+                                size="sm",
+                                className="me-1",
+                            ),
+                            dbc.Button(
+                                [html.I(className="fas fa-list me-2"), "Manage"],
+                                id="manage-sessions-button",
+                                color="info",
+                                size="sm",
+                            ),
+                        ],
+                        className="mb-2",
+                    ),
                 ],
                 width=4,
+                className="d-flex align-items-center justify-content-end flex-column",
+            ),
+            dbc.Col(
+                [
+                    dbc.Badge("Sprint 5 - Persistence", color="info", className="me-2"),
+                    dbc.Badge("v0.2.0", color="secondary"),
+                ],
+                width=2,
                 className="d-flex align-items-center justify-content-end",
             ),
         ]
@@ -356,7 +397,138 @@ def create_import_tab() -> html.Div:
                 ]
             ),
         ],
-        className="p-3",
+        className="mt-3",
+    )
+
+
+def create_save_session_modal() -> dbc.Modal:
+    """Create modal for saving current session."""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle([html.I(className="fas fa-save me-2"), "Save Session"])
+            ),
+            dbc.ModalBody(
+                [
+                    dbc.Label("Session Name *", html_for="session-name-input"),
+                    dbc.Input(
+                        id="session-name-input",
+                        placeholder="Enter a unique session name...",
+                        type="text",
+                        required=True,
+                    ),
+                    dbc.FormText("Give your session a descriptive name"),
+                    html.Br(),
+                    dbc.Label("Description", html_for="session-description-input"),
+                    dbc.Textarea(
+                        id="session-description-input",
+                        placeholder="Optional: Describe what this session contains...",
+                        style={"height": "100px"},
+                    ),
+                    html.Br(),
+                    html.Div(id="save-session-feedback"),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button("Cancel", id="save-session-cancel", color="secondary"),
+                    dbc.Button(
+                        "Save",
+                        id="save-session-confirm",
+                        color="success",
+                    ),
+                ]
+            ),
+        ],
+        id="save-session-modal",
+        is_open=False,
+        size="lg",
+    )
+
+
+def create_load_session_modal() -> dbc.Modal:
+    """Create modal for loading a saved session."""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [html.I(className="fas fa-folder-open me-2"), "Load Session"]
+                )
+            ),
+            dbc.ModalBody(
+                [
+                    html.P(
+                        "Select a session to load:",
+                        className="fw-bold mb-3",
+                    ),
+                    html.Div(id="session-list-container"),
+                    html.Div(id="load-session-feedback"),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button("Cancel", id="load-session-cancel", color="secondary"),
+                ]
+            ),
+        ],
+        id="load-session-modal",
+        is_open=False,
+        size="xl",
+    )
+
+
+def create_manage_sessions_modal() -> dbc.Modal:
+    """Create modal for managing saved sessions."""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [html.I(className="fas fa-list me-2"), "Manage Sessions"]
+                )
+            ),
+            dbc.ModalBody(
+                [
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.P(
+                                        "Saved Sessions:",
+                                        className="fw-bold mb-3",
+                                    ),
+                                ],
+                                width=8,
+                            ),
+                            dbc.Col(
+                                [
+                                    dbc.Button(
+                                        [
+                                            html.I(className="fas fa-sync me-2"),
+                                            "Refresh",
+                                        ],
+                                        id="refresh-sessions-button",
+                                        color="info",
+                                        size="sm",
+                                    ),
+                                ],
+                                width=4,
+                                className="text-end",
+                            ),
+                        ]
+                    ),
+                    html.Div(id="manage-sessions-container"),
+                    html.Div(id="manage-sessions-feedback"),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button("Close", id="manage-sessions-close", color="secondary"),
+                ]
+            ),
+        ],
+        id="manage-sessions-modal",
+        is_open=False,
+        size="xl",
     )
 
 
