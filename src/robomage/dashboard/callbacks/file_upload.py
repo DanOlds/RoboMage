@@ -316,3 +316,52 @@ def register_wavelength_callbacks(app: dash.Dash) -> None:
         }
 
         return custom_style, wavelength_data, display_text
+
+    @app.callback(
+        [
+            Output("wavelength-selector", "value", allow_duplicate=True),
+            Output("current-wavelength-display", "children", allow_duplicate=True),
+        ],
+        [Input("wavelength-store", "data")],
+        prevent_initial_call=True,
+    )
+    def sync_wavelength_display(wavelength_data):
+        """
+        Sync wavelength display when store is updated externally.
+
+        This ensures that when sessions are loaded, the wavelength
+        selector and display update correctly.
+
+        Args:
+            wavelength_data: Wavelength data from store
+
+        Returns:
+            Tuple of (selector value, display text)
+        """
+        if not wavelength_data or "current_wavelength" not in wavelength_data:
+            return dash.no_update, dash.no_update
+
+        wavelength = wavelength_data["current_wavelength"]
+
+        # Determine if this is a standard wavelength
+        standard_wavelengths = {
+            0.1665: "0.1665 Å (synchrotron)",
+            1.5406: "1.5406 Å (Cu Kα)",
+            0.7107: "0.7107 Å (Mo Kα)",
+            2.2897: "2.2897 Å (Cr Kα)",
+        }
+
+        # Check if wavelength matches a standard value (with small tolerance)
+        selector_value = None
+        for std_wavelength, display_name in standard_wavelengths.items():
+            if abs(wavelength - std_wavelength) < 0.0001:
+                selector_value = std_wavelength
+                display_text = display_name
+                break
+
+        if selector_value is None:
+            # Custom wavelength
+            selector_value = "custom"
+            display_text = f"{wavelength:.4f} Å (custom)"
+
+        return selector_value, display_text

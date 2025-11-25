@@ -86,7 +86,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         session_name: str | None,
         description: str | None,
         file_data: dict[str, Any] | None,
-        wavelength_data: dict[str, float] | None,
+        wavelength_data: dict[str, Any] | None,
     ) -> tuple[Any, int | None]:
         """
         Save current dashboard state to a session.
@@ -96,7 +96,8 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             session_name: User-provided session name
             description: Optional session description
             file_data: Dict mapping filenames to file data
-            wavelength_data: Wavelength settings per file
+            wavelength_data: Global wavelength settings with schema:
+                {"current_wavelength": float, "source_type": str}
 
         Returns:
             Tuple of (feedback message, session ID)
@@ -129,13 +130,16 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 name=session_name.strip(), description=description or ""
             )
 
+            # Get global wavelength
+            # (current dashboard uses single wavelength for all files)
+            # wavelength_data schema:
+            # {"current_wavelength": float, "source_type": str}
+            global_wavelength = 0.1665  # Default synchrotron wavelength
+            if wavelength_data and "current_wavelength" in wavelength_data:
+                global_wavelength = wavelength_data["current_wavelength"]
+
             # Add each file to the session
             for filename, file_info in file_data.items():
-                # Get wavelength for this file (default to synchrotron 0.1665 Å)
-                wavelength = (
-                    wavelength_data.get(filename, 0.1665) if wavelength_data else 0.1665
-                )
-
                 # Reconstruct DiffractionData from file-data-store format
                 # Schema from file_upload.py:
                 # {
@@ -153,14 +157,18 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 # Create DiffractionData object with proper validation
                 diffraction = DiffractionData(
                     filename=filename,
-                    q=q_array,
-                    intensity=intensity_array,
-                    wavelength=wavelength,
-                    metadata=file_info.get("metadata", {}),
+                    q_values=q_array,
+                    intensities=intensity_array,
+                    wavelength=global_wavelength,
                 )
 
                 # Save to FileStore via SessionManager
-                mgr.add_file(session_id, diffraction)
+                mgr.add_file_to_session(
+                    session_id=session_id,
+                    filename=filename,
+                    wavelength=global_wavelength,
+                    data=diffraction,
+                )
 
             num_files = len(file_data)
             return (
@@ -298,8 +306,8 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         prevent_initial_call=True,
     )
     def load_session_callback(
-        n_clicks_list: list[int], button_ids: list[dict[str, Any]]
-    ) -> tuple[dict[str, Any], dict[str, float], Any, int | None]:
+        n_clicks_list: list[int | None], button_ids: list[dict[str, Any]]
+    ) -> tuple[dict[str, Any], dict[str, Any], Any, int | None]:
         """
         Load a saved session and restore files and wavelengths.
 
@@ -309,16 +317,23 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
 
         Returns:
             Tuple of (file_data, wavelength_data, feedback, session_id)
+            where wavelength_data has schema:
+            {"current_wavelength": float, "source_type": str}
         """
         # Find which button was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
-            return {}, {}, html.Div(), None
+            return dash.no_update, dash.no_update, html.Div(), dash.no_update
 
         # Get the button that triggered the callback
         triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if triggered_id == "":
-            return {}, {}, html.Div(), None
+            return dash.no_update, dash.no_update, html.Div(), dash.no_update
+
+        # Check if this is actually a button click (not just a re-render)
+        triggered_value = ctx.triggered[0]["value"]
+        if triggered_value is None or triggered_value == 0:
+            return dash.no_update, dash.no_update, html.Div(), dash.no_update
 
         button_id = json.loads(triggered_id)
         session_id = button_id["index"]
@@ -359,32 +374,47 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
 
             # Reconstruct file data from stored files
             file_data = {}
-            wavelength_data = {}
+            # Track wavelength from first file (use database value)
+            # (all files should have same wavelength)
+            loaded_wavelength = 0.1665  # Default
 
             for session_file in session_files:
-                # Read DiffractionData from FileStore
-                diffraction = mgr.file_store.read_file(session_file.file_id)
+                # Read DiffractionData from FileStore using stored path
+                diffraction = mgr.file_store.load_file(session_file.stored_path)
 
                 if diffraction is None:
                     continue
 
+                # Get wavelength from database (first file)
+                # The stored file doesn't contain wavelength, but DB does
+                if not file_data:  # First file
+                    loaded_wavelength = session_file.wavelength or 0.1665
+
                 # Convert to file-data-store format (matching file_upload.py schema)
-                filename = diffraction.filename
+                filename = diffraction.filename or "unknown.chi"
                 file_info = {
                     "filename": filename,
-                    "q": diffraction.q.tolist(),
-                    "intensity": diffraction.intensity.tolist(),
-                    "metadata": diffraction.metadata or {},
-                    "num_points": len(diffraction.q),
-                    "q_range": [float(diffraction.q.min()), float(diffraction.q.max())],
+                    "q": diffraction.q_values.tolist(),
+                    "intensity": diffraction.intensities.tolist(),
+                    "metadata": {},  # DiffractionData doesn't store generic metadata
+                    "num_points": len(diffraction.q_values),
+                    "q_range": [
+                        float(diffraction.q_values.min()),
+                        float(diffraction.q_values.max()),
+                    ],
                     "intensity_range": [
-                        float(diffraction.intensity.min()),
-                        float(diffraction.intensity.max()),
+                        float(diffraction.intensities.min()),
+                        float(diffraction.intensities.max()),
                     ],
                 }
 
                 file_data[filename] = file_info
-                wavelength_data[filename] = diffraction.wavelength
+
+            # Restore global wavelength (matching wavelength-store schema)
+            wavelength_data = {
+                "current_wavelength": loaded_wavelength,
+                "source_type": "standard",  # Could be enhanced to detect custom values
+            }
 
             return (
                 file_data,
@@ -558,14 +588,17 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             )
 
     @app.callback(
-        Output("manage-sessions-feedback", "children"),
+        [
+            Output("manage-sessions-feedback", "children"),
+            Output("manage-sessions-container", "children", allow_duplicate=True),
+        ],
         [Input({"type": "delete-session", "index": dash.ALL}, "n_clicks")],
         [State({"type": "delete-session", "index": dash.ALL}, "id")],
         prevent_initial_call=True,
     )
     def delete_session_callback(
-        n_clicks_list: list[int], button_ids: list[dict[str, Any]]
-    ) -> Any:
+        n_clicks_list: list[int | None], button_ids: list[dict[str, Any]]
+    ) -> tuple[Any, Any]:
         """
         Handle session deletion.
 
@@ -574,17 +607,22 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             button_ids: List of button IDs
 
         Returns:
-            Feedback message
+            Tuple of (feedback message, updated session list)
         """
         # Find which button was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
-            return html.Div()
+            return html.Div(), dash.no_update
 
         # Get the button that triggered the callback
         triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if triggered_id == "":
-            return html.Div()
+            return html.Div(), dash.no_update
+
+        # Check if this is actually a button click (not just a re-render)
+        triggered_value = ctx.triggered[0]["value"]
+        if triggered_value is None or triggered_value == 0:
+            return html.Div(), dash.no_update
 
         button_id = json.loads(triggered_id)
         session_id = button_id["index"]
@@ -596,21 +634,130 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
 
             mgr.delete_session(session_id)
 
-            return dbc.Alert(
-                [
-                    html.I(className="fas fa-check-circle me-2"),
-                    f"Session '{session_name}' deleted successfully!",
-                ],
-                color="success",
-                dismissable=True,
-                duration=4000,
+            # Refresh the session list after deletion
+            sessions = mgr.list_sessions()
+
+            if not sessions:
+                session_list = dbc.Alert(
+                    "No saved sessions found.",
+                    color="info",
+                )
+            else:
+                # Recreate session cards without the deleted session
+                session_cards = []
+                for s in sessions:
+                    session_cards.append(
+                        dbc.Card(
+                            [
+                                dbc.CardHeader(
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                html.H5(s.name, className="mb-0"),
+                                                width=8,
+                                            ),
+                                            dbc.Col(
+                                                dbc.Button(
+                                                    [
+                                                        html.I(
+                                                            className=(
+                                                                "fas fa-trash me-1"
+                                                            )
+                                                        ),
+                                                        "Delete",
+                                                    ],
+                                                    id={
+                                                        "type": "delete-session",
+                                                        "index": s.id,
+                                                    },
+                                                    color="danger",
+                                                    size="sm",
+                                                ),
+                                                width=4,
+                                                className="text-end",
+                                            ),
+                                        ]
+                                    )
+                                ),
+                                dbc.CardBody(
+                                    [
+                                        html.P(
+                                            s.description or "No description",
+                                            className="text-muted",
+                                        ),
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    [
+                                                        html.Small(
+                                                            [
+                                                                html.I(
+                                                                    className=(
+                                                                        "fas "
+                                                                        "fa-file "
+                                                                        "me-1"
+                                                                    )
+                                                                ),
+                                                                (
+                                                                    f"{len(s.files)} "
+                                                                    f"files"
+                                                                ),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    width=4,
+                                                ),
+                                                dbc.Col(
+                                                    [
+                                                        html.Small(
+                                                            [
+                                                                html.I(
+                                                                    className=(
+                                                                        "fas "
+                                                                        "fa-calendar "
+                                                                        "me-1"
+                                                                    )
+                                                                ),
+                                                                (
+                                                                    f"Created: "
+                                                                    f"{s.created_at.strftime('%Y-%m-%d')}"
+                                                                ),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    width=8,
+                                                ),
+                                            ]
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            className="mb-3",
+                        )
+                    )
+                session_list = html.Div(session_cards)
+
+            return (
+                dbc.Alert(
+                    [
+                        html.I(className="fas fa-check-circle me-2"),
+                        f"Session '{session_name}' deleted successfully!",
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=4000,
+                ),
+                session_list,
             )
 
         except ValueError as e:
-            return dbc.Alert(
-                f"Error: {str(e)}",
-                color="danger",
-                dismissable=True,
+            return (
+                dbc.Alert(
+                    f"Error: {str(e)}",
+                    color="danger",
+                    dismissable=True,
+                ),
+                dash.no_update,
             )
         except Exception as e:
             return dbc.Alert(
@@ -618,3 +765,56 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 color="danger",
                 dismissable=True,
             )
+
+    @app.callback(
+        [
+            Output("file-list", "children", allow_duplicate=True),
+            Output("file-info", "children", allow_duplicate=True),
+            Output("status-text", "children", allow_duplicate=True),
+            Output("load-session-modal", "is_open", allow_duplicate=True),
+        ],
+        [
+            Input("file-data-store", "data"),
+        ],
+        [
+            State("load-session-modal", "is_open"),
+        ],
+        prevent_initial_call=True,
+    )
+    def sync_ui_with_store(
+        file_data: dict[str, Any] | None, load_modal_open: bool
+    ) -> tuple[Any, Any, str, bool]:
+        """
+        Sync file list UI with file-data-store when it changes.
+
+        This ensures that when sessions are loaded, the UI updates to show
+        the loaded files.
+
+        Args:
+            file_data: Current file data from store
+            load_modal_open: Whether load session modal is open
+
+        Returns:
+            Tuple of (file_list, file_info, status_text, close_modal)
+        """
+        from .file_upload import create_file_info, create_file_list
+
+        if not file_data:
+            file_data = {}
+
+        # Create updated UI components (same logic as file_upload.py)
+        file_list = create_file_list(file_data)
+        file_info = create_file_info(file_data)
+
+        num_files = len(file_data)
+        if num_files == 0:
+            status = "No files loaded"
+        elif num_files == 1:
+            status = "Loaded 1 file"
+        else:
+            status = f"Loaded {num_files} files"
+
+        # Close the load modal if it was open (session was just loaded)
+        close_modal = False if load_modal_open else dash.no_update
+
+        return file_list, file_info, status, close_modal

@@ -209,8 +209,11 @@ class SessionManager:
         """
         db = self.db_manager.get_session()
         try:
-            # Verify session exists
-            session = db.get(Session, session_id)
+            # Verify session exists (use query for consistency)
+            session = db.execute(
+                select(Session).where(Session.id == session_id)
+            ).scalar_one_or_none()
+
             if not session:
                 raise ValueError(f"Session {session_id} not found")
 

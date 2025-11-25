@@ -300,7 +300,7 @@ def create_import_tab() -> html.Div:
                                                         className="fw-bold",
                                                     ),
                                                     html.Span(
-                                                        "0.1665 Å",
+                                                        "0.1665 Å (synchrotron)",
                                                         id="current-wavelength-display",
                                                     ),
                                                 ],
