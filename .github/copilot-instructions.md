@@ -66,18 +66,21 @@ python peak_analyzer.py service --port 8001    # Service mode
 python peak_analyzer.py client file.chi        # Client mode
 ```
 
-### Dashboard Development (Sprint 4)
+### Dashboard Development (Sprint 4 + Sprint 5)
 ```bash
-# Dashboard Development (Sprint 4)
+# Dashboard Development
 python -m robomage.dashboard                       # Start dashboard (port 8050)
 python -m robomage --dashboard --dashboard-port 8051  # Custom port
 pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 ```
 
-**Dashboard Architecture (Phase 2):**
+**Dashboard Architecture:**
 - **Tab Structure**: 3-tab layout (Data Import, Visualization, Analysis)
+- **Session Persistence**: Save/load/manage analysis sessions with all files and metadata
+- **Storage Configuration**: Configurable storage location (default: ~/.robomage/)
+- **Debug Tools**: Built-in debug panel for inspecting session data
 - **Wavelength System**: Per-file assignment, 0.1665 Å synchrotron default, accurate Q→2θ conversion
-- **File Removal**: Red 'X' button for instant file removal, robust index-based callback logic
+- **File Management**: Upload, validate, remove files with instant visual feedback
 - **Plotting**: Line, scatter, filled area, export options, peak overlays with tooltips
 - **Analysis Integration**: Real-time peak detection with FastAPI service integration
 - **Interactive Controls**: Profile selection (Gaussian/Lorentzian/Voigt), prominence, distance, sensitivity sliders
@@ -86,8 +89,9 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **State Management**: Inter-tab communication via dcc.Store
 - **File Structure**: 
   - `src/robomage/dashboard/layouts/`: Tab-specific layouts
-  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting, analysis)
+  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting, analysis, persistence)
   - `src/robomage/dashboard/components/`: Reusable UI components
+  - `src/robomage/persistence/`: Complete persistence layer (database, file store, API)
 
 ## Code Conventions
 
@@ -97,6 +101,11 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `src/robomage/__main__.py`: CLI implementation for data loading/testing
 - `src/robomage/clients/`: HTTP clients for microservice communication
 - `src/robomage/dashboard/`: Dash-based visualization dashboard (Sprint 4)
+- `src/robomage/persistence/`: Complete persistence layer (Sprint 5)
+  - `database.py`: SQLAlchemy ORM and database management
+  - `models.py`: Database models (Session, File)
+  - `file_store.py`: HDF5-based file storage
+  - `api.py`: SessionManager high-level API
 - `src/robomage/visualization.py`: Publication-quality plotting utilities (Sprint 4)
 - `services/peak_analysis/`: Independent FastAPI microservice
 - `peak_analyzer.py`: Standalone CLI tool for peak analysis workflows
@@ -130,8 +139,24 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **Dash**: Interactive web dashboard framework (Sprint 4)
 - **Plotly**: Interactive scientific plotting (Sprint 4)
 - **Dash Bootstrap Components**: Professional UI components for dashboard
+- **SQLAlchemy**: ORM for session persistence (Sprint 5)
+- **h5py**: HDF5 file storage for data persistence (Sprint 5)
 
 ## Current Sprint Status
+**✅ Sprint 5 - Session Persistence: COMPLETE (November 25, 2025)**
+**MERGED TO MAIN** - Production-ready session persistence with dashboard integration
+
+**Completed Deliverables:**
+- ✅ **Complete Persistence Layer** - SQLite + HDF5 storage with SQLAlchemy ORM
+- ✅ **SessionManager API** - High-level API for session CRUD operations
+- ✅ **Dashboard Integration** - Save/Load/Manage UI with 3 modals
+- ✅ **Wavelength Preservation** - Per-file wavelength storage and retrieval
+- ✅ **Storage Configuration** - Configurable storage location with path validation
+- ✅ **Debug Information Panel** - Detailed session inspection and troubleshooting
+- ✅ **Data Integrity** - Verified roundtrip with comprehensive testing
+- ✅ **Comprehensive Testing** - 99/99 tests passing (85 existing + 14 new)
+- ✅ **Complete Documentation** - User guides, API docs, expansion guide
+
 **✅ Sprint 3 + Sprint 4 Phase 2: COMPLETE (November 13, 2025)**
 **MERGED TO MAIN** - Full-featured dashboard with integrated peak analysis
 
@@ -144,7 +169,6 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - ✅ **Enhanced Data Loading** - .chi and .xy file support with auto-detection
 - ✅ **Type Safety** - Strategic MyPy configuration with dashboard exclusion
 - ✅ **Code Quality** - All linting/formatting/type checks passing
-- ✅ **Comprehensive Testing** - 51/51 tests passing including analysis tab integration
 
 **🚀 READY FOR: Sprint 4 Phase 3 - Publication Features**
 - Advanced export options (CSV, JSON, publication plots)
@@ -155,7 +179,8 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
 - **File formats**: .chi and .xy files (Q, intensity columns) with auto-detection
 - **CLI**: Multiple tools - `python -m robomage` and `peak_analyzer.py` with service modes
-- **Dashboard**: Professional 3-tab Dash UI with wavelength management and plotting
+- **Dashboard**: Professional 3-tab Dash UI with wavelength management, plotting, and persistence
+- **Session Storage**: SQLite database + HDF5 files in `~/.robomage/` (configurable)
 - **Microservices**: FastAPI peak analysis service with HTTP/JSON communication  
 - **Type Safety**: Strategic MyPy configuration - strict for core library, lenient for UI
 - **Service Communication**: Robust retry logic and validation at API boundaries
@@ -168,9 +193,14 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 4. `services/peak_analysis/main.py` - FastAPI microservice implementation
 5. `peak_analyzer.py` - Multi-mode CLI demonstrating service patterns
 6. `src/robomage/clients/peak_analysis_client.py` - Service client with retry logic
+7. `src/robomage/persistence/api.py` - SessionManager for session persistence
 
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
 - `docs/sprint-3-peak-analysis-plan.md` - Service architecture implementation details
 - `docs/sprint-4-visualization-dashboard.md` - Dashboard development plan and architecture
+- `docs/dashboard-persistence-guide.md` - Complete session persistence user guide
+- `docs/persistence-quick-reference.md` - Code examples for persistence API
+- `docs/session-storage-expansion-guide.md` - Guide for extending persistence layer
+- `STORAGE-DEBUG-FEATURES.md` - Storage configuration and debug tools documentation
 - `README.md` - User-facing project overview and API documentation

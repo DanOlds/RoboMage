@@ -129,6 +129,9 @@ files = mgr.get_session_files(session_id)
 for file_obj in files:
     data = mgr.load_file_data(file_obj.id)
     wavelength = file_obj.wavelength  # Preserved exactly
+
+# Configure custom storage location
+custom_mgr = SessionManager(db_path="/data/robomage/sessions.db")
 ```
 
 **Key Features:**
@@ -138,13 +141,23 @@ for file_obj in files:
 - **Automatic Metadata**: Captures Q ranges, data points, timestamps
 - **Concurrent Access**: SQLite WAL mode for multi-window support
 - **Complete Cleanup**: Cascade delete removes both database and physical files
+- **Configurable Storage**: Custom storage locations for multi-user or network environments
+- **Debug Tools**: Built-in debug panel for inspecting session data and troubleshooting
 
-**Storage Location**: `~/.robomage/` (database + files)
+**Storage Location**: `~/.robomage/` (database + files) - Configurable via dashboard or API
+
+**Dashboard Features**:
+- 💾 **Save/Load Buttons**: One-click session save and restore
+- 📋 **Manage Sessions**: View all sessions with timestamps and file counts
+- 🗑️ **Delete Sessions**: Remove sessions with automatic file cleanup
+- ⚙️ **Storage Configuration**: Change storage location with path validation
+- 🐛 **Debug Panel**: Inspect detailed session information for troubleshooting
 
 **Documentation**:
 - 📘 **User Guide**: [`docs/dashboard-persistence-guide.md`](docs/dashboard-persistence-guide.md) - Complete workflows and troubleshooting
 - 🔧 **Quick Reference**: [`docs/persistence-quick-reference.md`](docs/persistence-quick-reference.md) - Code examples
 - 📚 **API Reference**: [`docs/persistence-layer-documentation.md`](docs/persistence-layer-documentation.md) - Technical details
+- 🔧 **Storage Features**: [`STORAGE-DEBUG-FEATURES.md`](STORAGE-DEBUG-FEATURES.md) - Storage configuration and debug tools
 
 **Dashboard Integration**: The dashboard includes Save/Load/Manage buttons for easy session management - no coding required!
 
@@ -349,6 +362,15 @@ pixi run test      # Full test suite with pytest
 > **Note**: All tasks are defined in `pixi.toml` and run in the isolated pixi environment automatically.
 
 ###  Project Status
+**Sprint 5 - Session Persistence** ✅ **COMPLETE (Nov 25, 2025)**:
+- ✅ Complete session save/load/delete system
+- ✅ Dashboard integration with UI controls
+- ✅ Wavelength preservation per file
+- ✅ Storage location configuration
+- ✅ Debug information panel
+- ✅ 99 tests passing with full coverage
+- ✅ Production-ready persistence layer
+
 **Sprint 3 + Sprint 4 Phase 2** ✅ **COMPLETE (Nov 13, 2025)**:
 - ✅ Robust data loading and validation system
 - ✅ Modern Pydantic-based data models with statistical analysis
@@ -356,7 +378,6 @@ pixi run test      # Full test suite with pytest
 - ✅ Interactive dashboard with real-time analysis integration
 - ✅ Command-line interface for batch processing
 - ✅ Comprehensive documentation and examples
-- ✅ Full test coverage (51 tests) with CI/CD pipeline
 - ✅ Type-safe codebase with MyPy compliance
 
 **Sprint 4 Phase 3** 📋 **Planned**:
