@@ -818,3 +818,296 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         close_modal = False if load_modal_open else dash.no_update
 
         return file_list, file_info, status, close_modal
+
+    # ===== Storage Configuration Callbacks =====
+
+    @app.callback(
+        Output("configure-storage-modal", "is_open"),
+        [
+            Input("configure-storage-button", "n_clicks"),
+            Input("configure-storage-cancel", "n_clicks"),
+            Input("configure-storage-apply", "n_clicks"),
+        ],
+        [State("configure-storage-modal", "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_configure_storage_modal(
+        open_clicks: int,
+        cancel_clicks: int,
+        apply_clicks: int,
+        is_open: bool,
+    ) -> bool:
+        """Toggle configure storage modal."""
+        return not is_open
+
+    @app.callback(
+        Output("storage-location-display", "children"),
+        [
+            Input("storage-location-store", "data"),
+            Input("manage-sessions-modal", "is_open"),
+        ],
+    )
+    def update_storage_location_display(
+        custom_path: str | None, modal_open: bool
+    ) -> str:
+        """
+        Update storage location display.
+
+        Shows custom path if set, otherwise default location.
+        """
+
+        if custom_path:
+            return custom_path
+        else:
+            # Show default location
+            from robomage.persistence.database import DEFAULT_DB_PATH
+
+            return str(DEFAULT_DB_PATH.parent)
+
+    @app.callback(
+        Output("current-storage-path", "children"),
+        [Input("configure-storage-modal", "is_open")],
+        [State("storage-location-store", "data")],
+    )
+    def update_current_storage_path(is_open: bool, custom_path: str | None) -> str:
+        """Update current storage path in configuration modal."""
+
+        if custom_path:
+            return custom_path
+        else:
+            from robomage.persistence.database import DEFAULT_DB_PATH
+
+            return str(DEFAULT_DB_PATH.parent)
+
+    @app.callback(
+        [
+            Output("storage-location-store", "data", allow_duplicate=True),
+            Output("configure-storage-feedback", "children"),
+            Output("new-storage-path-input", "value"),
+        ],
+        [
+            Input("configure-storage-apply", "n_clicks"),
+            Input("reset-storage-button", "n_clicks"),
+        ],
+        [State("new-storage-path-input", "value")],
+        prevent_initial_call=True,
+    )
+    def handle_storage_configuration(
+        apply_clicks: int | None,
+        reset_clicks: int | None,
+        new_path: str | None,
+    ) -> tuple[str | None, Any, str]:
+        """
+        Handle storage location configuration.
+
+        Validates and applies new storage location.
+        """
+        from pathlib import Path
+
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return dash.no_update, html.Div(), ""
+
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # Handle reset to default
+        if triggered_id == "reset-storage-button":
+            return (
+                None,
+                dbc.Alert(
+                    [
+                        html.I(className="fas fa-check-circle me-2"),
+                        "Storage location reset to default (~/.robomage/)",
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=3000,
+                ),
+                "",
+            )
+
+        # Handle apply new path
+        if triggered_id == "configure-storage-apply":
+            if not new_path or not new_path.strip():
+                return (
+                    dash.no_update,
+                    dbc.Alert(
+                        "Please enter a storage path",
+                        color="danger",
+                        dismissable=True,
+                    ),
+                    dash.no_update,
+                )
+
+            # Expand user path (~/)
+            try:
+                expanded_path = Path(new_path).expanduser()
+
+                # Create directory if it doesn't exist
+                expanded_path.mkdir(parents=True, exist_ok=True)
+
+                # Verify it's writable
+                test_file = expanded_path / ".robomage_test"
+                test_file.touch()
+                test_file.unlink()
+
+                return (
+                    str(expanded_path),
+                    dbc.Alert(
+                        [
+                            html.I(className="fas fa-check-circle me-2"),
+                            f"Storage location changed to: {expanded_path}",
+                        ],
+                        color="success",
+                        dismissable=True,
+                        duration=3000,
+                    ),
+                    "",
+                )
+
+            except Exception as e:
+                return (
+                    dash.no_update,
+                    dbc.Alert(
+                        f"Error: {str(e)}. Path must be writable.",
+                        color="danger",
+                        dismissable=True,
+                    ),
+                    dash.no_update,
+                )
+
+        return dash.no_update, html.Div(), ""
+
+    # ===== Debug Panel Callbacks =====
+
+    @app.callback(
+        Output("debug-panel-collapse", "is_open"),
+        [Input("toggle-debug-panel-button", "n_clicks")],
+        [State("debug-panel-collapse", "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_debug_panel(n_clicks: int | None, is_open: bool) -> bool:
+        """Toggle debug panel visibility."""
+        return not is_open
+
+    @app.callback(
+        Output("debug-info-display", "children"),
+        [
+            Input("debug-panel-collapse", "is_open"),
+            Input("refresh-sessions-button", "n_clicks"),
+        ],
+        [State("storage-location-store", "data")],
+    )
+    def update_debug_info(
+        is_open: bool, refresh_clicks: int | None, custom_path: str | None
+    ) -> Any:
+        """
+        Generate debug information display.
+
+        Shows detailed information about storage, sessions, and configuration.
+        """
+        if not is_open:
+            return html.Div()
+
+        from pathlib import Path
+
+        try:
+            # Determine database path
+            if custom_path:
+                db_path = Path(custom_path) / "robomage.db"
+                file_store_path = Path(custom_path) / "files"
+            else:
+                from robomage.persistence.database import DEFAULT_DB_PATH
+                from robomage.persistence.file_store import DEFAULT_STORE_PATH
+
+                db_path = DEFAULT_DB_PATH
+                file_store_path = DEFAULT_STORE_PATH
+
+            # Create session manager
+            mgr = SessionManager(db_path=db_path) if custom_path else SessionManager()
+
+            # Get all sessions
+            sessions = mgr.list_sessions()
+
+            # Collect debug information
+            debug_sections = []
+
+            # 1. Storage Configuration
+            debug_sections.append(
+                html.Div(
+                    [
+                        html.H6("Storage Configuration", className="fw-bold mb-2"),
+                        html.Pre(
+                            f"Database: {db_path}\n"
+                            f"Files: {file_store_path}\n"
+                            f"Database exists: {db_path.exists()}\n"
+                            f"File store exists: {file_store_path.exists()}",
+                            className="bg-light p-2 rounded",
+                        ),
+                    ],
+                    className="mb-3",
+                )
+            )
+
+            # 2. Session Summary
+            total_files = sum(len(s.files) for s in sessions)
+            debug_sections.append(
+                html.Div(
+                    [
+                        html.H6("Session Summary", className="fw-bold mb-2"),
+                        html.Pre(
+                            f"Total sessions: {len(sessions)}\n"
+                            f"Total files: {total_files}",
+                            className="bg-light p-2 rounded",
+                        ),
+                    ],
+                    className="mb-3",
+                )
+            )
+
+            # 3. Detailed Session Info
+            if sessions:
+                session_details = []
+                for s in sessions:
+                    files_info = []
+                    for f in s.files:
+                        files_info.append(
+                            f"    • {f.filename} "
+                            f"({f.num_points} pts, {f.wavelength} Å)\n"
+                            f"      Path: {f.stored_path}\n"
+                            f"      Q range: [{f.q_min:.3f}, {f.q_max:.3f}]"
+                        )
+
+                    last_accessed_str = s.last_accessed.strftime("%Y-%m-%d %H:%M:%S")
+                    session_details.append(
+                        f"Session ID {s.id}: {s.name}\n"
+                        f"  Description: {s.description or 'None'}\n"
+                        f"  Created: {s.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                        f"  Last accessed: {last_accessed_str}\n"
+                        f"  Files ({len(s.files)}):\n" + "\n".join(files_info)
+                    )
+
+                debug_sections.append(
+                    html.Div(
+                        [
+                            html.H6(
+                                "Detailed Session Information",
+                                className="fw-bold mb-2",
+                            ),
+                            html.Pre(
+                                "\n\n".join(session_details),
+                                className="bg-light p-2 rounded",
+                                style={"maxHeight": "300px", "overflow": "auto"},
+                            ),
+                        ],
+                        className="mb-3",
+                    )
+                )
+
+            return html.Div(debug_sections)
+
+        except Exception as e:
+            return dbc.Alert(
+                f"Error generating debug info: {str(e)}",
+                color="danger",
+            )

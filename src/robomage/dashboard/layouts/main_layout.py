@@ -51,12 +51,14 @@ def create_main_layout() -> html.Div:
             create_save_session_modal(),
             create_load_session_modal(),
             create_manage_sessions_modal(),
+            create_configure_storage_modal(),
             # Data stores for inter-tab communication
             dcc.Store(id="file-data-store"),
             dcc.Store(id="wavelength-store"),
             dcc.Store(id="analysis-results-store"),
             # Session management stores
             dcc.Store(id="current-session-id"),
+            dcc.Store(id="storage-location-store", data=None),  # Custom storage path
         ],
         fluid=True,
     )
@@ -488,6 +490,49 @@ def create_manage_sessions_modal() -> dbc.Modal:
             ),
             dbc.ModalBody(
                 [
+                    # Storage location info and configuration
+                    dbc.Alert(
+                        [
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        [
+                                            html.I(className="fas fa-database me-2"),
+                                            html.Strong("Storage Location:"),
+                                        ],
+                                        width=3,
+                                    ),
+                                    dbc.Col(
+                                        [
+                                            html.Code(
+                                                id="storage-location-display",
+                                                children="~/.robomage/",
+                                            ),
+                                        ],
+                                        width=6,
+                                    ),
+                                    dbc.Col(
+                                        [
+                                            dbc.Button(
+                                                [
+                                                    html.I(className="fas fa-cog me-1"),
+                                                    "Configure",
+                                                ],
+                                                id="configure-storage-button",
+                                                color="link",
+                                                size="sm",
+                                            ),
+                                        ],
+                                        width=3,
+                                        className="text-end",
+                                    ),
+                                ]
+                            ),
+                        ],
+                        color="info",
+                        className="mb-3",
+                    ),
+                    # Session list section
                     dbc.Row(
                         [
                             dbc.Col(
@@ -497,7 +542,7 @@ def create_manage_sessions_modal() -> dbc.Modal:
                                         className="fw-bold mb-3",
                                     ),
                                 ],
-                                width=8,
+                                width=6,
                             ),
                             dbc.Col(
                                 [
@@ -509,15 +554,47 @@ def create_manage_sessions_modal() -> dbc.Modal:
                                         id="refresh-sessions-button",
                                         color="info",
                                         size="sm",
+                                        className="me-2",
+                                    ),
+                                    dbc.Button(
+                                        [
+                                            html.I(className="fas fa-bug me-2"),
+                                            "Debug Info",
+                                        ],
+                                        id="toggle-debug-panel-button",
+                                        color="secondary",
+                                        size="sm",
+                                        outline=True,
                                     ),
                                 ],
-                                width=4,
+                                width=6,
                                 className="text-end",
                             ),
                         ]
                     ),
                     html.Div(id="manage-sessions-container"),
                     html.Div(id="manage-sessions-feedback"),
+                    # Debug panel (initially hidden)
+                    dbc.Collapse(
+                        dbc.Card(
+                            [
+                                dbc.CardHeader(
+                                    [
+                                        html.I(className="fas fa-bug me-2"),
+                                        html.Strong("Debug Information"),
+                                    ]
+                                ),
+                                dbc.CardBody(
+                                    [
+                                        html.Div(id="debug-info-display"),
+                                    ]
+                                ),
+                            ],
+                            className="mt-3",
+                        ),
+                        id="debug-panel-collapse",
+                        is_open=False,
+                    ),
                 ]
             ),
             dbc.ModalFooter(
@@ -529,6 +606,118 @@ def create_manage_sessions_modal() -> dbc.Modal:
         id="manage-sessions-modal",
         is_open=False,
         size="xl",
+    )
+
+
+def create_configure_storage_modal() -> dbc.Modal:
+    """Create modal for configuring storage location."""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.I(className="fas fa-cog me-2"),
+                        "Configure Storage Location",
+                    ]
+                )
+            ),
+            dbc.ModalBody(
+                [
+                    dbc.Alert(
+                        [
+                            html.I(className="fas fa-info-circle me-2"),
+                            "Configure where RoboMage stores session data. ",
+                            "This affects both the database "
+                            "and file storage locations.",
+                        ],
+                        color="info",
+                    ),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.Label(
+                                        "Current Location:", className="fw-bold"
+                                    ),
+                                    html.Code(
+                                        id="current-storage-path",
+                                        children="~/.robomage/",
+                                        className="d-block mb-3",
+                                    ),
+                                ],
+                                width=12,
+                            ),
+                        ]
+                    ),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.Label(
+                                        "New Location:",
+                                        className="fw-bold mb-2",
+                                    ),
+                                    dbc.Input(
+                                        id="new-storage-path-input",
+                                        type="text",
+                                        placeholder=(
+                                            "/path/to/storage or ~/custom/location"
+                                        ),
+                                        className="mb-2",
+                                    ),
+                                    html.Small(
+                                        [
+                                            html.I(className="fas fa-lightbulb me-1"),
+                                            "Tip: Use absolute paths or "
+                                            "~/ for home directory.",
+                                        ],
+                                        className="text-muted",
+                                    ),
+                                ],
+                                width=12,
+                            ),
+                        ]
+                    ),
+                    html.Hr(),
+                    dbc.Alert(
+                        [
+                            html.I(className="fas fa-exclamation-triangle me-2"),
+                            html.Strong("Important: "),
+                            "Changing the storage location will use "
+                            "a different database. "
+                            "Existing sessions in the old location "
+                            "will not be visible "
+                            "until you switch back.",
+                        ],
+                        color="warning",
+                    ),
+                    html.Div(id="configure-storage-feedback"),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        "Reset to Default",
+                        id="reset-storage-button",
+                        color="secondary",
+                        outline=True,
+                    ),
+                    dbc.Button(
+                        "Cancel",
+                        id="configure-storage-cancel",
+                        color="secondary",
+                    ),
+                    dbc.Button(
+                        "Apply",
+                        id="configure-storage-apply",
+                        color="primary",
+                    ),
+                ]
+            ),
+        ],
+        id="configure-storage-modal",
+        is_open=False,
+        size="lg",
     )
 
 
