@@ -2,11 +2,13 @@
 Main Dashboard Layout
 
 Phase 1.5: Professional tab-based layout for the RoboMage dashboard
-with Data Import, Visualization, and Analysis tabs.
+with Data Import, Visualization, Analysis, and Workflow tabs.
 """
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
+
+from .workflow_layout import create_workflow_tab
 
 
 def create_main_layout() -> html.Div:
@@ -38,6 +40,11 @@ def create_main_layout() -> html.Div:
                         label="🔬 Analysis",
                         tab_id="analysis",
                         children=[create_analysis_tab()],
+                    ),
+                    dbc.Tab(
+                        label="⚙️ Workflow Builder",
+                        tab_id="workflow",
+                        children=[create_workflow_tab()],
                     ),
                 ],
                 id="main-tabs",

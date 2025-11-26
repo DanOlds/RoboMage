@@ -11,7 +11,13 @@ import sys
 import dash
 import dash_bootstrap_components as dbc
 
-from robomage.dashboard.callbacks import analysis, file_upload, persistence, plotting
+from robomage.dashboard.callbacks import (
+    analysis,
+    file_upload,
+    persistence,
+    plotting,
+    workflow,
+)
 from robomage.dashboard.layouts.main_layout import create_main_layout
 
 # Add the project root to Python path for imports
@@ -49,6 +55,7 @@ def create_app(debug: bool = False) -> dash.Dash:
     plotting.register_callbacks(app)
     analysis.register_callbacks(app)
     persistence.register_persistence_callbacks(app)
+    workflow.register_callbacks(app)
 
     return app
 
