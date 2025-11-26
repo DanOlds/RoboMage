@@ -39,3 +39,10 @@ typecheck = "mypy src"
 check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
 dashboard = "python -m robomage --dashboard"
 dashboard-debug = "python -m robomage --dashboard --debug"
+
+# Individual service tasks
+peak-service = "python services/peak_analysis/main.py --port 8001"
+workflow-service = "python services/workflow_engine/main.py --port 8002"
+
+# Start all services for workflow system (cross-platform)
+start-all = "python start_services.py"

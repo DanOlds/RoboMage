@@ -392,18 +392,28 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
 
     print(f"🚀 Executing workflow: {workflow.name} (ID: {workflow_id})")
 
-    # Execute using orchestrator
-    result = await orchestrator.execute_workflow(workflow, context)
+    try:
+        # Execute using orchestrator
+        result = await orchestrator.execute_workflow(workflow, context)
 
-    # Store execution result
-    executions[result.execution_id] = result
+        # Store execution result
+        executions[result.execution_id] = result
 
-    status_emoji = "✅" if result.status == ExecutionStatus.COMPLETED else "❌"
-    print(
-        f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
-    )
+        status_emoji = "✅" if result.status == ExecutionStatus.COMPLETED else "❌"
+        print(
+            f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
+        )
 
-    return result
+        return result
+        
+    except Exception as e:
+        print(f"❌ Workflow execution failed with exception: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Workflow execution error: {str(e)}"
+        )
 
 
 @app.get("/executions/{execution_id}", response_model=WorkflowExecutionResult)
@@ -435,6 +445,11 @@ def main():
 
     print(f"🌐 Starting Workflow Service on http://{args.host}:{args.port}")
     print(f"📚 API docs available at http://{args.host}:{args.port}/docs")
+    print()
+    print("⚠️  IMPORTANT: Some workflow nodes require additional services:")
+    print("   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001")
+    print("   • Dashboard: pixi run python -m robomage.dashboard")
+    print()
 
     uvicorn.run(
         "main:app" if args.reload else app,

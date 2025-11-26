@@ -50,10 +50,15 @@ async def peak_analysis_handler(
     # Create client
     client = PeakAnalysisClient(service_url)
 
-    # Build analysis config
+    # Build analysis config matching the service's AnalysisConfig model
     analysis_config = {
-        "peak_detection": {"prominence": prominence, "distance": distance},
-        "fitting": {"profile_type": profile_type},
+        "detection": {
+            "min_prominence": prominence,
+            "min_distance": distance,
+        },
+        "fitting": {
+            "profile_type": profile_type,
+        },
     }
 
     files = inputs.get("input", [])
@@ -61,40 +66,64 @@ async def peak_analysis_handler(
         raise ValueError("No input files provided for analysis")
 
     results = []
+    errors = []
     for i, data in enumerate(files):
         try:
             logger.info(f"Analyzing file {i+1}/{len(files)}: {data.filename}")
-            response = client.analyze_diffraction_data(data, analysis_config)
+            response = client.analyze_peaks(data, analysis_config)
 
+            # Extract results from response
+            # Response structure: {peaks: [...], metadata: {...}, background: {...}}
+            peaks = response.get("peaks", [])
+            metadata = response.get("metadata", {})
+            
             # Store result as dict
             result = {
                 "filename": data.filename,
-                "peaks_detected": response.peaks_detected,
-                "peaks_fitted": response.peaks_fitted,
-                "overall_r_squared": response.overall_r_squared,
+                "peaks_detected": metadata.get("num_peaks_detected", len(peaks)),
+                "peaks_fitted": metadata.get("num_peaks_fitted", len(peaks)),
+                "overall_r_squared": metadata.get("overall_r_squared", 0.0),
                 "peak_list": [
                     {
-                        "position": peak.position,
-                        "d_spacing": peak.d_spacing,
-                        "height": peak.height,
-                        "width": peak.width,
-                        "r_squared": peak.r_squared,
+                        "position": peak.get("position"),
+                        "d_spacing": peak.get("d_spacing"),
+                        "height": peak.get("height"),
+                        "width": peak.get("width"),
+                        "area": peak.get("area"),
+                        "r_squared": peak.get("r_squared", 0.0),
                     }
-                    for peak in response.peak_list
+                    for peak in peaks
                 ],
             }
             results.append(result)
             logger.info(
-                f"File {i+1}: Found {response.peaks_detected} peaks, "
-                f"fitted {response.peaks_fitted}"
+                f"File {i+1}: Found {metadata.get('num_peaks_detected', len(peaks))} peaks, "
+                f"fitted {metadata.get('num_peaks_fitted', len(peaks))}"
             )
 
         except Exception as e:
-            logger.error(f"Failed to analyze file {i+1}: {e}")
-            # Continue with other files
+            error_msg = str(e)
+            logger.error(f"Failed to analyze file {i+1}: {error_msg}")
+            errors.append(f"File {i+1} ({data.filename if hasattr(data, 'filename') else 'unknown'}): {error_msg}")
 
     if not results:
-        raise ValueError("No files were analyzed successfully")
+        # Provide detailed error message
+        error_details = "\n  - ".join(errors) if errors else "Unknown error"
+        
+        # Check if it's likely a service connection issue
+        if errors and any("Connection" in err or "refused" in err.lower() or "timeout" in err.lower() for err in errors):
+            raise ValueError(
+                f"No files were analyzed successfully. "
+                f"Peak analysis service may not be running.\n"
+                f"Start the service with:\n"
+                f"  pixi run python services/peak_analysis/main.py --port 8001\n\n"
+                f"Errors encountered:\n  - {error_details}"
+            )
+        else:
+            raise ValueError(
+                f"No files were analyzed successfully.\n"
+                f"Errors encountered:\n  - {error_details}"
+            )
 
     logger.info(f"Successfully analyzed {len(results)} files")
     return results

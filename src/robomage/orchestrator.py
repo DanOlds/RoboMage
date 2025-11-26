@@ -140,9 +140,83 @@ class WorkflowOrchestrator:
         Callbacks will be called with (execution_id, node_result) after each node completes.
         
         Args:
-            callback: Async function(execution_id: str, result: NodeExecutionResult)
+            callback: Async function with signature (execution_id: str, node_result: NodeExecutionResult)
         """
         self._execution_callbacks.append(callback)
+
+    def _make_serializable(self, obj: Any, _seen: set | None = None) -> Any:
+        """
+        Convert complex objects to JSON-serializable format.
+        
+        Handles common non-serializable types like DiffractionData objects,
+        NumPy arrays, and nested structures. Protects against circular references.
+        
+        Args:
+            obj: Object to serialize
+            _seen: Set of object IDs already processed (for circular reference detection)
+            
+        Returns:
+            JSON-serializable version of the object
+        """
+        # Initialize seen set for circular reference detection
+        if _seen is None:
+            _seen = set()
+            
+        # Check for circular references
+        obj_id = id(obj)
+        if obj_id in _seen:
+            return "<circular reference>"
+        
+        try:
+            import numpy as np
+        except ImportError:
+            np = None
+        
+        # Handle None
+        if obj is None:
+            return None
+            
+        # Handle primitive types (no need to track these)
+        if isinstance(obj, (str, int, float, bool)):
+            return obj
+            
+        # Add to seen set for complex types
+        _seen.add(obj_id)
+        
+        try:
+            # Handle dict recursively
+            if isinstance(obj, dict):
+                return {k: self._make_serializable(v, _seen) for k, v in obj.items()}
+                
+            # Handle list/tuple recursively
+            if isinstance(obj, (list, tuple)):
+                return [self._make_serializable(item, _seen) for item in obj]
+                
+            # Handle numpy arrays
+            if np and isinstance(obj, np.ndarray):
+                return obj.tolist()
+                
+            # Handle datetime objects
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+                
+            # Handle DiffractionData objects
+            if hasattr(obj, 'to_dict'):
+                return self._make_serializable(obj.to_dict(), _seen)
+                
+            # Handle Pydantic models
+            if hasattr(obj, 'model_dump'):
+                return self._make_serializable(obj.model_dump(), _seen)
+                
+            # For other objects, convert to safe string representation
+            return f"<{type(obj).__name__}>"
+            
+        except Exception as e:
+            logger.warning(f"Failed to serialize {type(obj).__name__}: {e}")
+            return f"<{type(obj).__name__}: serialization error>"
+        finally:
+            # Remove from seen set when done
+            _seen.discard(obj_id)
 
     async def execute_workflow(
         self, workflow: Any, initial_context: dict[str, Any] | None = None
@@ -213,6 +287,10 @@ class WorkflowOrchestrator:
                 f"Workflow {execution_id} completed successfully in {duration_ms:.1f}ms"
             )
 
+            # Get final output but make it JSON-serializable
+            all_outputs = context.get_all_outputs()
+            final_output = self._make_serializable(all_outputs)
+
             return WorkflowExecutionResult(
                 execution_id=execution_id,
                 workflow_id=workflow.id or "unknown",
@@ -220,7 +298,7 @@ class WorkflowOrchestrator:
                 started_at=started_at,
                 completed_at=completed_at,
                 node_results=node_results,
-                final_output=context.get_all_outputs(),
+                final_output=final_output,
                 error=None,
                 total_duration_ms=duration_ms,
             )
@@ -348,14 +426,23 @@ class WorkflowOrchestrator:
                 f"Node {node.id} completed successfully in {duration_ms:.1f}ms"
             )
 
+            # Create serializable summary of output
+            output_summary = None
+            if output:
+                try:
+                    serialized = self._make_serializable(output)
+                    summary_str = str(serialized)[:500]  # Limit size
+                    output_summary = {"summary": summary_str, "type": type(output).__name__}
+                except Exception as e:
+                    logger.warning(f"Failed to serialize output for node {node.id}: {e}")
+                    output_summary = {"summary": f"<{type(output).__name__}>", "type": type(output).__name__}
+
             return NodeExecutionResult(
                 node_id=node.id,
                 status=ExecutionStatus.COMPLETED,
                 started_at=started_at,
                 completed_at=completed_at,
-                output={"summary": str(output)[:200]}
-                if output
-                else None,  # Truncate for storage
+                output=output_summary,
                 error=None,
                 duration_ms=duration_ms,
             )

@@ -266,10 +266,16 @@ class NodeTypeMetadata(BaseModel):
   - Inputs: `results[]`
   - Outputs: `file_path`
 
-- **`save_session`**: Save results as session
-  - Config: `session_name`
+- **`export_json`**: Export results to JSON
+  - Config: `output_path`
+  - Inputs: `results[]`
+  - Outputs: `file_path`
+
+- **`save_to_session`**: **[NEW - Day 5-6]** Save results to session for visualization
+  - Config: `session_id` ("current" or specific ID), `include_files`, `include_results`
   - Inputs: `files[]`, `results[]`
-  - Outputs: `session_id`
+  - Outputs: `session_info` (files_saved count, session_id)
+  - **Purpose**: Enables workflow → dashboard visualization integration
 
 - **`plot_results`**: Generate plots
   - Config: `plot_type`, `style`
@@ -1421,7 +1427,129 @@ class Workflow(Base):
     definition = Column(JSON, nullable=False)  # WorkflowDefinition as JSON
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=True)  # Optional link to session
 ```
+
+### Workflow → Session Integration (Day 5-6 Feature)
+Enable seamless workflow results → dashboard visualization:
+
+#### 1. `save_to_session` Node Handler
+```python
+# src/robomage/workflow/nodes/output_nodes.py
+
+async def save_to_session_handler(
+    config: dict[str, Any],
+    inputs: dict[str, Any], 
+    context: Any
+) -> dict:
+    """
+    Save workflow results into a session for visualization.
+    
+    Config Parameters:
+        - session_id: str (target session ID, or "current" for active session)
+        - include_files: bool (save DiffractionData objects, default: True)
+        - include_results: bool (save analysis results, default: True)
+    
+    Inputs:
+        - files: List[DiffractionData] (optional)
+        - results: List[PeakAnalysisResponse] (optional)
+    
+    Outputs:
+        Dictionary with session info and saved items count
+    
+    Example:
+        config = {
+            "session_id": "current",
+            "include_files": True,
+            "include_results": True
+        }
+    """
+    from robomage.persistence.api import SessionManager
+    
+    session_id = config.get("session_id", "current")
+    include_files = config.get("include_files", True)
+    include_results = config.get("include_results", True)
+    
+    manager = SessionManager()
+    saved_count = 0
+    
+    # Save DiffractionData files
+    if include_files:
+        files = inputs.get("files", [])
+        for data in files:
+            manager.add_file_to_session(
+                session_id=session_id,
+                diffraction_data=data,
+                filename=data.filename or f"workflow_output_{saved_count}.chi"
+            )
+            saved_count += 1
+    
+    # Save analysis results as metadata
+    if include_results:
+        results = inputs.get("results", [])
+        # Store in session metadata or separate results table
+        # (implementation depends on persistence schema)
+    
+    return {
+        "session_id": session_id,
+        "files_saved": saved_count,
+        "status": "success"
+    }
+```
+
+#### 2. Dashboard UI Integration
+Add "Save to Session" button in workflow tab:
+
+```python
+# src/robomage/dashboard/callbacks/workflow.py
+
+@callback(
+    Output("save-to-session-status", "children"),
+    Input("save-results-to-session-btn", "n_clicks"),
+    State("execution-results", "data"),
+    State("active-session-id", "data"),
+    prevent_initial_call=True
+)
+def save_workflow_results_to_session(n_clicks, execution_results, session_id):
+    """
+    Extract DiffractionData from workflow execution and add to active session.
+    Enables immediate visualization of workflow results.
+    """
+    if not execution_results or not session_id:
+        return dbc.Alert("No results or active session", color="warning")
+    
+    from robomage.persistence.api import SessionManager
+    manager = SessionManager()
+    
+    # Extract DiffractionData objects from execution results
+    files_saved = 0
+    for node_result in execution_results.get("node_results", []):
+        output = node_result.get("output")
+        
+        # Handle different output types
+        if isinstance(output, list):
+            for item in output:
+                if hasattr(item, "q_values"):  # DiffractionData-like object
+                    manager.add_file_to_session(
+                        session_id=session_id,
+                        diffraction_data=item,
+                        filename=getattr(item, "filename", f"workflow_{files_saved}.chi")
+                    )
+                    files_saved += 1
+    
+    # Trigger refresh of Data Import and Visualization tabs
+    return dbc.Alert(
+        f"✅ Saved {files_saved} files to session '{session_id}'. "
+        "Switch to Visualization tab to view results.",
+        color="success"
+    )
+```
+
+#### 3. Benefits
+- **Seamless workflow**: Load → Analyze → Visualize in one interface
+- **No manual exports**: Results automatically available for plotting
+- **Session continuity**: All analysis saved together
+- **Reproducibility**: Workflow + results linked to session
 
 ### Service Architecture
 Workflow service follows same patterns as peak analysis:

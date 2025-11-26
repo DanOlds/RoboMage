@@ -188,7 +188,7 @@ def create_workflow_tab() -> html.Div:
                                                 [
                                                     dbc.Label("Workflow Definition (JSON):"),
                                                     html.Small(
-                                                        " Click node types below to add to workflow",
+                                                        " Phase 1: Manual JSON editing (drag-and-drop coming in Phase 2)",
                                                         className="text-muted",
                                                     ),
                                                     dcc.Textarea(
@@ -207,7 +207,7 @@ def create_workflow_tab() -> html.Div:
                                                             html.I(
                                                                 className="fas fa-info-circle me-1"
                                                             ),
-                                                            "Edit the JSON directly or use node palette to build workflow",
+                                                            "Edit the JSON directly. Reference the node types on the left for available options.",
                                                         ],
                                                         className="text-info mt-1",
                                                     ),

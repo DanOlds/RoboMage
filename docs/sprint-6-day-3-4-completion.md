@@ -144,27 +144,37 @@ curl http://localhost:8002/health
 - ✅ All buttons render correctly
 - ✅ Execution log area ready
 
-## Next Steps (Day 5-6: Persistence)
+## Next Steps (Day 5-6: Persistence + Session Integration)
 
 ### Planned Work
 1. **Extend SQLite Schema:**
    - Add `workflows` table
    - Link workflows to sessions
+   - Store execution history
 
 2. **Integrate with SessionManager:**
    - Save workflows with sessions
    - Load workflows from saved sessions
    - Workflow versioning
 
-3. **Enhanced UI:**
+3. **Workflow → Session Integration (NEW):**
+   - Add `save_to_session` node type for explicit session saves
+   - Implement "Save Results to Current Session" button in UI
+   - Extract DiffractionData from workflow outputs
+   - Automatically add results to active session
+   - Enable seamless workflow → visualization workflow
+
+4. **Enhanced UI:**
    - Load workflow from saved workflows list (currently view-only)
    - Workflow templates as clickable actions
    - Execution history persistence
+   - Session integration controls
 
-4. **Additional Tests:**
+5. **Additional Tests:**
    - Integration tests with real service
    - Workflow save/load roundtrip tests
    - Session persistence with workflows
+   - Workflow-to-session data flow tests
 
 ## Technical Notes
 

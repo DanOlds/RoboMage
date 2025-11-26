@@ -318,10 +318,21 @@ def register_execution_callbacks(app):
                 result = exec_response.json()
                 return result, create_execution_log_ui(result)
             else:
+                # Try to get detailed error from response
+                try:
+                    error_detail = exec_response.json().get("detail", exec_response.text)
+                except:
+                    error_detail = exec_response.text
+                    
+                logger.error(f"Workflow execution failed: {error_detail}")
                 return (
                     None,
                     dbc.Alert(
-                        f"Execution failed: {exec_response.text}",
+                        [
+                            html.Strong("Execution failed: "),
+                            html.Br(),
+                            html.Code(error_detail),
+                        ],
                         color="danger",
                     ),
                 )

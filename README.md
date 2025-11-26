@@ -295,22 +295,41 @@ pixi run python peak_analyzer.py --help
 
 RoboMage includes a professional Dash-based dashboard for interactive powder diffraction analysis:
 
-- **3-tab interface**: Data Import, Visualization, and Analysis tabs for streamlined workflows
+- **4-tab interface**: Data Import, Visualization, Analysis, and Workflow Builder tabs
 - **Wavelength management**: Assign and display per-file wavelength (default: 0.1665 Å synchrotron)
 - **Robust file handling**: Upload, validate, and remove files with a single click (red 'X' button)
 - **Accurate Q→2θ conversion**: Uses file-specific wavelength for scientific correctness
 - **Publication-quality plots**: Line, scatter, and filled area types with export options
 - **Real-time peak analysis**: Interactive parameter controls with live peak detection service integration
 - **Peak visualization**: Automatic peak annotation on plots with detailed tooltips (Q, d-spacing, intensity, FWHM)
+- **Workflow orchestration**: Visual workflow builder for multi-step analysis pipelines
 - **Service monitoring**: Connection status indicators with helpful startup instructions
 - **State management**: Seamless inter-tab data flow and persistent user selections
 
-**To launch the dashboard:**
+**Quick Start - All Services:**
 ```powershell
+# Start all required services with one command
+pixi run start-all
+```
+This starts:
+1. Peak Analysis Service (port 8001)
+2. Workflow Service (port 8002)
+3. Dashboard (port 8050)
+
+Then open http://localhost:8050 in your browser.
+
+**Manual startup (individual services):**
+```powershell
+# Dashboard only
 pixi run python -m robomage --dashboard
-# or
+
+# Or start services individually
+pixi run python services/peak_analysis/main.py --port 8001
+pixi run python services/workflow_engine/main.py --port 8002
 python -m robomage.dashboard
 ```
+
+See [docs/SERVICES-QUICKSTART.md](docs/SERVICES-QUICKSTART.md) for detailed service documentation.
 
 See [docs/sprint-4-visualization-dashboard.md](docs/sprint-4-visualization-dashboard.md) for full details.
 
