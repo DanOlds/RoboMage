@@ -11,6 +11,7 @@ matplotlib = "*"
 pydantic = ">=2"
 pytest = "*"
 pytest-cov = "*"
+pytest-asyncio = "*"
 ruff = ">=0.14.0,<0.15"
 mypy = "*"
 sqlalchemy = "*"
@@ -24,6 +25,7 @@ pandas-stubs = "*"
 dash = ">=2.14.0"
 plotly = ">=5.17.0"
 dash-bootstrap-components = ">=1.5.0"
+h5py = "*"
 
 [pypi-dependencies]
 robomage = { path = ".", editable = true }
