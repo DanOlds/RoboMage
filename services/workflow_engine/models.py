@@ -142,7 +142,9 @@ class NodeExecutionResult(BaseModel):
     status: ExecutionStatus = Field(..., description="Node execution status")
     started_at: datetime = Field(..., description="Execution start time")
     completed_at: datetime | None = Field(None, description="Execution completion time")
-    output: dict[str, Any] | None = Field(None, description="Node output data")
+    output: dict[str, Any] | list[Any] | None = Field(
+        None, description="Node output data (dict for summaries, list for full serialization)"
+    )
     error: str | None = Field(None, description="Error message if failed")
     duration_ms: float | None = Field(
         None, description="Execution duration in milliseconds"

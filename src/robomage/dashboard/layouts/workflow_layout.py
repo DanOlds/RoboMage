@@ -6,6 +6,9 @@ Phase 1: JSON-based workflow editor with node palette and execution controls.
 Future: Visual drag-and-drop interface with ReactFlow.
 """
 
+import os
+from pathlib import Path
+
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
@@ -245,17 +248,42 @@ def create_workflow_tab() -> html.Div:
                                                         label="Execution Log",
                                                         children=[
                                                             html.Div(
-                                                                id="workflow-execution-log",
-                                                                children=[
-                                                                    html.P(
-                                                                        "No workflow executed yet",
-                                                                        className="text-muted mt-3",
-                                                                    )
-                                                                ],
-                                                                style={
-                                                                    "maxHeight": "600px",
-                                                                    "overflowY": "auto",
-                                                                },
+                                                                [
+                                                                    # Alert for save-to-session feedback
+                                                                    dbc.Alert(
+                                                                        id="save-to-session-alert",
+                                                                        is_open=False,
+                                                                        duration=6000,
+                                                                        dismissable=True,
+                                                                    ),
+                                                                    # Save to session button
+                                                                    dbc.Button(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-save me-2"
+                                                                            ),
+                                                                            "Save Results to Current Session",
+                                                                        ],
+                                                                        id="save-results-to-session-btn",
+                                                                        color="success",
+                                                                        size="sm",
+                                                                        className="mb-3 w-100",
+                                                                    ),
+                                                                    # Execution log
+                                                                    html.Div(
+                                                                        id="workflow-execution-log",
+                                                                        children=[
+                                                                            html.P(
+                                                                                "No workflow executed yet",
+                                                                                className="text-muted mt-3",
+                                                                            )
+                                                                        ],
+                                                                        style={
+                                                                            "maxHeight": "600px",
+                                                                            "overflowY": "auto",
+                                                                        },
+                                                                    ),
+                                                                ]
                                                             )
                                                         ],
                                                     ),
@@ -311,53 +339,59 @@ def create_service_status_indicator() -> html.Div:
 
 
 def get_default_workflow_json() -> str:
-    """Get default workflow JSON template."""
-    return """{
+    """Get default workflow JSON template with absolute paths."""
+    # Get absolute path to examples directory
+    # __file__ is src/robomage/dashboard/layouts/workflow_layout.py
+    # Need to go up 5 levels to get to project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    examples_dir = str(project_root / "examples")
+    
+    return f"""{{
   "name": "Example Workflow",
   "description": "Load files and analyze peaks",
   "nodes": [
-    {
+    {{
       "id": "load_1",
       "type": "load_files",
       "label": "Load Data Files",
-      "config": {
-        "directory": "examples",
+      "config": {{
+        "directory": "{examples_dir}",
         "pattern": "*.chi"
-      },
-      "position": {"x": 100, "y": 100}
-    },
-    {
+      }},
+      "position": {{"x": 100, "y": 100}}
+    }},
+    {{
       "id": "analyze_1",
       "type": "peak_analysis",
       "label": "Detect Peaks",
-      "config": {
+      "config": {{
         "profile_type": "gaussian",
         "prominence": 0.1,
         "distance": 5
-      },
-      "position": {"x": 400, "y": 100}
-    },
-    {
+      }},
+      "position": {{"x": 400, "y": 100}}
+    }},
+    {{
       "id": "export_1",
       "type": "export_csv",
       "label": "Export Results",
-      "config": {
+      "config": {{
         "output_path": "workflow_results.csv",
         "format": "peaks"
-      },
-      "position": {"x": 700, "y": 100}
-    }
+      }},
+      "position": {{"x": 700, "y": 100}}
+    }}
   ],
   "edges": [
-    {
+    {{
       "id": "edge_1",
       "source": "load_1",
       "target": "analyze_1"
-    },
-    {
+    }},
+    {{
       "id": "edge_2",
       "source": "analyze_1",
       "target": "export_1"
-    }
+    }}
   ]
-}"""
+}}"""

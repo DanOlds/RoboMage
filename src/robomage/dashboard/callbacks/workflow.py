@@ -26,6 +26,7 @@ def register_callbacks(app):
     register_workflow_management_callbacks(app)
     register_execution_callbacks(app)
     register_saved_workflows_callback(app)
+    register_session_integration_callback(app)
 
 
 def register_service_health_callback(app):
@@ -493,3 +494,145 @@ def register_saved_workflows_callback(app):
         except Exception as e:
             logger.debug(f"Failed to load saved workflows: {e}")
             return html.P("Unable to load workflows", className="text-muted")
+
+
+def register_session_integration_callback(app):
+    """Save workflow execution results to active session."""
+
+    @app.callback(
+        Output("save-to-session-alert", "children"),
+        Output("save-to-session-alert", "is_open"),
+        Input("save-results-to-session-btn", "n_clicks"),
+        State("workflow-execution-result", "data"),
+        State("current-session-id", "data"),
+        prevent_initial_call=True,
+    )
+    def save_workflow_results_to_session(n_clicks, execution_results, current_session_id):
+        """
+        Extract workflow execution results and save to active session.
+
+        This allows users to run a workflow and immediately visualize
+        results in the Visualization tab without manual export/import.
+        """
+        if not execution_results:
+            return (
+                dbc.Alert(
+                    "No execution results to save",
+                    color="warning",
+                    className="mb-0 py-2",
+                ),
+                True,
+            )
+
+        if not current_session_id:
+            return (
+                dbc.Alert(
+                    "No active session. Please load or create a session first.",
+                    color="warning",
+                    className="mb-0 py-2",
+                ),
+                True,
+            )
+
+        session_id = current_session_id
+        
+        # Debug logging
+        logger.info(f"Save to session called - session_id: {session_id}")
+        logger.info(f"Execution results structure: {list(execution_results.keys()) if execution_results else 'None'}")
+
+        try:
+            from robomage.data.models import DiffractionData
+            from robomage.persistence.api import SessionManager
+
+            manager = SessionManager()
+
+            files_saved = 0
+            errors = []
+
+            # Extract results from execution
+            result = execution_results.get("result", {})
+            node_results = result.get("node_results", [])
+            
+            logger.info(f"Found {len(node_results)} node results")
+            logger.info(f"Result keys: {list(result.keys())}")
+
+            # Look for DiffractionData in node outputs
+            for node_result in node_results:
+                node_id = node_result.get("node_id")
+                output = node_result.get("output")
+                status = node_result.get("status")
+                
+                logger.info(f"Node {node_id}: status={status}, output type={type(output).__name__}")
+                
+                # Log more detail about output structure
+                if isinstance(output, list) and len(output) > 0:
+                    logger.info(f"  First item type: {type(output[0]).__name__}")
+                    if isinstance(output[0], dict):
+                        logger.info(f"  First item keys: {list(output[0].keys())}")
+                elif isinstance(output, dict):
+                    logger.info(f"  Output dict keys: {list(output.keys())}")
+
+                # Skip failed nodes
+                if status != "completed":
+                    logger.info(f"  Skipping {node_id} - status is {status}")
+                    continue
+
+                # Handle different output types
+                if isinstance(output, list):
+                    logger.info(f"Node {node_id} has list output with {len(output)} items")
+                    for i, item in enumerate(output):
+                        item_type = type(item).__name__
+                        has_q = isinstance(item, dict) and "q_values" in item
+                        logger.info(f"  Item {i}: type={item_type}, has q_values={has_q}")
+                        if isinstance(item, dict):
+                            logger.info(f"    Keys: {list(item.keys())[:10]}")
+                        
+                        # Check if this looks like DiffractionData dict
+                        if isinstance(item, dict) and "q_values" in item:
+                            try:
+                                # Reconstruct DiffractionData from dict
+                                data = DiffractionData(**item)
+
+                                filename = item.get("filename", f"{node_id}_output_{i}.chi")
+                                wavelength = item.get("wavelength", 0.1665)
+
+                                manager.add_file_to_session(
+                                    session_id=session_id,
+                                    filename=filename,
+                                    wavelength=wavelength,
+                                    data=data,
+                                )
+                                files_saved += 1
+
+                            except Exception as e:
+                                errors.append(
+                                    f"Failed to save {node_id} output {i}: {str(e)}"
+                                )
+
+            # Build alert message
+            if files_saved > 0:
+                message = (
+                    f"✅ Successfully saved {files_saved} file(s) to session. "
+                    f"Switch to the Visualization tab to view results."
+                )
+                if errors:
+                    message += f" Note: {len(errors)} item(s) could not be saved."
+                color = "success"
+            else:
+                message = "⚠️ No diffraction data found in workflow results to save."
+                if errors:
+                    message += f" Errors: {'; '.join(errors[:3])}"
+                color = "warning"
+
+            return dbc.Alert(message, color=color, className="mb-0 py-2"), True
+
+        except Exception as e:
+            logger.error(f"Error saving workflow results to session: {e}")
+            return (
+                dbc.Alert(
+                    f"❌ Error: {str(e)}",
+                    color="danger",
+                    className="mb-0 py-2",
+                ),
+                True,
+            )

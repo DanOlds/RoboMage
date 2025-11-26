@@ -83,6 +83,7 @@ async def register_node_handlers(orch: WorkflowOrchestrator) -> None:
     orch.register_node_handler("export_csv", output_nodes.export_csv_handler)
     orch.register_node_handler("export_json", output_nodes.export_json_handler)
     orch.register_node_handler("save_results", output_nodes.save_results_handler)
+    orch.register_node_handler("save_to_session", output_nodes.save_to_session_handler)
 
     print(f"✅ Registered {len(orch.node_handlers)} node types")
 
@@ -393,8 +394,10 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
     print(f"🚀 Executing workflow: {workflow.name} (ID: {workflow_id})")
 
     try:
-        # Execute using orchestrator
-        result = await orchestrator.execute_workflow(workflow, context)
+        # Execute using orchestrator with full output storage for session persistence
+        result = await orchestrator.execute_workflow(
+            workflow, context, store_full_outputs=True
+        )
 
         # Store execution result
         executions[result.execution_id] = result

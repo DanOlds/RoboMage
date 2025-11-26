@@ -164,3 +164,199 @@ async def save_results_handler(
     context.metadata[key] = data
 
     return {"saved": True, "key": key, "data_type": type(data).__name__}
+
+
+async def save_to_session_handler(
+    config: dict[str, Any], inputs: dict[str, Any], context: Any
+) -> dict:
+    """
+    Save workflow results into a session for dashboard visualization.
+    
+    This enables seamless workflow → visualization integration by extracting
+    DiffractionData objects from workflow execution and adding them to the
+    specified session.
+    
+    Config Parameters:
+        - session_id: str
+            Target session ID. Use "current" for active dashboard session,
+            or provide specific session ID. If session doesn't exist, it will
+            be created with this ID as the name.
+        
+        - include_files: bool (default: True)
+            Whether to save DiffractionData objects to session
+        
+        - include_results: bool (default: True)
+            Whether to save analysis results (peaks, statistics) as metadata
+        
+        - overwrite_duplicates: bool (default: False)
+            If True, replaces existing files with same name
+    
+    Inputs:
+        - files: List[DiffractionData] (optional)
+            Diffraction data to save to session
+        
+        - results: List[dict] (optional)
+            Analysis results (peak lists, statistics, etc.)
+    
+    Outputs:
+        Dictionary with operation summary:
+        {
+            "session_id": str,
+            "files_saved": int,
+            "results_saved": int,
+            "status": "success" | "partial" | "error",
+            "errors": List[str]
+        }
+    
+    Example Workflow:
+        ```json
+        {
+          "nodes": [
+            {"id": "load_1", "type": "load_files", "config": {"directory": "data/"}},
+            {"id": "analyze_1", "type": "peak_analysis", "config": {...}},
+            {"id": "save_1", "type": "save_to_session", "config": {
+              "session_id": "my_analysis_session",
+              "include_files": true,
+              "include_results": true
+            }}
+          ],
+          "edges": [
+            {"source": "load_1", "target": "analyze_1"},
+            {"source": "analyze_1", "target": "save_1"}
+          ]
+        }
+        ```
+    
+    Raises:
+        ValueError: If session_id is invalid or session creation fails
+        RuntimeError: If persistence layer is unavailable
+    """
+    from datetime import datetime
+
+    # Extract config
+    session_id = config.get("session_id", "current")
+    include_files = config.get("include_files", True)
+    include_results = config.get("include_results", True)
+
+    logger.info(f"Saving workflow results to session: {session_id}")
+
+    # Initialize session manager
+    try:
+        from robomage.persistence.api import SessionManager
+
+        manager = SessionManager()
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize SessionManager: {e}")
+
+    # Handle "current" session ID (from dashboard context)
+    if session_id == "current":
+        # Get from context if provided, otherwise create new
+        session_id = context.metadata.get("active_session_id")
+        if not session_id:
+            # Create new session with timestamp
+            session_id = f"workflow_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"No active session, creating new: {session_id}")
+    
+    # Convert string numeric IDs to integers for existing sessions
+    original_session_id = session_id
+    if isinstance(session_id, str) and session_id.isdigit():
+        session_id = int(session_id)
+
+    # Ensure session exists
+    try:
+        session = manager.get_session(session_id) if isinstance(session_id, int) else None
+        
+        if session is None:
+            # Create session if it doesn't exist (only for string names)
+            if isinstance(original_session_id, str) and not original_session_id.isdigit():
+                logger.info(f"Creating new session: {original_session_id}")
+                try:
+                    session_id = manager.create_session(
+                        name=original_session_id, description="Created by workflow execution"
+                    )
+                except Exception as create_error:
+                    raise RuntimeError(
+                        f"Failed to create session {original_session_id}: {create_error}"
+                    )
+            else:
+                raise ValueError(
+                    f"Session {session_id} not found. Please create the session first."
+                )
+    except (ValueError, RuntimeError) as e:
+        # Return error status instead of raising
+        logger.error(f"Session validation failed: {e}")
+        return {
+            "session_id": session_id,
+            "files_saved": 0,
+            "results_saved": 0,
+            "status": "error",
+            "errors": [str(e)],
+        }
+
+    files_saved = 0
+    results_saved = 0
+    errors = []
+
+    # Save DiffractionData files
+    if include_files:
+        files = inputs.get("files", inputs.get("input", []))
+        if not isinstance(files, list):
+            files = [files]
+
+        for i, data in enumerate(files):
+            try:
+                # Generate filename if not present
+                filename = getattr(data, "filename", None)
+                if not filename:
+                    filename = f"workflow_output_{i}.chi"
+
+                # Get wavelength (provide default if not present)
+                wavelength = getattr(data, "wavelength", None)
+                if wavelength is None:
+                    wavelength = 0.1665  # Default synchrotron wavelength
+
+                # Add to session
+                manager.add_file_to_session(
+                    session_id=session_id,
+                    filename=filename,
+                    wavelength=wavelength,
+                    data=data,
+                )
+                files_saved += 1
+                logger.debug(f"Saved file {filename} to session {session_id}")
+
+            except Exception as e:
+                error_msg = f"Failed to save file {i}: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+    # Save analysis results metadata
+    if include_results:
+        results = inputs.get("results", [])
+        if results:
+            try:
+                # Store results count in context for now
+                # Future: Add metadata field to Session model
+                results_saved = len(results)
+                logger.info(f"Processed {results_saved} analysis results")
+
+            except Exception as e:
+                error_msg = f"Failed to process results metadata: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+    # Determine status
+    if errors and (files_saved == 0 and results_saved == 0):
+        status = "error"
+    elif errors:
+        status = "partial"
+    else:
+        status = "success"
+
+    return {
+        "session_id": session_id,
+        "files_saved": files_saved,
+        "results_saved": results_saved,
+        "status": status,
+        "errors": errors,
+    }

@@ -6,7 +6,7 @@ Defines database schema for sessions and files.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -44,6 +44,11 @@ class Session(Base):
     # Relationship to files (cascade delete)
     files: Mapped[list["File"]] = relationship(
         "File", back_populates="session", cascade="all, delete-orphan"
+    )
+
+    # Relationship to workflows (cascade delete)
+    workflows: Mapped[list["Workflow"]] = relationship(
+        "Workflow", back_populates="session", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -97,3 +102,39 @@ class File(Base):
             f"<File(id={self.id}, filename='{self.filename}', "
             f"session_id={self.session_id})>"
         )
+
+
+class Workflow(Base):
+    """
+    Workflow definition storage.
+
+    Stores workflow definitions and links them to sessions for reproducibility.
+    Workflows can be saved, loaded, and re-executed within the context of a session.
+
+    Attributes:
+        id: Primary key (UUID string)
+        name: Unique workflow name
+        description: Optional description
+        definition: Workflow definition as JSON (nodes, edges, etc.)
+        created_at: Timestamp when workflow was created
+        updated_at: Timestamp when workflow was last updated
+        session_id: Optional foreign key to parent session
+        session: Relationship to parent Session
+    """
+
+    __tablename__ = "workflows"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    definition: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    # Optional link to session
+    session_id: Mapped[int | None] = mapped_column(ForeignKey("sessions.id"))
+    session: Mapped["Session"] = relationship("Session", back_populates="workflows")
+
+    def __repr__(self) -> str:
+        """String representation of Workflow."""
+        return f"<Workflow(id='{self.id}', name='{self.name}', session_id={self.session_id})>"

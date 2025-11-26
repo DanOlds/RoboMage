@@ -219,7 +219,8 @@ class WorkflowOrchestrator:
             _seen.discard(obj_id)
 
     async def execute_workflow(
-        self, workflow: Any, initial_context: dict[str, Any] | None = None
+        self, workflow: Any, initial_context: dict[str, Any] | None = None,
+        store_full_outputs: bool = False
     ) -> Any:
         """
         Execute a complete workflow.
@@ -227,6 +228,8 @@ class WorkflowOrchestrator:
         Args:
             workflow: WorkflowDefinition with nodes and edges
             initial_context: Optional initial data/configuration
+            store_full_outputs: If True, store complete serialized outputs instead of summaries.
+                               Warning: Can create large results for DiffractionData objects.
             
         Returns:
             WorkflowExecutionResult with status and outputs
@@ -251,6 +254,9 @@ class WorkflowOrchestrator:
         context = ExecutionContext()
         if initial_context:
             context.metadata.update(initial_context)
+        
+        # Store serialization mode in context for node execution
+        context.metadata["_store_full_outputs"] = store_full_outputs
 
         try:
             # Build execution graph and validate
@@ -426,23 +432,31 @@ class WorkflowOrchestrator:
                 f"Node {node.id} completed successfully in {duration_ms:.1f}ms"
             )
 
-            # Create serializable summary of output
-            output_summary = None
+            # Check if we should store full outputs
+            store_full = context.metadata.get("_store_full_outputs", False)
+            
+            # Create output for node result
+            output_data = None
             if output:
                 try:
-                    serialized = self._make_serializable(output)
-                    summary_str = str(serialized)[:500]  # Limit size
-                    output_summary = {"summary": summary_str, "type": type(output).__name__}
+                    if store_full:
+                        # Store complete serialized output
+                        output_data = self._make_serializable(output)
+                    else:
+                        # Store summary only (default behavior)
+                        serialized = self._make_serializable(output)
+                        summary_str = str(serialized)[:500]  # Limit size
+                        output_data = {"summary": summary_str, "type": type(output).__name__}
                 except Exception as e:
                     logger.warning(f"Failed to serialize output for node {node.id}: {e}")
-                    output_summary = {"summary": f"<{type(output).__name__}>", "type": type(output).__name__}
+                    output_data = {"summary": f"<{type(output).__name__}>", "type": type(output).__name__}
 
             return NodeExecutionResult(
                 node_id=node.id,
                 status=ExecutionStatus.COMPLETED,
                 started_at=started_at,
                 completed_at=completed_at,
-                output=output_summary,
+                output=output_data,
                 error=None,
                 duration_ms=duration_ms,
             )
