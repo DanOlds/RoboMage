@@ -431,6 +431,9 @@ class WorkflowOrchestrator:
             logger.info(
                 f"Node {node.id} completed successfully in {duration_ms:.1f}ms"
             )
+            
+            # Debug: Print node type to verify it's being captured
+            print(f"🔍 ORCHESTRATOR: Node {node.id} type={node.type}")
 
             # Check if we should store full outputs
             store_full = context.metadata.get("_store_full_outputs", False)
@@ -453,6 +456,7 @@ class WorkflowOrchestrator:
 
             return NodeExecutionResult(
                 node_id=node.id,
+                node_type=node.type,
                 status=ExecutionStatus.COMPLETED,
                 started_at=started_at,
                 completed_at=completed_at,
@@ -472,6 +476,7 @@ class WorkflowOrchestrator:
 
             return NodeExecutionResult(
                 node_id=node.id,
+                node_type=node.type,
                 status=ExecutionStatus.FAILED,
                 started_at=started_at,
                 completed_at=completed_at,

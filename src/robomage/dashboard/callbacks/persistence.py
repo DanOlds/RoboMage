@@ -17,6 +17,66 @@ from robomage.data.models import DiffractionData
 from robomage.persistence import SessionManager
 
 
+def _load_session_files(mgr: SessionManager, session_id: int) -> tuple[dict[str, Any], dict[str, Any]]:
+    """
+    Helper function to load files from a session into UI store format.
+    
+    Args:
+        mgr: SessionManager instance
+        session_id: ID of session to load files from
+        
+    Returns:
+        Tuple of (file_data, wavelength_data) dicts in UI store format
+    """
+    session_files = mgr.get_session_files(session_id)
+    
+    if not session_files:
+        return {}, {"current_wavelength": 0.1665, "source_type": "standard"}
+    
+    # Reconstruct file data from stored files
+    file_data = {}
+    loaded_wavelength = 0.1665  # Default
+    
+    for session_file in session_files:
+        # Read DiffractionData from FileStore using stored path
+        diffraction = mgr.file_store.load_file(session_file.stored_path)
+        
+        if diffraction is None:
+            continue
+        
+        # Get wavelength from database (first file)
+        if not file_data:  # First file
+            loaded_wavelength = session_file.wavelength or 0.1665
+        
+        # Convert to file-data-store format (matching file_upload.py schema)
+        filename = diffraction.filename or "unknown.chi"
+        file_info = {
+            "filename": filename,
+            "q": diffraction.q_values.tolist(),
+            "intensity": diffraction.intensities.tolist(),
+            "metadata": {},  # DiffractionData doesn't store generic metadata
+            "num_points": len(diffraction.q_values),
+            "q_range": [
+                float(diffraction.q_values.min()),
+                float(diffraction.q_values.max()),
+            ],
+            "intensity_range": [
+                float(diffraction.intensities.min()),
+                float(diffraction.intensities.max()),
+            ],
+        }
+        
+        file_data[filename] = file_info
+    
+    # Restore global wavelength (matching wavelength-store schema)
+    wavelength_data = {
+        "current_wavelength": loaded_wavelength,
+        "source_type": "standard",  # Could be enhanced to detect custom values
+    }
+    
+    return file_data, wavelength_data
+
+
 def register_persistence_callbacks(app: dash.Dash) -> None:
     """
     Register all session persistence callbacks.
@@ -112,15 +172,8 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 None,
             )
 
-        if not file_data:
-            return (
-                dbc.Alert(
-                    "No files to save. Please upload files first.",
-                    color="warning",
-                    dismissable=True,
-                ),
-                None,
-            )
+        # Note: Removed file_data requirement to allow creating empty sessions
+        # This supports workflow-first usage where data comes from workflow execution
 
         try:
             mgr = SessionManager()
@@ -138,45 +191,52 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             if wavelength_data and "current_wavelength" in wavelength_data:
                 global_wavelength = wavelength_data["current_wavelength"]
 
-            # Add each file to the session
-            for filename, file_info in file_data.items():
-                # Reconstruct DiffractionData from file-data-store format
-                # Schema from file_upload.py:
-                # {
-                #   "filename": str,
-                #   "q": list[float],
-                #   "intensity": list[float],
-                #   "metadata": dict,
-                #   "num_points": int,
-                #   "q_range": [min, max],
-                #   "intensity_range": [min, max]
-                # }
-                q_array = np.array(file_info["q"])
-                intensity_array = np.array(file_info["intensity"])
+            # Add each file to the session (if any files are present)
+            num_files = 0
+            if file_data:
+                for filename, file_info in file_data.items():
+                    # Reconstruct DiffractionData from file-data-store format
+                    # Schema from file_upload.py:
+                    # {
+                    #   "filename": str,
+                    #   "q": list[float],
+                    #   "intensity": list[float],
+                    #   "metadata": dict,
+                    #   "num_points": int,
+                    #   "q_range": [min, max],
+                    #   "intensity_range": [min, max]
+                    # }
+                    q_array = np.array(file_info["q"])
+                    intensity_array = np.array(file_info["intensity"])
 
-                # Create DiffractionData object with proper validation
-                diffraction = DiffractionData(
-                    filename=filename,
-                    q_values=q_array,
-                    intensities=intensity_array,
-                    wavelength=global_wavelength,
-                )
+                    # Create DiffractionData object with proper validation
+                    diffraction = DiffractionData(
+                        filename=filename,
+                        q_values=q_array,
+                        intensities=intensity_array,
+                        wavelength=global_wavelength,
+                    )
 
-                # Save to FileStore via SessionManager
-                mgr.add_file_to_session(
-                    session_id=session_id,
-                    filename=filename,
-                    wavelength=global_wavelength,
-                    data=diffraction,
-                )
+                    # Save to FileStore via SessionManager
+                    mgr.add_file_to_session(
+                        session_id=session_id,
+                        filename=filename,
+                        wavelength=global_wavelength,
+                        data=diffraction,
+                    )
+                    num_files += 1
 
-            num_files = len(file_data)
+            # Build success message
+            if num_files > 0:
+                message = f"Session '{session_name}' saved successfully with {num_files} file{'s' if num_files != 1 else ''}!"
+            else:
+                message = f"Empty session '{session_name}' created successfully. You can add files via upload or workflow execution."
+            
             return (
                 dbc.Alert(
                     [
                         html.I(className="fas fa-check-circle me-2"),
-                        f"Session '{session_name}' saved successfully with "
-                        f"{num_files} file{'s' if num_files != 1 else ''}!",
+                        message,
                     ],
                     color="success",
                     dismissable=True,
@@ -298,6 +358,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         [
             Output("file-data-store", "data", allow_duplicate=True),
             Output("wavelength-store", "data", allow_duplicate=True),
+            Output("analysis-results-store", "data", allow_duplicate=True),
             Output("load-session-feedback", "children"),
             Output("current-session-id", "data", allow_duplicate=True),
         ],
@@ -307,7 +368,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
     )
     def load_session_callback(
         n_clicks_list: list[int | None], button_ids: list[dict[str, Any]]
-    ) -> tuple[dict[str, Any], dict[str, Any], Any, int | None]:
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], Any, int | None]:
         """
         Load a saved session and restore files and wavelengths.
 
@@ -316,7 +377,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             button_ids: List of button IDs
 
         Returns:
-            Tuple of (file_data, wavelength_data, feedback, session_id)
+            Tuple of (file_data, wavelength_data, analysis_results, feedback, session_id)
             where wavelength_data has schema:
             {"current_wavelength": float, "source_type": str}
         """
@@ -333,7 +394,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         # Check if this is actually a button click (not just a re-render)
         triggered_value = ctx.triggered[0]["value"]
         if triggered_value is None or triggered_value == 0:
-            return dash.no_update, dash.no_update, html.Div(), dash.no_update
+            return dash.no_update, dash.no_update, dash.no_update, html.Div(), dash.no_update
 
         button_id = json.loads(triggered_id)
         session_id = button_id["index"]
@@ -344,6 +405,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
 
             if not session:
                 return (
+                    {},
                     {},
                     {},
                     dbc.Alert(
@@ -361,6 +423,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 return (
                     {},
                     {},
+                    {},
                     dbc.Alert(
                         [
                             html.I(className="fas fa-exclamation-triangle me-2"),
@@ -372,53 +435,15 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                     session_id,
                 )
 
-            # Reconstruct file data from stored files
-            file_data = {}
-            # Track wavelength from first file (use database value)
-            # (all files should have same wavelength)
-            loaded_wavelength = 0.1665  # Default
+            # Use helper function to load session files
+            file_data, wavelength_data = _load_session_files(mgr, session_id)
 
-            for session_file in session_files:
-                # Read DiffractionData from FileStore using stored path
-                diffraction = mgr.file_store.load_file(session_file.stored_path)
-
-                if diffraction is None:
-                    continue
-
-                # Get wavelength from database (first file)
-                # The stored file doesn't contain wavelength, but DB does
-                if not file_data:  # First file
-                    loaded_wavelength = session_file.wavelength or 0.1665
-
-                # Convert to file-data-store format (matching file_upload.py schema)
-                filename = diffraction.filename or "unknown.chi"
-                file_info = {
-                    "filename": filename,
-                    "q": diffraction.q_values.tolist(),
-                    "intensity": diffraction.intensities.tolist(),
-                    "metadata": {},  # DiffractionData doesn't store generic metadata
-                    "num_points": len(diffraction.q_values),
-                    "q_range": [
-                        float(diffraction.q_values.min()),
-                        float(diffraction.q_values.max()),
-                    ],
-                    "intensity_range": [
-                        float(diffraction.intensities.min()),
-                        float(diffraction.intensities.max()),
-                    ],
-                }
-
-                file_data[filename] = file_info
-
-            # Restore global wavelength (matching wavelength-store schema)
-            wavelength_data = {
-                "current_wavelength": loaded_wavelength,
-                "source_type": "standard",  # Could be enhanced to detect custom values
-            }
-
+            # Note: Analysis results are not persisted yet, so return empty dict
+            # In future, could load from database if we add analysis result storage
             return (
                 file_data,
                 wavelength_data,
+                {},  # Empty analysis results (not yet persisted)
                 dbc.Alert(
                     [
                         html.I(className="fas fa-check-circle me-2"),
@@ -439,6 +464,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             return (
                 {},
                 {},
+                {},
                 dbc.Alert(
                     f"Error: {str(e)}",
                     color="danger",
@@ -448,6 +474,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             )
         except Exception as e:
             return (
+                {},
                 {},
                 {},
                 dbc.Alert(
@@ -1111,3 +1138,110 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 f"Error generating debug info: {str(e)}",
                 color="danger",
             )
+
+    @app.callback(
+        Output("current-session-id", "data", allow_duplicate=True),
+        Output("session-status", "children", allow_duplicate=True),
+        Output("session-status", "className", allow_duplicate=True),
+        Output("file-data-store", "data", allow_duplicate=True),
+        Output("wavelength-store", "data", allow_duplicate=True),
+        Output("analysis-results-store", "data", allow_duplicate=True),
+        Input("init-interval", "n_intervals"),
+        prevent_initial_call='initial_duplicate',  # Special mode for allow_duplicate on initial load
+    )
+    def auto_create_default_session(n_intervals: int | None) -> tuple[int | None, str, str, dict, dict, dict]:
+        """
+        Auto-create a default session when the dashboard loads and update status display.
+        
+        This ensures users always have an active session for workflow execution
+        without needing to manually create one first.
+        
+        Also loads any existing files from the session into the UI stores.
+        
+        Triggered by init-interval which fires once on page load.
+        
+        Returns:
+            Tuple of (session_id, status_text, css_class, file_data, wavelength_data, analysis_results)
+        """
+        print(f"🔍 DEBUG: auto_create_default_session called with n_intervals={n_intervals}")
+        try:
+            mgr = SessionManager()
+            
+            # Check if a default session already exists
+            all_sessions = mgr.list_sessions()
+            print(f"🔍 DEBUG: Found {len(all_sessions)} total sessions")
+            default_sessions = [s for s in all_sessions if s.name.startswith("Default Session")]
+            print(f"🔍 DEBUG: Found {len(default_sessions)} default sessions")
+            
+            if default_sessions:
+                # Use the most recent default session
+                default_session = max(default_sessions, key=lambda s: s.created_at)
+                session_id = default_session.id
+                file_count = len(default_session.files)
+                status_text = f"{default_session.name} ({file_count} file{'s' if file_count != 1 else ''})"
+                print(f"🔍 DEBUG: Using existing session: {status_text}, ID={session_id}")
+                
+                # Load files from existing session
+                file_data, wavelength_data = _load_session_files(mgr, session_id)
+                print(f"🔍 DEBUG: Loaded {len(file_data)} files from session")
+                
+                return session_id, status_text, "text-success", file_data, wavelength_data, {}
+            
+            # Create a new default session
+            from datetime import datetime
+            session_name = f"Default Session {datetime.now().strftime('%Y-%m-%d')}"
+            
+            session_id = mgr.create_session(
+                name=session_name,
+                description="Auto-created default session for dashboard workflows"
+            )
+            
+            # New session has 0 files
+            status_text = f"{session_name} (0 files)"
+            print(f"🔍 DEBUG: Created new session: {status_text}, ID={session_id}")
+            
+            # Empty session - no files to load
+            return session_id, status_text, "text-success", {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
+            
+        except Exception as e:
+            # Log error but don't crash - user can still create manual sessions
+            print(f"❌ ERROR in auto_create_default_session: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, "No active session", "text-warning", {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
+
+    @app.callback(
+        Output("session-status", "children"),
+        Output("session-status", "className"),
+        Input("current-session-id", "data"),
+        prevent_initial_call=True,  # Don't run on initial load (auto-create handles that)
+    )
+    def update_session_status_display(session_id: int | None) -> tuple[str, str]:
+        """
+        Update the session status display when session changes.
+        
+        This handles updates after save/load operations.
+        The initial display is handled by auto_create_default_session.
+        
+        Args:
+            session_id: Current active session ID
+            
+        Returns:
+            Tuple of (status_text, css_class)
+        """
+        if session_id is None:
+            return "No active session", "text-warning"
+        
+        try:
+            mgr = SessionManager()
+            session = mgr.get_session(session_id)
+            
+            if session:
+                file_count = len(session.files)
+                status_text = f"{session.name} ({file_count} file{'s' if file_count != 1 else ''})"
+                return status_text, "text-success"
+            else:
+                return "Session not found", "text-danger"
+                
+        except Exception as e:
+            return f"Error: {str(e)}", "text-danger"

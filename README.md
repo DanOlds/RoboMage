@@ -381,6 +381,17 @@ pixi run test      # Full test suite with pytest
 > **Note**: All tasks are defined in `pixi.toml` and run in the isolated pixi environment automatically.
 
 ###  Project Status
+
+**Sprint 6 - Workflow Session Integration** ✅ **COMPLETE (Nov 27, 2025)**:
+- ✅ Auto-create default session on dashboard load
+- ✅ Workflow results save directly to active session
+- ✅ All tabs auto-refresh after workflow execution
+- ✅ Session status display with file counts
+- ✅ Load/delete saved workflows from UI
+- ✅ Analysis tab populates with peak detection results
+- ✅ Node type tracking for result processing
+- ✅ Seamless UX - no manual session creation needed
+
 **Sprint 5 - Session Persistence** ✅ **COMPLETE (Nov 25, 2025)**:
 - ✅ Complete session save/load/delete system
 - ✅ Dashboard integration with UI controls
@@ -399,6 +410,13 @@ pixi run test      # Full test suite with pytest
 - ✅ Comprehensive documentation and examples
 - ✅ Type-safe codebase with MyPy compliance
 
+**Sprint 7 - Analysis Result Persistence** 📋 **NEXT (MVP)**:
+- 🎯 Save peak analysis results to database
+- 🎯 Extensible schema for future analysis types (GSAS-II, phase ID, texture)
+- 🎯 Analysis results persist across page reloads
+- 🎯 Parameters and quality metrics tracked
+- 🎯 Foundation for multi-analysis workflows
+
 **Sprint 4 Phase 3** 📋 **Planned**:
 - 🔄 Publication-quality plot export and formatting
 - 🔄 Advanced export options (CSV, JSON, combined results)
@@ -416,6 +434,8 @@ pixi run test      # Full test suite with pytest
 - **[Complete API Documentation](src/robomage/)** - Detailed docstrings in source code
 - **[Architecture & Dev Guide](.github/copilot-instructions.md)** - Architecture patterns, pixi usage, sprint status
 - **[LLM Chat Guide](docs/llm-chat-guide.md)** - Quick start template for AI assistant conversations
+- **[Sprint 6 Completion](docs/sprint-6-days-5-6-COMPLETE.md)** - Workflow-session integration summary
+- **[Sprint 7 Plan](docs/sprint-7-analysis-persistence-mvp.md)** - Extensible analysis result storage
 - **[Sprint 4 Dashboard Plan](docs/sprint-4-visualization-dashboard.md)** - Dashboard implementation phases
 - **[Examples](examples/)** - Working code samples and tutorials
 - **[Environment Config](pixi.toml)** - Pixi environment and task definitions

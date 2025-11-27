@@ -139,6 +139,7 @@ class NodeExecutionResult(BaseModel):
     )
 
     node_id: str = Field(..., description="Node identifier")
+    node_type: str | None = Field(None, description="Node type (e.g., 'load_files', 'peak_analysis')")
     status: ExecutionStatus = Field(..., description="Node execution status")
     started_at: datetime = Field(..., description="Execution start time")
     completed_at: datetime | None = Field(None, description="Execution completion time")

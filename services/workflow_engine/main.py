@@ -406,6 +406,12 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
         print(
             f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
         )
+        
+        # Debug: Check if node_type is in the results
+        if result.node_results:
+            print(f"🔍 SERVICE: Returning {len(result.node_results)} node results")
+            for nr in result.node_results[:2]:  # Check first 2
+                print(f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}")
 
         return result
         

@@ -75,7 +75,8 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 ```
 
 **Dashboard Architecture:**
-- **Tab Structure**: 3-tab layout (Data Import, Visualization, Analysis)
+- **Tab Structure**: 4-tab layout (Data Import, Visualization, Analysis, Workflow Builder)
+- **Session Integration**: Auto-create default session on load, save/load workflow results
 - **Session Persistence**: Save/load/manage analysis sessions with all files and metadata
 - **Storage Configuration**: Configurable storage location (default: ~/.robomage/)
 - **Debug Tools**: Built-in debug panel for inspecting session data
@@ -83,13 +84,14 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **File Management**: Upload, validate, remove files with instant visual feedback
 - **Plotting**: Line, scatter, filled area, export options, peak overlays with tooltips
 - **Analysis Integration**: Real-time peak detection with FastAPI service integration
+- **Workflow Builder**: Visual JSON editor, execute workflows, save results to session
 - **Interactive Controls**: Profile selection (Gaussian/Lorentzian/Voigt), prominence, distance, sensitivity sliders
 - **Results Display**: Professional tables with fit quality metrics, scrollable per-file results
 - **Service Monitoring**: Health check indicators with startup instructions
 - **State Management**: Inter-tab communication via dcc.Store
 - **File Structure**: 
   - `src/robomage/dashboard/layouts/`: Tab-specific layouts
-  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting, analysis, persistence)
+  - `src/robomage/dashboard/callbacks/`: Tab-specific callback functions (file upload, removal, plotting, analysis, persistence, workflow)
   - `src/robomage/dashboard/components/`: Reusable UI components
   - `src/robomage/persistence/`: Complete persistence layer (database, file store, API)
 
@@ -100,16 +102,19 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `src/robomage/data_io.py`: Legacy pandas-based API
 - `src/robomage/__main__.py`: CLI implementation for data loading/testing
 - `src/robomage/clients/`: HTTP clients for microservice communication
-- `src/robomage/dashboard/`: Dash-based visualization dashboard (Sprint 4)
+- `src/robomage/dashboard/`: Dash-based visualization dashboard (Sprint 4-6)
 - `src/robomage/persistence/`: Complete persistence layer (Sprint 5)
   - `database.py`: SQLAlchemy ORM and database management
-  - `models.py`: Database models (Session, File)
+  - `models.py`: Database models (Session, File) - **Sprint 7 will add AnalysisResult**
   - `file_store.py`: HDF5-based file storage
   - `api.py`: SessionManager high-level API
+- `src/robomage/workflow/`: Workflow definition and node implementations
+  - `nodes/`: Workflow node types (load_files, peak_analysis, export_csv)
 - `src/robomage/visualization.py`: Publication-quality plotting utilities (Sprint 4)
-- `services/peak_analysis/`: Independent FastAPI microservice
+- `src/robomage/orchestrator.py`: DAG-based workflow execution engine (Sprint 6)
+- `services/peak_analysis/`: Independent FastAPI microservice for peak detection
+- `services/workflow_engine/`: FastAPI service for workflow execution
 - `peak_analyzer.py`: Standalone CLI tool for peak analysis workflows
-- `src/robomage/orchestrator.py`: Service coordination (planned)
 
 ### Service Architecture Patterns
 - **Independent Services**: FastAPI apps in `services/` with their own requirements.txt
@@ -143,6 +148,27 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - **h5py**: HDF5 file storage for data persistence (Sprint 5)
 
 ## Current Sprint Status
+
+**✅ Sprint 6 Days 5-6 - Workflow Session Integration: COMPLETE (November 27, 2025)**
+
+**Completed Deliverables:**
+- ✅ **Auto-Session Creation** - Dashboard auto-creates "Default Session YYYY-MM-DD" on load
+- ✅ **Session File Loading** - Existing session files load automatically on startup
+- ✅ **Workflow Save Integration** - Save workflow results (files, metadata) directly to active session
+- ✅ **UI Auto-Refresh** - All tabs update after workflow save (file-data, wavelength, analysis stores)
+- ✅ **Session Status Display** - 3-column status bar shows session name and file count
+- ✅ **Saved Workflows Management** - Load and delete saved workflows from UI
+- ✅ **Node Type Tracking** - `NodeExecutionResult` includes `node_type` field for result processing
+- ✅ **Analysis Tab Population** - Peak analysis results display after workflow execution
+- ✅ **Store Listener Pattern** - Analysis tab listens to `analysis-results-store` updates
+- ✅ **Seamless UX** - No manual session creation needed before running workflows
+
+**Known Limitation:**
+- ⚠️ **Analysis results not persisted** - Stored in `analysis-results-store` (in-memory only)
+- Page reload clears analysis results (files and metadata persist)
+- Must re-run workflow to regenerate analysis
+- **Sprint 7 will fix** with extensible database storage
+
 **✅ Sprint 5 - Session Persistence: COMPLETE (November 25, 2025)**
 **MERGED TO MAIN** - Production-ready session persistence with dashboard integration
 
@@ -162,7 +188,7 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 **Completed Deliverables:**
 - ✅ **Complete Peak Analysis Microservice** - FastAPI REST API with multi-profile fitting
-- ✅ **Professional Dashboard Framework** - 3-tab UI with wavelength management (0.1665 Å default)
+- ✅ **Professional Dashboard Framework** - 4-tab UI with wavelength management (0.1665 Å default)
 - ✅ **Analysis Tab Integration** - Real-time peak detection with interactive parameter controls
 - ✅ **Peak Visualization** - Automatic peak annotation on diffraction plots with tooltips
 - ✅ **Service Health Monitoring** - Connection status indicators and startup guidance
@@ -170,34 +196,50 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - ✅ **Type Safety** - Strategic MyPy configuration with dashboard exclusion
 - ✅ **Code Quality** - All linting/formatting/type checks passing
 
-**🚀 READY FOR: Sprint 4 Phase 3 - Publication Features**
-- Advanced export options (CSV, JSON, publication plots)
-- Batch processing and analysis comparison
-- Enhanced visualization features
+**🚀 NEXT: Sprint 7 - Analysis Result Persistence (Extensible MVP)**
+
+**Objective**: Add **extensible analysis result storage** to support peak detection now and future analysis types (GSAS-II Rietveld, phase identification, texture analysis)
+
+**Key Features**:
+- ✅ Generic `AnalysisResult` table with JSON storage for flexibility
+- ✅ Support multiple analysis types per file
+- ✅ Track parameters and quality metrics for reproducibility
+- ✅ Analysis versioning for tool compatibility
+- ✅ Peak detection results persist across page reloads
+- ✅ Foundation pattern for future GSAS-II integration
+
+**See**: `docs/sprint-7-analysis-persistence-mvp.md` for detailed plan
 
 ## Integration Points
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
 - **File formats**: .chi and .xy files (Q, intensity columns) with auto-detection
 - **CLI**: Multiple tools - `python -m robomage` and `peak_analyzer.py` with service modes
-- **Dashboard**: Professional 3-tab Dash UI with wavelength management, plotting, and persistence
+- **Dashboard**: Professional 4-tab Dash UI with workflow builder and session integration
 - **Session Storage**: SQLite database + HDF5 files in `~/.robomage/` (configurable)
-- **Microservices**: FastAPI peak analysis service with HTTP/JSON communication  
+- **Workflow Engine**: FastAPI service with DAG orchestrator, JSON workflow definitions
+- **Microservices**: FastAPI services (peak analysis, workflow execution) with HTTP/JSON communication  
 - **Type Safety**: Strategic MyPy configuration - strict for core library, lenient for UI
 - **Service Communication**: Robust retry logic and validation at API boundaries
-- **Future**: GSAS-II refinement engine integration, Phase 3 publication features
+- **Future**: Analysis result persistence (Sprint 7), GSAS-II refinement engine integration
 
 ## Key Files for Understanding Context
 1. `src/robomage/__init__.py` - Public API definition and dual API exports
 2. `src/robomage/data/models.py` - Core DiffractionData and DataStatistics
 3. `examples/load_data_example.py` - Comprehensive tutorial showing both APIs
 4. `services/peak_analysis/main.py` - FastAPI microservice implementation
-5. `peak_analyzer.py` - Multi-mode CLI demonstrating service patterns
-6. `src/robomage/clients/peak_analysis_client.py` - Service client with retry logic
-7. `src/robomage/persistence/api.py` - SessionManager for session persistence
+5. `services/workflow_engine/main.py` - Workflow execution service
+6. `peak_analyzer.py` - Multi-mode CLI demonstrating service patterns
+7. `src/robomage/clients/peak_analysis_client.py` - Service client with retry logic
+8. `src/robomage/persistence/api.py` - SessionManager for session persistence
+9. `src/robomage/orchestrator.py` - DAG workflow executor
+10. `docs/sprint-7-analysis-persistence-mvp.md` - Next sprint plan (extensible analysis storage)
 
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
-- `docs/sprint-3-peak-analysis-plan.md` - Service architecture implementation details
+- `docs/sprint-6-days-5-6-COMPLETE.md` - Workflow-session integration completion summary
+- `docs/sprint-7-analysis-persistence-mvp.md` - **NEXT SPRINT**: Extensible analysis result storage
+- `docs/sprint-5-persistence-architecture.md` - Persistence layer design philosophy
+- `docs/sprint-6-workflow-orchestrator-mvp.md` - Workflow engine architecture
 - `docs/sprint-4-visualization-dashboard.md` - Dashboard development plan and architecture
 - `docs/dashboard-persistence-guide.md` - Complete session persistence user guide
 - `docs/persistence-quick-reference.md` - Code examples for persistence API

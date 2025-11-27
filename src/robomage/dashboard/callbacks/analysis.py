@@ -21,6 +21,7 @@ def register_callbacks(app):
     register_service_health_callback(app)
     register_analysis_callback(app)
     register_service_status_update(app)
+    register_analysis_store_listener(app)
 
 
 def register_service_health_callback(app):
@@ -357,3 +358,39 @@ def create_analysis_summary_ui(results: dict[str, Any]) -> html.Div:
         summary_cards.append(card)
 
     return html.Div(summary_cards)
+
+
+def register_analysis_store_listener(app):
+    """Register callback to update UI when analysis-results-store is updated."""
+
+    @app.callback(
+        Output("analysis-summary", "children", allow_duplicate=True),
+        [Input("analysis-results-store", "data")],
+        prevent_initial_call=True,
+    )
+    def update_analysis_from_store(analysis_data):
+        """
+        Update analysis summary UI when store is updated (e.g., from workflow save).
+
+        Args:
+            analysis_data: Analysis results from store
+
+        Returns:
+            Updated UI component
+        """
+        print(f"🔍 ANALYSIS TAB: Store updated with {len(analysis_data) if analysis_data else 0} results")
+        
+        if not analysis_data:
+            return dbc.Alert(
+                [
+                    html.I(className="fas fa-info-circle me-2"),
+                    (
+                        "Click 'Run Analysis' to detect peaks in your data, "
+                        "or run a workflow that includes peak analysis."
+                    ),
+                ],
+                color="info",
+            )
+
+        # Use the same UI creation function
+        return create_analysis_summary_ui(analysis_data)
