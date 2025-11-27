@@ -6,7 +6,7 @@ Defines database schema for sessions and files.
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -96,6 +96,14 @@ class File(Base):
     # Relationship to session
     session: Mapped["Session"] = relationship("Session", back_populates="files")
 
+    # Relationship to analysis results (cascade delete)
+    analysis_results: Mapped[list["AnalysisResult"]] = relationship(
+        "AnalysisResult",
+        back_populates="file",
+        cascade="all, delete-orphan",
+        order_by="desc(AnalysisResult.created_at)",
+    )
+
     def __repr__(self) -> str:
         """String representation of File."""
         return (
@@ -138,3 +146,61 @@ class Workflow(Base):
     def __repr__(self) -> str:
         """String representation of Workflow."""
         return f"<Workflow(id='{self.id}', name='{self.name}', session_id={self.session_id})>"
+
+
+class AnalysisResult(Base):
+    """
+    Generic analysis result storage with extensible JSON schema.
+
+    Supports multiple analysis types:
+    - peak_detection: Peak positions, fits, quality metrics
+    - rietveld: GSAS-II refinement results (future)
+    - phase_identification: Phase matching results (future)
+    - texture_analysis: Pole figures, ODF (future)
+
+    Each analysis type defines its own result_data schema while
+    sharing common metadata fields for provenance and reproducibility.
+
+    Attributes:
+        id: Primary key
+        file_id: Foreign key to analyzed file
+        analysis_type: Type identifier ('peak_detection', 'rietveld', etc.)
+        analysis_version: Tool version for reproducibility
+        created_at: Timestamp when analysis was performed
+        result_data: Analysis-specific results (JSON schema varies by type)
+        parameters: Analysis parameters used (for reproducibility)
+        quality_metrics: Quality/goodness-of-fit metrics
+        file: Relationship to parent File
+    """
+
+    __tablename__ = "analysis_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Link to file
+    file_id: Mapped[int] = mapped_column(Integer, ForeignKey("files.id"), nullable=False)
+    file: Mapped["File"] = relationship("File", back_populates="analysis_results")
+
+    # Analysis metadata
+    analysis_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    analysis_version: Mapped[str | None] = mapped_column(String)
+
+    # Timing
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now
+    )
+
+    # Flexible result storage
+    result_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    parameters: Mapped[dict | None] = mapped_column(JSON)
+    quality_metrics: Mapped[dict | None] = mapped_column(JSON)
+
+    # Index for common queries
+    __table_args__ = (Index("idx_file_analysis_type", "file_id", "analysis_type"),)
+
+    def __repr__(self) -> str:
+        """String representation of AnalysisResult."""
+        return (
+            f"<AnalysisResult(id={self.id}, file_id={self.file_id}, "
+            f"type='{self.analysis_type}')>"
+        )

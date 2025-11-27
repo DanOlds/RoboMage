@@ -17,29 +17,37 @@ from robomage.data.models import DiffractionData
 from robomage.persistence import SessionManager
 
 
-def _load_session_files(mgr: SessionManager, session_id: int) -> tuple[dict[str, Any], dict[str, Any]]:
+def _load_session_files(
+    mgr: SessionManager, session_id: int
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """
-    Helper function to load files from a session into UI store format.
+    Helper function to load files and analysis results from a session into UI store format.
     
     Args:
         mgr: SessionManager instance
         session_id: ID of session to load files from
         
     Returns:
-        Tuple of (file_data, wavelength_data) dicts in UI store format
+        Tuple of (file_data, wavelength_data, analysis_results) dicts in UI store format
     """
     session_files = mgr.get_session_files(session_id)
     
     if not session_files:
-        return {}, {"current_wavelength": 0.1665, "source_type": "standard"}
+        return {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
     
     # Reconstruct file data from stored files
     file_data = {}
+    analysis_results = {}
     loaded_wavelength = 0.1665  # Default
     
     for session_file in session_files:
         # Read DiffractionData from FileStore using stored path
-        diffraction = mgr.file_store.load_file(session_file.stored_path)
+        try:
+            diffraction = mgr.file_store.load_file(session_file.stored_path)
+        except FileNotFoundError:
+            # File was deleted or moved - skip it
+            print(f"⚠️ WARNING: Skipping missing file: {session_file.filename}")
+            continue
         
         if diffraction is None:
             continue
@@ -67,6 +75,15 @@ def _load_session_files(mgr: SessionManager, session_id: int) -> tuple[dict[str,
         }
         
         file_data[filename] = file_info
+        
+        # Load analysis results for this file (Sprint 7)
+        latest_peak_analysis = mgr.get_latest_analysis(
+            file_id=session_file.id, analysis_type="peak_detection"
+        )
+        
+        if latest_peak_analysis:
+            # Store analysis result in same format as analysis tab expects
+            analysis_results[filename] = latest_peak_analysis.result_data
     
     # Restore global wavelength (matching wavelength-store schema)
     wavelength_data = {
@@ -74,7 +91,7 @@ def _load_session_files(mgr: SessionManager, session_id: int) -> tuple[dict[str,
         "source_type": "standard",  # Could be enhanced to detect custom values
     }
     
-    return file_data, wavelength_data
+    return file_data, wavelength_data, analysis_results
 
 
 def register_persistence_callbacks(app: dash.Dash) -> None:
@@ -435,15 +452,14 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                     session_id,
                 )
 
-            # Use helper function to load session files
-            file_data, wavelength_data = _load_session_files(mgr, session_id)
+            # Use helper function to load session files and analysis results
+            file_data, wavelength_data, analysis_results = _load_session_files(mgr, session_id)
 
-            # Note: Analysis results are not persisted yet, so return empty dict
-            # In future, could load from database if we add analysis result storage
+            # Analysis results now loaded from database (Sprint 7)
             return (
                 file_data,
                 wavelength_data,
-                {},  # Empty analysis results (not yet persisted)
+                analysis_results,  # Restored from database
                 dbc.Alert(
                     [
                         html.I(className="fas fa-check-circle me-2"),
@@ -1181,11 +1197,12 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 status_text = f"{default_session.name} ({file_count} file{'s' if file_count != 1 else ''})"
                 print(f"🔍 DEBUG: Using existing session: {status_text}, ID={session_id}")
                 
-                # Load files from existing session
-                file_data, wavelength_data = _load_session_files(mgr, session_id)
+                # Load files and analysis results from existing session (Sprint 7)
+                file_data, wavelength_data, analysis_results = _load_session_files(mgr, session_id)
                 print(f"🔍 DEBUG: Loaded {len(file_data)} files from session")
+                print(f"🔍 DEBUG: Loaded {len(analysis_results)} analysis results from session")
                 
-                return session_id, status_text, "text-success", file_data, wavelength_data, {}
+                return session_id, status_text, "text-success", file_data, wavelength_data, analysis_results
             
             # Create a new default session
             from datetime import datetime

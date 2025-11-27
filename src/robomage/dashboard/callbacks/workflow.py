@@ -794,7 +794,7 @@ def register_session_integration_callback(app):
                                 # Use default wavelength if None or missing
                                 wavelength = item.get("wavelength") or 0.1665
 
-                                manager.add_file_to_session(
+                                file_obj = manager.add_file_to_session(
                                     session_id=session_id,
                                     filename=filename,
                                     wavelength=wavelength,
@@ -802,11 +802,99 @@ def register_session_integration_callback(app):
                                 )
                                 files_saved += 1
                                 logger.info(f"  ✅ Saved {filename} to session {session_id}")
+                                
+                                # Sprint 7: Save analysis results to database if we have them for this file
+                                if filename in analysis_results:
+                                    try:
+                                        result_data = analysis_results[filename]
+                                        # Extract parameters from workflow execution if available
+                                        # (in future could pass from workflow node)
+                                        parameters = {
+                                            "source": "workflow",
+                                            "node_id": node_id,
+                                        }
+                                        # Extract quality metrics from result
+                                        quality_metrics = {
+                                            "overall_r_squared": result_data.get("metadata", {}).get("overall_r_squared", 0.0)
+                                        }
+                                        
+                                        manager.save_analysis_result(
+                                            file_id=file_obj.id,
+                                            analysis_type="peak_detection",
+                                            result_data=result_data,
+                                            parameters=parameters,
+                                            quality_metrics=quality_metrics,
+                                            analysis_version="robomage-workflow-0.1.0",
+                                        )
+                                        logger.info(f"  ✅ Saved peak analysis results for {filename} to database")
+                                        print(f"  ✅ Saved peak analysis results for {filename} to database")
+                                    except Exception as db_error:
+                                        logger.warning(f"  ⚠️ Could not save analysis results for {filename}: {db_error}")
 
                             except Exception as e:
                                 error_msg = f"Failed to save {node_id} output {i}: {str(e)}"
                                 logger.error(error_msg, exc_info=True)
                                 errors.append(error_msg)
+
+            # Sprint 7: Save analysis results for existing files in session (not just new files from output)
+            # This handles workflows that run peak analysis on already-loaded files
+            if analysis_results:
+                try:
+                    session_files = manager.get_session_files(session_id)
+                    logger.info(f"🔍 Checking {len(analysis_results)} analysis results against {len(session_files)} session files")
+                    
+                    for session_file in session_files:
+                        try:
+                            diffraction = manager.file_store.load_file(session_file.stored_path)
+                            if diffraction is None:
+                                continue
+                            
+                            filename = diffraction.filename or "unknown.chi"
+                            
+                            # If we have analysis results for this file, save them
+                            if filename in analysis_results:
+                                # Check if we already saved this (from file creation above)
+                                existing_analysis = manager.get_latest_analysis(
+                                    file_id=session_file.id,
+                                    analysis_type="peak_detection"
+                                )
+                                
+                                # Only save if no analysis exists or if it's different
+                                # (Simple check: if existing analysis has different peak count, it's different)
+                                should_save = True
+                                if existing_analysis:
+                                    existing_peak_count = len(existing_analysis.result_data.get("peaks", []))
+                                    new_peak_count = len(analysis_results[filename].get("peaks", []))
+                                    if existing_peak_count == new_peak_count:
+                                        should_save = False
+                                        logger.info(f"  ℹ️ Analysis for {filename} already in database (skipping)")
+                                
+                                if should_save:
+                                    result_data = analysis_results[filename]
+                                    parameters = {
+                                        "source": "workflow",
+                                        "workflow_type": "existing_files",
+                                    }
+                                    quality_metrics = {
+                                        "overall_r_squared": result_data.get("metadata", {}).get("overall_r_squared", 0.0)
+                                    }
+                                    
+                                    manager.save_analysis_result(
+                                        file_id=session_file.id,
+                                        analysis_type="peak_detection",
+                                        result_data=result_data,
+                                        parameters=parameters,
+                                        quality_metrics=quality_metrics,
+                                        analysis_version="robomage-workflow-0.1.0",
+                                    )
+                                    logger.info(f"  ✅ Saved peak analysis for existing file {filename} to database")
+                                    print(f"  ✅ Saved peak analysis for existing file {filename} to database")
+                        except Exception as file_error:
+                            logger.warning(f"  ⚠️ Could not process analysis for {session_file.filename}: {file_error}")
+                            continue
+                            
+                except Exception as analysis_save_error:
+                    logger.warning(f"Could not save analysis results for existing files: {analysis_save_error}")
 
             # Build alert message
             if files_saved > 0:
