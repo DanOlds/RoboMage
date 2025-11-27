@@ -378,8 +378,10 @@ def register_analysis_store_listener(app):
         Returns:
             Updated UI component
         """
-        print(f"🔍 ANALYSIS TAB: Store updated with {len(analysis_data) if analysis_data else 0} results")
-        
+        print(
+            f"🔍 ANALYSIS TAB: Store updated with {len(analysis_data) if analysis_data else 0} results"
+        )
+
         if not analysis_data:
             return dbc.Alert(
                 [

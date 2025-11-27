@@ -7,6 +7,7 @@ Node handlers for exporting results and generating outputs.
 import csv
 import json
 import logging
+from csv import DictWriter
 from pathlib import Path
 from typing import Any
 
@@ -18,17 +19,17 @@ async def export_csv_handler(
 ) -> dict:
     """
     Export analysis results to CSV files.
-    
+
     Config Parameters:
         - output_path: str (output file path or directory)
         - format: str (csv format: "peaks", "statistics", "data")
-    
+
     Inputs:
         - input: List of results (from peak analysis or statistics)
-    
+
     Outputs:
         Dictionary with export information
-    
+
     Example:
         config = {
             "output_path": "results/peaks.csv",
@@ -82,9 +83,11 @@ async def export_csv_handler(
         # Export statistical results
         if results:
             with open(output_file, "w", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=results[0].keys())
-                writer.writeheader()
-                writer.writerows(results)
+                dict_writer: DictWriter[Any] = csv.DictWriter(
+                    f, fieldnames=results[0].keys()
+                )
+                dict_writer.writeheader()
+                dict_writer.writerows(results)
 
     else:
         raise ValueError(f"Unknown export format: {format_type}")
@@ -103,14 +106,14 @@ async def export_json_handler(
 ) -> dict:
     """
     Export results to JSON file.
-    
+
     Config Parameters:
         - output_path: str (output file path)
         - pretty: bool (pretty print JSON, default: True)
-    
+
     Inputs:
         - input: Any serializable data
-    
+
     Outputs:
         Dictionary with export information
     """
@@ -142,13 +145,13 @@ async def save_results_handler(
 ) -> dict:
     """
     Save workflow results to context for later retrieval.
-    
+
     Config Parameters:
         - key: str (key name for storing results)
-    
+
     Inputs:
         - input: Any data to save
-    
+
     Outputs:
         Confirmation dictionary
     """
@@ -171,33 +174,33 @@ async def save_to_session_handler(
 ) -> dict:
     """
     Save workflow results into a session for dashboard visualization.
-    
+
     This enables seamless workflow → visualization integration by extracting
     DiffractionData objects from workflow execution and adding them to the
     specified session.
-    
+
     Config Parameters:
         - session_id: str
             Target session ID. Use "current" for active dashboard session,
             or provide specific session ID. If session doesn't exist, it will
             be created with this ID as the name.
-        
+
         - include_files: bool (default: True)
             Whether to save DiffractionData objects to session
-        
+
         - include_results: bool (default: True)
             Whether to save analysis results (peaks, statistics) as metadata
-        
+
         - overwrite_duplicates: bool (default: False)
             If True, replaces existing files with same name
-    
+
     Inputs:
         - files: List[DiffractionData] (optional)
             Diffraction data to save to session
-        
+
         - results: List[dict] (optional)
             Analysis results (peak lists, statistics, etc.)
-    
+
     Outputs:
         Dictionary with operation summary:
         {
@@ -207,7 +210,7 @@ async def save_to_session_handler(
             "status": "success" | "partial" | "error",
             "errors": List[str]
         }
-    
+
     Example Workflow:
         ```json
         {
@@ -226,7 +229,7 @@ async def save_to_session_handler(
           ]
         }
         ```
-    
+
     Raises:
         ValueError: If session_id is invalid or session creation fails
         RuntimeError: If persistence layer is unavailable
@@ -256,7 +259,7 @@ async def save_to_session_handler(
             # Create new session with timestamp
             session_id = f"workflow_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             logger.info(f"No active session, creating new: {session_id}")
-    
+
     # Convert string numeric IDs to integers for existing sessions
     original_session_id = session_id
     if isinstance(session_id, str) and session_id.isdigit():
@@ -264,15 +267,21 @@ async def save_to_session_handler(
 
     # Ensure session exists
     try:
-        session = manager.get_session(session_id) if isinstance(session_id, int) else None
-        
+        session = (
+            manager.get_session(session_id) if isinstance(session_id, int) else None
+        )
+
         if session is None:
             # Create session if it doesn't exist (only for string names)
-            if isinstance(original_session_id, str) and not original_session_id.isdigit():
+            if (
+                isinstance(original_session_id, str)
+                and not original_session_id.isdigit()
+            ):
                 logger.info(f"Creating new session: {original_session_id}")
                 try:
                     session_id = manager.create_session(
-                        name=original_session_id, description="Created by workflow execution"
+                        name=original_session_id,
+                        description="Created by workflow execution",
                     )
                 except Exception as create_error:
                     raise RuntimeError(

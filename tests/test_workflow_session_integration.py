@@ -4,15 +4,13 @@ Integration tests for workflow-session integration.
 Tests the end-to-end flow: workflow execution → save to session → visualization.
 """
 
-import asyncio
-from pathlib import Path
 
 import pytest
 
 from robomage import load_test_data
+from robomage.orchestrator import ExecutionContext, WorkflowOrchestrator
 from robomage.persistence.api import SessionManager
 from robomage.workflow.nodes import output_nodes
-from robomage.orchestrator import ExecutionContext, WorkflowOrchestrator
 
 
 @pytest.fixture
@@ -24,9 +22,10 @@ def session_manager():
 @pytest.fixture
 def test_session(session_manager, request):
     """Create a test session with unique name."""
-    test_name = request.node.name if hasattr(request, 'node') else 'default'
+    test_name = request.node.name if hasattr(request, "node") else "default"
     return session_manager.create_session(
-        name=f"Integration Test Session {test_name}", description="Testing workflow integration"
+        name=f"Integration Test Session {test_name}",
+        description="Testing workflow integration",
     )
 
 
@@ -135,9 +134,7 @@ async def test_save_to_session_handler_current_session(session_manager, test_ses
 
 
 @pytest.mark.asyncio
-async def test_workflow_to_session_integration(
-    session_manager, test_session, tmp_path
-):
+async def test_workflow_to_session_integration(session_manager, test_session, tmp_path):
     """
     End-to-end test: Execute workflow with save_to_session node.
 
@@ -152,7 +149,6 @@ async def test_workflow_to_session_integration(
     test_data = load_test_data()
 
     # Save test data to file
-    import numpy as np
 
     with open(test_file, "w") as f:
         for q, i in zip(test_data.q_values, test_data.intensities):

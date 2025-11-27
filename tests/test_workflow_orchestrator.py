@@ -89,13 +89,22 @@ class TestWorkflowOrchestrator:
             name="Simple Chain",
             nodes=[
                 WorkflowNode(
-                    id="node1", type="test", label="Node 1", position=NodePosition(x=0, y=0)
+                    id="node1",
+                    type="test",
+                    label="Node 1",
+                    position=NodePosition(x=0, y=0),
                 ),
                 WorkflowNode(
-                    id="node2", type="test", label="Node 2", position=NodePosition(x=1, y=0)
+                    id="node2",
+                    type="test",
+                    label="Node 2",
+                    position=NodePosition(x=1, y=0),
                 ),
                 WorkflowNode(
-                    id="node3", type="test", label="Node 3", position=NodePosition(x=2, y=0)
+                    id="node3",
+                    type="test",
+                    label="Node 3",
+                    position=NodePosition(x=2, y=0),
                 ),
             ],
             edges=[
@@ -120,16 +129,28 @@ class TestWorkflowOrchestrator:
             name="Parallel Branches",
             nodes=[
                 WorkflowNode(
-                    id="root", type="test", label="Root", position=NodePosition(x=0, y=0)
+                    id="root",
+                    type="test",
+                    label="Root",
+                    position=NodePosition(x=0, y=0),
                 ),
                 WorkflowNode(
-                    id="branch1", type="test", label="Branch 1", position=NodePosition(x=1, y=0)
+                    id="branch1",
+                    type="test",
+                    label="Branch 1",
+                    position=NodePosition(x=1, y=0),
                 ),
                 WorkflowNode(
-                    id="branch2", type="test", label="Branch 2", position=NodePosition(x=1, y=1)
+                    id="branch2",
+                    type="test",
+                    label="Branch 2",
+                    position=NodePosition(x=1, y=1),
                 ),
                 WorkflowNode(
-                    id="merge", type="test", label="Merge", position=NodePosition(x=2, y=0)
+                    id="merge",
+                    type="test",
+                    label="Merge",
+                    position=NodePosition(x=2, y=0),
                 ),
             ],
             edges=[
@@ -162,13 +183,22 @@ class TestWorkflowOrchestrator:
             name="Cycle Workflow",
             nodes=[
                 WorkflowNode(
-                    id="node1", type="test", label="Node 1", position=NodePosition(x=0, y=0)
+                    id="node1",
+                    type="test",
+                    label="Node 1",
+                    position=NodePosition(x=0, y=0),
                 ),
                 WorkflowNode(
-                    id="node2", type="test", label="Node 2", position=NodePosition(x=1, y=0)
+                    id="node2",
+                    type="test",
+                    label="Node 2",
+                    position=NodePosition(x=1, y=0),
                 ),
                 WorkflowNode(
-                    id="node3", type="test", label="Node 3", position=NodePosition(x=2, y=0)
+                    id="node3",
+                    type="test",
+                    label="Node 3",
+                    position=NodePosition(x=2, y=0),
                 ),
             ],
             edges=[
@@ -315,7 +345,10 @@ class TestWorkflowOrchestrator:
             name="Data Flow Test",
             nodes=[
                 WorkflowNode(
-                    id="source", type="source", label="Source", position=NodePosition(x=0, y=0)
+                    id="source",
+                    type="source",
+                    label="Source",
+                    position=NodePosition(x=0, y=0),
                 ),
                 WorkflowNode(
                     id="transform",
@@ -324,7 +357,10 @@ class TestWorkflowOrchestrator:
                     position=NodePosition(x=1, y=0),
                 ),
                 WorkflowNode(
-                    id="sink", type="sink", label="Sink", position=NodePosition(x=2, y=0)
+                    id="sink",
+                    type="sink",
+                    label="Sink",
+                    position=NodePosition(x=2, y=0),
                 ),
             ],
             edges=[
@@ -358,7 +394,10 @@ class TestWorkflowOrchestrator:
             name="Context Test",
             nodes=[
                 WorkflowNode(
-                    id="node1", type="reader", label="Reader", position=NodePosition(x=0, y=0)
+                    id="node1",
+                    type="reader",
+                    label="Reader",
+                    position=NodePosition(x=0, y=0),
                 )
             ],
             edges=[],
@@ -386,7 +425,10 @@ class TestWorkflowOrchestrator:
             name="Timing Test",
             nodes=[
                 WorkflowNode(
-                    id="node1", type="simple", label="Simple", position=NodePosition(x=0, y=0)
+                    id="node1",
+                    type="simple",
+                    label="Simple",
+                    position=NodePosition(x=0, y=0),
                 )
             ],
             edges=[],

@@ -98,9 +98,13 @@ async def test_workflow_session_integration():
                         print(f"   First item keys: {keys}")
 
                         if "q_values" in first_item:
-                            print(f"   ✅ SUCCESS: Full DiffractionData found!")
-                            print(f"      - q_values: {len(first_item['q_values'])} points")
-                            print(f"      - intensities: {len(first_item.get('intensities', []))} points")
+                            print("   ✅ SUCCESS: Full DiffractionData found!")
+                            print(
+                                f"      - q_values: {len(first_item['q_values'])} points"
+                            )
+                            print(
+                                f"      - intensities: {len(first_item.get('intensities', []))} points"
+                            )
                             print(f"      - filename: {first_item.get('filename')}")
                             print(f"      - wavelength: {first_item.get('wavelength')}")
                             print()
@@ -110,16 +114,18 @@ async def test_workflow_session_integration():
                             print(
                                 "   Would extract DiffractionData and call manager.add_file_to_session()"
                             )
-                            print("   ✅ Data structure is correct for session persistence")
+                            print(
+                                "   ✅ Data structure is correct for session persistence"
+                            )
 
                         else:
-                            print(f"   ❌ FAILED: q_values not found in output")
-                            print(f"      This means full serialization didn't work!")
+                            print("   ❌ FAILED: q_values not found in output")
+                            print("      This means full serialization didn't work!")
             elif isinstance(output, dict):
                 print(f"   Output keys: {list(output.keys())}")
                 if "summary" in output:
-                    print(f"   ⚠️  WARNING: Got summary instead of full data!")
-                    print(f"   This means store_full_outputs=False was used")
+                    print("   ⚠️  WARNING: Got summary instead of full data!")
+                    print("   This means store_full_outputs=False was used")
         else:
             print("   ❌ No node results found")
 

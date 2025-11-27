@@ -6,7 +6,6 @@ Phase 1: JSON-based workflow editor with node palette and execution controls.
 Future: Visual drag-and-drop interface with ReactFlow.
 """
 
-import os
 from pathlib import Path
 
 import dash_bootstrap_components as dbc
@@ -16,14 +15,14 @@ from dash import dcc, html
 def create_workflow_tab() -> html.Div:
     """
     Create the Workflow Builder tab.
-    
+
     Phase 1 Implementation:
     - Node type palette (clickable cards)
     - JSON workflow editor (for MVP)
     - Workflow management (save/load/execute)
     - Execution log viewer
     - Service health indicator
-    
+
     Returns:
         Workflow tab layout component
     """
@@ -66,7 +65,10 @@ def create_workflow_tab() -> html.Div:
                                             html.H6("Quick Start Templates"),
                                             html.Div(id="workflow-templates"),
                                         ],
-                                        style={"maxHeight": "700px", "overflowY": "auto"},
+                                        style={
+                                            "maxHeight": "700px",
+                                            "overflowY": "auto",
+                                        },
                                     ),
                                 ],
                                 className="h-100",
@@ -189,7 +191,9 @@ def create_workflow_tab() -> html.Div:
                                             # Workflow JSON editor (Phase 1)
                                             html.Div(
                                                 [
-                                                    dbc.Label("Workflow Definition (JSON):"),
+                                                    dbc.Label(
+                                                        "Workflow Definition (JSON):"
+                                                    ),
                                                     html.Small(
                                                         " Phase 1: Manual JSON editing (drag-and-drop coming in Phase 2)",
                                                         className="text-muted",
@@ -345,7 +349,7 @@ def get_default_workflow_json() -> str:
     # Need to go up 5 levels to get to project root
     project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
     examples_dir = str(project_root / "examples")
-    
+
     return f"""{{
   "name": "Example Workflow",
   "description": "Load files and analyze peaks",

@@ -6,7 +6,7 @@ Defines database schema for sessions and files.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -178,7 +178,9 @@ class AnalysisResult(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # Link to file
-    file_id: Mapped[int] = mapped_column(Integer, ForeignKey("files.id"), nullable=False)
+    file_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("files.id"), nullable=False
+    )
     file: Mapped["File"] = relationship("File", back_populates="analysis_results")
 
     # Analysis metadata

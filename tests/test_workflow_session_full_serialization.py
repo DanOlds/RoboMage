@@ -17,10 +17,10 @@ if str(project_root) not in sys.path:
 
 from services.workflow_engine.models import (
     ExecutionStatus,
+    NodeExecutionResult,
     NodePosition,
     WorkflowDefinition,
     WorkflowNode,
-    NodeExecutionResult,
 )
 from src.robomage.orchestrator import WorkflowOrchestrator
 from src.robomage.workflow.nodes import data_nodes
@@ -28,7 +28,7 @@ from src.robomage.workflow.nodes import data_nodes
 
 class TestWorkflowSessionFullSerialization:
     """Test that workflow execution results contain full DiffractionData for session saves."""
-    
+
     @pytest.mark.asyncio
     async def test_orchestrator_full_serialization_mode(self):
         """Test that store_full_outputs=True serializes complete DiffractionData."""
@@ -43,42 +43,42 @@ class TestWorkflowSessionFullSerialization:
                     label="Load Files",
                     config={
                         "directory": str(Path(__file__).parent.parent / "examples"),
-                        "pattern": "*.chi"
+                        "pattern": "*.chi",
                     },
                     position=NodePosition(x=100, y=100),
                 )
             ],
             edges=[],
         )
-        
+
         orchestrator = WorkflowOrchestrator()
         orchestrator.register_node_handler("load_files", data_nodes.load_files_handler)
-        
+
         # Execute with full serialization
         result = await orchestrator.execute_workflow(workflow, store_full_outputs=True)
-        
+
         # Verify execution succeeded
         assert result.status.value == "completed"
         assert len(result.node_results) == 1
-        
+
         # Verify output contains full data
         node_result = result.node_results[0]
         assert node_result.node_id == "load_1"
         assert node_result.output is not None
         assert isinstance(node_result.output, list)
         assert len(node_result.output) > 0
-        
+
         # Verify first item is complete DiffractionData dict
         first_file = node_result.output[0]
         assert isinstance(first_file, dict)
         assert "q_values" in first_file
         assert "intensities" in first_file
         assert "filename" in first_file
-        
+
         # Verify data is complete (not truncated)
         assert len(first_file["q_values"]) > 500  # More than summary truncation limit
         assert len(first_file["intensities"]) > 500
-        
+
     @pytest.mark.asyncio
     async def test_orchestrator_summary_mode_default(self):
         """Test that default mode (store_full_outputs=False) stores summaries."""
@@ -92,23 +92,23 @@ class TestWorkflowSessionFullSerialization:
                     label="Load Files",
                     config={
                         "directory": str(Path(__file__).parent.parent / "examples"),
-                        "pattern": "*.chi"
+                        "pattern": "*.chi",
                     },
                     position=NodePosition(x=100, y=100),
                 )
             ],
             edges=[],
         )
-        
+
         orchestrator = WorkflowOrchestrator()
         orchestrator.register_node_handler("load_files", data_nodes.load_files_handler)
-        
+
         # Execute with default (summary) mode
         result = await orchestrator.execute_workflow(workflow, store_full_outputs=False)
-        
+
         # Verify execution succeeded
         assert result.status.value == "completed"
-        
+
         # Verify output is a summary dict
         node_result = result.node_results[0]
         assert node_result.output is not None
@@ -116,13 +116,15 @@ class TestWorkflowSessionFullSerialization:
         assert "summary" in node_result.output
         assert "type" in node_result.output
         assert len(node_result.output["summary"]) <= 500  # Truncated
-        
+
     def test_dashboard_callback_extracts_full_data(self):
         """Test that dashboard callback can extract DiffractionData from full results."""
-        import numpy as np
-        from robomage.data.models import DiffractionData
         from datetime import datetime
-        
+
+        import numpy as np
+
+        from robomage.data.models import DiffractionData
+
         # Simulate execution results with full serialization
         execution_results = {
             "execution_id": "exec_test",
@@ -151,11 +153,11 @@ class TestWorkflowSessionFullSerialization:
                 }
             ],
         }
-        
+
         # Extract data (simulating dashboard callback logic)
         node_results = execution_results.get("node_results", [])
         diffraction_data_list = []
-        
+
         for node_result in node_results:
             output = node_result.get("output")
             if isinstance(output, list):
@@ -167,7 +169,7 @@ class TestWorkflowSessionFullSerialization:
                         # Reconstruct DiffractionData
                         data = DiffractionData(**item)
                         diffraction_data_list.append(data)
-        
+
         # Verify extraction succeeded
         assert len(diffraction_data_list) == 1
         data = diffraction_data_list[0]
@@ -180,25 +182,25 @@ class TestWorkflowSessionFullSerialization:
 
 class TestNodeExecutionResultModel:
     """Test that NodeExecutionResult model accepts both dict and list outputs."""
-    
+
     def test_accepts_dict_output(self):
         """Verify model accepts dict output (summary mode)."""
         from datetime import datetime
-        
+
         result = NodeExecutionResult(
             node_id="test_1",
             status=ExecutionStatus.COMPLETED,
             started_at=datetime.now(),
             output={"summary": "test data", "type": "list"},
         )
-        
+
         assert isinstance(result.output, dict)
         assert "summary" in result.output
-        
+
     def test_accepts_list_output(self):
         """Verify model accepts list output (full serialization mode)."""
         from datetime import datetime
-        
+
         result = NodeExecutionResult(
             node_id="test_1",
             status=ExecutionStatus.COMPLETED,
@@ -208,7 +210,7 @@ class TestNodeExecutionResultModel:
                 {"q_values": [7, 8, 9], "intensities": [10, 11, 12]},
             ],
         )
-        
+
         assert isinstance(result.output, list)
         assert len(result.output) == 2
         assert "q_values" in result.output[0]

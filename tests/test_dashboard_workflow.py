@@ -8,7 +8,6 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from dash.testing.application_runners import import_app
 
 
 @pytest.fixture
@@ -62,7 +61,6 @@ def test_service_health_check_success(mock_get, dash_app):
     }
     mock_get.return_value = mock_response
 
-    from robomage.dashboard.callbacks.workflow import WORKFLOW_SERVICE_URL
 
     # Simulate callback
     from robomage.dashboard.callbacks.workflow import register_service_health_callback
@@ -130,7 +128,9 @@ def test_save_workflow(mock_post, dash_app):
     }
     mock_post.return_value = mock_response
 
-    from robomage.dashboard.callbacks.workflow import register_workflow_management_callbacks
+    from robomage.dashboard.callbacks.workflow import (
+        register_workflow_management_callbacks,
+    )
 
     # Just verify callback registration works
     register_workflow_management_callbacks(dash_app)

@@ -6,11 +6,11 @@ This script starts all required services in the background and
 provides a single Ctrl+C handler to stop everything cleanly.
 """
 
+import os
+import signal
 import subprocess
 import sys
 import time
-import signal
-import os
 from pathlib import Path
 
 # Change to project root

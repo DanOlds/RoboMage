@@ -26,7 +26,7 @@ Endpoints:
 Usage:
     # Start service
     python main.py --port 8002 --host 0.0.0.0
-    
+
     # Or with uvicorn directly
     uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 
@@ -105,7 +105,10 @@ def get_registered_node_types() -> list[NodeTypeMetadata]:
                 "properties": {
                     "directory": {"type": "string", "default": "."},
                     "pattern": {"type": "string", "default": "*.chi"},
-                    "wavelength": {"type": "number", "description": "Optional wavelength override"},
+                    "wavelength": {
+                        "type": "number",
+                        "description": "Optional wavelength override",
+                    },
                 },
                 "required": ["directory", "pattern"],
             },
@@ -298,9 +301,7 @@ async def health_check():
         "status": "healthy",
         "workflows_count": len(workflows),
         "executions_count": len(executions),
-        "node_types_registered": len(orchestrator.node_handlers)
-        if orchestrator
-        else 0,
+        "node_types_registered": len(orchestrator.node_handlers) if orchestrator else 0,
     }
 
 
@@ -308,10 +309,10 @@ async def health_check():
 async def create_workflow(workflow: WorkflowDefinition):
     """
     Create a new workflow definition.
-    
+
     Args:
         workflow: WorkflowDefinition with nodes and edges
-        
+
     Returns:
         Created workflow with assigned ID and timestamps
     """
@@ -373,11 +374,11 @@ async def delete_workflow(workflow_id: str):
 async def execute_workflow(workflow_id: str, context: dict | None = None):
     """
     Execute a workflow.
-    
+
     Args:
         workflow_id: ID of workflow to execute
         context: Optional initial context/configuration
-        
+
     Returns:
         WorkflowExecutionResult with status and outputs
     """
@@ -385,9 +386,7 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
         raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
 
     if not orchestrator:
-        raise HTTPException(
-            status_code=503, detail="Orchestrator not initialized"
-        )
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
 
     workflow = workflows[workflow_id]
 
@@ -406,22 +405,24 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
         print(
             f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
         )
-        
+
         # Debug: Check if node_type is in the results
         if result.node_results:
             print(f"🔍 SERVICE: Returning {len(result.node_results)} node results")
             for nr in result.node_results[:2]:  # Check first 2
-                print(f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}")
+                print(
+                    f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}"
+                )
 
         return result
-        
+
     except Exception as e:
         print(f"❌ Workflow execution failed with exception: {e}")
         import traceback
+
         traceback.print_exc()
         raise HTTPException(
-            status_code=500, 
-            detail=f"Workflow execution error: {str(e)}"
+            status_code=500, detail=f"Workflow execution error: {str(e)}"
         )
 
 
@@ -456,7 +457,9 @@ def main():
     print(f"📚 API docs available at http://{args.host}:{args.port}/docs")
     print()
     print("⚠️  IMPORTANT: Some workflow nodes require additional services:")
-    print("   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001")
+    print(
+        "   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001"
+    )
     print("   • Dashboard: pixi run python -m robomage.dashboard")
     print()
 

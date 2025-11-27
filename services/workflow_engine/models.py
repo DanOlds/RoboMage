@@ -65,9 +65,7 @@ class WorkflowEdge(BaseModel):
     id: str = Field(..., description="Unique edge identifier")
     source: str = Field(..., description="Source node ID")
     target: str = Field(..., description="Target node ID")
-    source_handle: str | None = Field(
-        None, description="Source output port (optional)"
-    )
+    source_handle: str | None = Field(None, description="Source output port (optional)")
     target_handle: str | None = Field(None, description="Target input port (optional)")
 
 
@@ -139,12 +137,15 @@ class NodeExecutionResult(BaseModel):
     )
 
     node_id: str = Field(..., description="Node identifier")
-    node_type: str | None = Field(None, description="Node type (e.g., 'load_files', 'peak_analysis')")
+    node_type: str | None = Field(
+        None, description="Node type (e.g., 'load_files', 'peak_analysis')"
+    )
     status: ExecutionStatus = Field(..., description="Node execution status")
     started_at: datetime = Field(..., description="Execution start time")
     completed_at: datetime | None = Field(None, description="Execution completion time")
     output: dict[str, Any] | list[Any] | None = Field(
-        None, description="Node output data (dict for summaries, list for full serialization)"
+        None,
+        description="Node output data (dict for summaries, list for full serialization)",
     )
     error: str | None = Field(None, description="Error message if failed")
     duration_ms: float | None = Field(

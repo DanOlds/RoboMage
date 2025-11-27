@@ -1209,9 +1209,7 @@ def create_status_bar() -> dbc.Row:
                 [
                     html.Small(
                         [
-                            html.Span(
-                                "Session: ", className="text-muted"
-                            ),
+                            html.Span("Session: ", className="text-muted"),
                             html.Span(
                                 "No active session",
                                 id="session-status",

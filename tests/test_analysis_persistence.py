@@ -5,13 +5,14 @@ Tests the AnalysisResult model and SessionManager API methods for
 saving, retrieving, filtering, and deleting analysis results.
 """
 
-import pytest
-from datetime import datetime
 import uuid
+from datetime import datetime
 
+import pytest
+
+from robomage import load_test_data
 from robomage.persistence import SessionManager
 from robomage.persistence.models import AnalysisResult
-from robomage import load_test_data
 
 
 @pytest.fixture
@@ -194,9 +195,7 @@ def test_save_analysis_result_complete(
     assert isinstance(result.created_at, datetime)
 
 
-def test_save_analysis_result_invalid_file_id(
-    session_manager, peak_detection_result
-):
+def test_save_analysis_result_invalid_file_id(session_manager, peak_detection_result):
     """Test saving analysis result with invalid file_id raises error."""
     with pytest.raises(ValueError, match="File 99999 not found"):
         session_manager.save_analysis_result(

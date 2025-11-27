@@ -7,12 +7,11 @@ Integrates with the workflow service (port 8002).
 
 import json
 import logging
-from typing import Any
 
-import requests
-from dash import Input, Output, State, callback_context, html, no_update, ALL
-from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+import requests
+from dash import ALL, Input, Output, State, callback_context, html, no_update
+from dash.exceptions import PreventUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +181,8 @@ def create_node_palette_ui(node_types: list[dict]) -> list:
                                         ]
                                     ),
                                     html.Small(
-                                        node["description"], className="text-muted d-block"
+                                        node["description"],
+                                        className="text-muted d-block",
                                     ),
                                 ],
                                 className="py-2",
@@ -321,10 +321,12 @@ def register_execution_callbacks(app):
             else:
                 # Try to get detailed error from response
                 try:
-                    error_detail = exec_response.json().get("detail", exec_response.text)
+                    error_detail = exec_response.json().get(
+                        "detail", exec_response.text
+                    )
                 except:
                     error_detail = exec_response.text
-                    
+
                 logger.error(f"Workflow execution failed: {error_detail}")
                 return (
                     None,
@@ -391,7 +393,7 @@ def create_execution_log_ui(result: dict) -> html.Div:
                             [
                                 html.Div(
                                     [
-                                        html.Strong(f"{i+1}. {nr['node_id']}: "),
+                                        html.Strong(f"{i + 1}. {nr['node_id']}: "),
                                         dbc.Badge(
                                             nr["status"],
                                             color="success"
@@ -408,7 +410,9 @@ def create_execution_log_ui(result: dict) -> html.Div:
                                 (
                                     html.Div(
                                         [
-                                            html.Strong("Error: ", className="text-danger"),
+                                            html.Strong(
+                                                "Error: ", className="text-danger"
+                                            ),
                                             html.Code(nr["error"]),
                                         ],
                                         className="mt-2",
@@ -450,26 +454,26 @@ def register_saved_workflows_callback(app):
     def load_saved_workflows(n_intervals, delete_clicks):
         """Fetch and display saved workflows."""
         ctx = callback_context
-        
+
         # Check if delete was triggered
         if ctx.triggered and ctx.triggered[0]["prop_id"] != ".":
             triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
             if "delete-workflow" in triggered_id:
                 import json
+
                 button_id = json.loads(triggered_id)
                 workflow_id = button_id["workflow_id"]
-                
+
                 # Delete the workflow
                 try:
                     response = requests.delete(
-                        f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}",
-                        timeout=2
+                        f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}", timeout=2
                     )
                     if response.status_code == 200:
                         logger.info(f"Deleted workflow: {workflow_id}")
                 except Exception as e:
                     logger.error(f"Failed to delete workflow: {e}")
-        
+
         # Load and display workflows
         try:
             response = requests.get(f"{WORKFLOW_SERVICE_URL}/workflows", timeout=2)
@@ -547,7 +551,7 @@ def register_saved_workflows_callback(app):
         except Exception as e:
             logger.debug(f"Failed to load saved workflows: {e}")
             return html.P("Unable to load workflows", className="text-muted")
-    
+
     @app.callback(
         Output("workflow-json-input", "value", allow_duplicate=True),
         Output("workflow-load-feedback", "children", allow_duplicate=True),
@@ -560,27 +564,27 @@ def register_saved_workflows_callback(app):
         ctx = callback_context
         if not ctx.triggered:
             return no_update, no_update
-        
+
         # Find which button was clicked
         triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if triggered_id == "":
             return no_update, no_update
-        
+
         import json
+
         button_id = json.loads(triggered_id)
         workflow_id = button_id["workflow_id"]
-        
+
         try:
             # Fetch the workflow
             response = requests.get(
-                f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}",
-                timeout=2
+                f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}", timeout=2
             )
-            
+
             if response.status_code == 200:
                 workflow = response.json()
                 workflow_json = json.dumps(workflow, indent=2)
-                
+
                 feedback = dbc.Alert(
                     [
                         html.I(className="fas fa-check-circle me-2"),
@@ -590,7 +594,7 @@ def register_saved_workflows_callback(app):
                     dismissable=True,
                     duration=3000,
                 )
-                
+
                 return workflow_json, feedback
             else:
                 return no_update, dbc.Alert(
@@ -598,7 +602,7 @@ def register_saved_workflows_callback(app):
                     color="danger",
                     dismissable=True,
                 )
-                
+
         except Exception as e:
             logger.error(f"Error loading workflow: {e}")
             return no_update, dbc.Alert(
@@ -622,20 +626,22 @@ def register_session_integration_callback(app):
         State("current-session-id", "data"),
         prevent_initial_call=True,
     )
-    def save_workflow_results_to_session(n_clicks, execution_results, current_session_id):
+    def save_workflow_results_to_session(
+        n_clicks, execution_results, current_session_id
+    ):
         """
         Extract workflow execution results and save to active session.
 
         This allows users to run a workflow and immediately visualize
         results in the Visualization tab without manual export/import.
-        
+
         Also extracts peak analysis results if available.
-        
+
         Returns:
             Tuple of (alert, is_open, file_data, wavelength_data, analysis_results)
         """
         import dash
-        
+
         if not execution_results:
             return (
                 dbc.Alert(
@@ -663,10 +669,12 @@ def register_session_integration_callback(app):
             )
 
         session_id = current_session_id
-        
+
         # Debug logging
         logger.info(f"Save to session called - session_id: {session_id}")
-        logger.info(f"Execution results structure: {list(execution_results.keys()) if execution_results else 'None'}")
+        logger.info(
+            f"Execution results structure: {list(execution_results.keys()) if execution_results else 'None'}"
+        )
 
         try:
             from robomage.data.models import DiffractionData
@@ -681,7 +689,7 @@ def register_session_integration_callback(app):
             # Extract node results directly from execution results
             # The API returns WorkflowExecutionResult which has node_results at top level
             node_results = execution_results.get("node_results", [])
-            
+
             logger.info(f"Found {len(node_results)} node results")
             logger.info(f"Execution status: {execution_results.get('status')}")
             print(f"\n🔍 WORKFLOW SAVE: Processing {len(node_results)} node results")
@@ -692,10 +700,14 @@ def register_session_integration_callback(app):
                 node_type = node_result.get("node_type")  # Get node type
                 output = node_result.get("output")
                 status = node_result.get("status")
-                
-                print(f"🔍 Node: id={node_id}, type={node_type}, status={status}, output_type={type(output).__name__}")
-                logger.info(f"Node {node_id} ({node_type}): status={status}, output type={type(output).__name__}")
-                
+
+                print(
+                    f"🔍 Node: id={node_id}, type={node_type}, status={status}, output_type={type(output).__name__}"
+                )
+                logger.info(
+                    f"Node {node_id} ({node_type}): status={status}, output type={type(output).__name__}"
+                )
+
                 # Log more detail about output structure
                 if isinstance(output, list) and len(output) > 0:
                     logger.info(f"  First item type: {type(output[0]).__name__}")
@@ -711,86 +723,114 @@ def register_session_integration_callback(app):
 
                 # Extract peak analysis results from peak_analysis nodes
                 if node_type in ("peak_detection", "peak_analysis"):
-                    print(f"🔍 Found peak analysis node: {node_id}, output type: {type(output)}")
+                    print(
+                        f"🔍 Found peak analysis node: {node_id}, output type: {type(output)}"
+                    )
                     logger.info(f"Found peak analysis node: {node_id}")
                     logger.info(f"  Output type: {type(output)}")
-                    
+
                     # peak_analysis_handler returns a list of result dicts
                     if isinstance(output, list):
                         logger.info(f"  Processing {len(output)} analysis results")
                         for result in output:
                             if isinstance(result, dict) and "filename" in result:
                                 filename = result["filename"]
-                                
+
                                 # Convert workflow format to analysis-results-store format
                                 # Workflow format: {"filename": ..., "peaks_detected": ..., "peak_list": [...]}
                                 # Analysis tab expects full PeakAnalysisClient response format
                                 # Need to include "peaks", "metadata", etc.
-                                
+
                                 # Reconstruct the expected format
                                 peaks = []
                                 for peak in result.get("peak_list", []):
-                                    peaks.append({
-                                        "position": peak.get("position"),
-                                        "height": peak.get("height"),
-                                        "width": peak.get("width"),
-                                        "area": peak.get("area"),
-                                        "d_spacing": peak.get("d_spacing"),
-                                        "r_squared": peak.get("r_squared", 0.0),
-                                    })
-                                
+                                    peaks.append(
+                                        {
+                                            "position": peak.get("position"),
+                                            "height": peak.get("height"),
+                                            "width": peak.get("width"),
+                                            "area": peak.get("area"),
+                                            "d_spacing": peak.get("d_spacing"),
+                                            "r_squared": peak.get("r_squared", 0.0),
+                                        }
+                                    )
+
                                 analysis_results[filename] = {
                                     "filename": filename,
                                     "peaks": peaks,
                                     "metadata": {
-                                        "num_peaks_detected": result.get("peaks_detected", len(peaks)),
-                                        "num_peaks_fitted": result.get("peaks_fitted", len(peaks)),
-                                        "overall_r_squared": result.get("overall_r_squared", 0.0),
+                                        "num_peaks_detected": result.get(
+                                            "peaks_detected", len(peaks)
+                                        ),
+                                        "num_peaks_fitted": result.get(
+                                            "peaks_fitted", len(peaks)
+                                        ),
+                                        "overall_r_squared": result.get(
+                                            "overall_r_squared", 0.0
+                                        ),
                                     },
                                 }
-                                logger.info(f"  ✅ Added analysis for {filename} ({len(peaks)} peaks)")
-                                print(f"  ✅ Added analysis for {filename} ({len(peaks)} peaks)")
-                    
+                                logger.info(
+                                    f"  ✅ Added analysis for {filename} ({len(peaks)} peaks)"
+                                )
+                                print(
+                                    f"  ✅ Added analysis for {filename} ({len(peaks)} peaks)"
+                                )
+
                     # Also handle dict format (if output is already keyed by filename)
                     elif isinstance(output, dict):
                         if "peaks" in output or "filename" in output:
                             # Single file result
                             filename = output.get("filename", "unknown.chi")
                             analysis_results[filename] = output
-                            logger.info(f"  ✅ Added analysis for {filename} (dict format)")
+                            logger.info(
+                                f"  ✅ Added analysis for {filename} (dict format)"
+                            )
                         else:
                             # Multiple files (dict of results)
                             for key, value in output.items():
-                                if isinstance(value, dict) and ("peaks" in value or "peak_list" in value):
+                                if isinstance(value, dict) and (
+                                    "peaks" in value or "peak_list" in value
+                                ):
                                     analysis_results[key] = value
                                     logger.info(f"  ✅ Added analysis for {key}")
 
                 # Handle different output types
                 if isinstance(output, list):
-                    logger.info(f"Node {node_id} has list output with {len(output)} items")
+                    logger.info(
+                        f"Node {node_id} has list output with {len(output)} items"
+                    )
                     for i, item in enumerate(output):
                         item_type = type(item).__name__
                         has_q = isinstance(item, dict) and "q_values" in item
-                        logger.info(f"  Item {i}: type={item_type}, has q_values={has_q}")
+                        logger.info(
+                            f"  Item {i}: type={item_type}, has q_values={has_q}"
+                        )
                         if isinstance(item, dict):
                             logger.info(f"    Keys: {list(item.keys())[:10]}")
-                        
+
                         # Check if this looks like DiffractionData dict
                         if isinstance(item, dict) and "q_values" in item:
                             try:
                                 # Convert lists to numpy arrays (JSON serialization converts arrays to lists)
                                 import numpy as np
-                                
+
                                 item_copy = item.copy()
                                 if isinstance(item_copy.get("q_values"), list):
-                                    item_copy["q_values"] = np.array(item_copy["q_values"])
+                                    item_copy["q_values"] = np.array(
+                                        item_copy["q_values"]
+                                    )
                                 if isinstance(item_copy.get("intensities"), list):
-                                    item_copy["intensities"] = np.array(item_copy["intensities"])
-                                
+                                    item_copy["intensities"] = np.array(
+                                        item_copy["intensities"]
+                                    )
+
                                 # Reconstruct DiffractionData from dict
                                 data = DiffractionData(**item_copy)
 
-                                filename = item.get("filename", f"{node_id}_output_{i}.chi")
+                                filename = item.get(
+                                    "filename", f"{node_id}_output_{i}.chi"
+                                )
                                 # Use default wavelength if None or missing
                                 wavelength = item.get("wavelength") or 0.1665
 
@@ -801,8 +841,10 @@ def register_session_integration_callback(app):
                                     data=data,
                                 )
                                 files_saved += 1
-                                logger.info(f"  ✅ Saved {filename} to session {session_id}")
-                                
+                                logger.info(
+                                    f"  ✅ Saved {filename} to session {session_id}"
+                                )
+
                                 # Sprint 7: Save analysis results to database if we have them for this file
                                 if filename in analysis_results:
                                     try:
@@ -815,9 +857,11 @@ def register_session_integration_callback(app):
                                         }
                                         # Extract quality metrics from result
                                         quality_metrics = {
-                                            "overall_r_squared": result_data.get("metadata", {}).get("overall_r_squared", 0.0)
+                                            "overall_r_squared": result_data.get(
+                                                "metadata", {}
+                                            ).get("overall_r_squared", 0.0)
                                         }
-                                        
+
                                         manager.save_analysis_result(
                                             file_id=file_obj.id,
                                             analysis_type="peak_detection",
@@ -826,13 +870,21 @@ def register_session_integration_callback(app):
                                             quality_metrics=quality_metrics,
                                             analysis_version="robomage-workflow-0.1.0",
                                         )
-                                        logger.info(f"  ✅ Saved peak analysis results for {filename} to database")
-                                        print(f"  ✅ Saved peak analysis results for {filename} to database")
+                                        logger.info(
+                                            f"  ✅ Saved peak analysis results for {filename} to database"
+                                        )
+                                        print(
+                                            f"  ✅ Saved peak analysis results for {filename} to database"
+                                        )
                                     except Exception as db_error:
-                                        logger.warning(f"  ⚠️ Could not save analysis results for {filename}: {db_error}")
+                                        logger.warning(
+                                            f"  ⚠️ Could not save analysis results for {filename}: {db_error}"
+                                        )
 
                             except Exception as e:
-                                error_msg = f"Failed to save {node_id} output {i}: {str(e)}"
+                                error_msg = (
+                                    f"Failed to save {node_id} output {i}: {str(e)}"
+                                )
                                 logger.error(error_msg, exc_info=True)
                                 errors.append(error_msg)
 
@@ -841,34 +893,44 @@ def register_session_integration_callback(app):
             if analysis_results:
                 try:
                     session_files = manager.get_session_files(session_id)
-                    logger.info(f"🔍 Checking {len(analysis_results)} analysis results against {len(session_files)} session files")
-                    
+                    logger.info(
+                        f"🔍 Checking {len(analysis_results)} analysis results against {len(session_files)} session files"
+                    )
+
                     for session_file in session_files:
                         try:
-                            diffraction = manager.file_store.load_file(session_file.stored_path)
+                            diffraction = manager.file_store.load_file(
+                                session_file.stored_path
+                            )
                             if diffraction is None:
                                 continue
-                            
+
                             filename = diffraction.filename or "unknown.chi"
-                            
+
                             # If we have analysis results for this file, save them
                             if filename in analysis_results:
                                 # Check if we already saved this (from file creation above)
                                 existing_analysis = manager.get_latest_analysis(
                                     file_id=session_file.id,
-                                    analysis_type="peak_detection"
+                                    analysis_type="peak_detection",
                                 )
-                                
+
                                 # Only save if no analysis exists or if it's different
                                 # (Simple check: if existing analysis has different peak count, it's different)
                                 should_save = True
                                 if existing_analysis:
-                                    existing_peak_count = len(existing_analysis.result_data.get("peaks", []))
-                                    new_peak_count = len(analysis_results[filename].get("peaks", []))
+                                    existing_peak_count = len(
+                                        existing_analysis.result_data.get("peaks", [])
+                                    )
+                                    new_peak_count = len(
+                                        analysis_results[filename].get("peaks", [])
+                                    )
                                     if existing_peak_count == new_peak_count:
                                         should_save = False
-                                        logger.info(f"  ℹ️ Analysis for {filename} already in database (skipping)")
-                                
+                                        logger.info(
+                                            f"  ℹ️ Analysis for {filename} already in database (skipping)"
+                                        )
+
                                 if should_save:
                                     result_data = analysis_results[filename]
                                     parameters = {
@@ -876,9 +938,11 @@ def register_session_integration_callback(app):
                                         "workflow_type": "existing_files",
                                     }
                                     quality_metrics = {
-                                        "overall_r_squared": result_data.get("metadata", {}).get("overall_r_squared", 0.0)
+                                        "overall_r_squared": result_data.get(
+                                            "metadata", {}
+                                        ).get("overall_r_squared", 0.0)
                                     }
-                                    
+
                                     manager.save_analysis_result(
                                         file_id=session_file.id,
                                         analysis_type="peak_detection",
@@ -887,14 +951,22 @@ def register_session_integration_callback(app):
                                         quality_metrics=quality_metrics,
                                         analysis_version="robomage-workflow-0.1.0",
                                     )
-                                    logger.info(f"  ✅ Saved peak analysis for existing file {filename} to database")
-                                    print(f"  ✅ Saved peak analysis for existing file {filename} to database")
+                                    logger.info(
+                                        f"  ✅ Saved peak analysis for existing file {filename} to database"
+                                    )
+                                    print(
+                                        f"  ✅ Saved peak analysis for existing file {filename} to database"
+                                    )
                         except Exception as file_error:
-                            logger.warning(f"  ⚠️ Could not process analysis for {session_file.filename}: {file_error}")
+                            logger.warning(
+                                f"  ⚠️ Could not process analysis for {session_file.filename}: {file_error}"
+                            )
                             continue
-                            
+
                 except Exception as analysis_save_error:
-                    logger.warning(f"Could not save analysis results for existing files: {analysis_save_error}")
+                    logger.warning(
+                        f"Could not save analysis results for existing files: {analysis_save_error}"
+                    )
 
             # Build alert message
             if files_saved > 0:
@@ -902,19 +974,21 @@ def register_session_integration_callback(app):
                 try:
                     session = manager.get_session(session_id)
                     session_files = manager.get_session_files(session_id)
-                    
+
                     # Reconstruct file data (same as load_session callback)
                     file_data = {}
                     loaded_wavelength = 0.1665
-                    
+
                     for session_file in session_files:
-                        diffraction = manager.file_store.load_file(session_file.stored_path)
+                        diffraction = manager.file_store.load_file(
+                            session_file.stored_path
+                        )
                         if diffraction is None:
                             continue
-                        
+
                         if not file_data:  # First file
                             loaded_wavelength = session_file.wavelength or 0.1665
-                        
+
                         filename = diffraction.filename or "unknown.chi"
                         file_info = {
                             "filename": filename,
@@ -932,28 +1006,32 @@ def register_session_integration_callback(app):
                             ],
                         }
                         file_data[filename] = file_info
-                    
+
                     wavelength_data = {
                         "current_wavelength": loaded_wavelength,
                         "source_type": "standard",
                     }
-                    
+
                 except Exception as reload_error:
                     logger.warning(f"Could not reload session data: {reload_error}")
                     file_data = dash.no_update
                     wavelength_data = dash.no_update
-                
+
                 message = (
                     f"✅ Successfully saved {files_saved} file(s) to session. "
                     f"Data refreshed in Visualization tab."
                 )
                 if analysis_results:
-                    message += f" Found {len(analysis_results)} peak analysis result(s)."
+                    message += (
+                        f" Found {len(analysis_results)} peak analysis result(s)."
+                    )
                 if errors:
                     message += f" Note: {len(errors)} item(s) could not be saved."
                 color = "success"
             else:
-                logger.warning(f"No diffraction data found. Node results: {len(node_results)}, Errors: {len(errors)}")
+                logger.warning(
+                    f"No diffraction data found. Node results: {len(node_results)}, Errors: {len(errors)}"
+                )
                 message = "⚠️ No diffraction data found in workflow results to save."
                 if errors:
                     message += f" Errors: {'; '.join(errors[:3])}"
@@ -963,8 +1041,16 @@ def register_session_integration_callback(app):
                 # Still return analysis results even if no files
                 # (workflow might have only peak detection on existing data)
 
-            print(f"🔍 WORKFLOW SAVE COMPLETE: {files_saved} files, {len(analysis_results)} analysis results")
-            return dbc.Alert(message, color=color, className="mb-0 py-2"), True, file_data, wavelength_data, analysis_results if analysis_results else dash.no_update
+            print(
+                f"🔍 WORKFLOW SAVE COMPLETE: {files_saved} files, {len(analysis_results)} analysis results"
+            )
+            return (
+                dbc.Alert(message, color=color, className="mb-0 py-2"),
+                True,
+                file_data,
+                wavelength_data,
+                analysis_results if analysis_results else dash.no_update,
+            )
 
         except Exception as e:
             logger.error(f"Error saving workflow results to session: {e}")

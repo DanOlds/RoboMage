@@ -22,24 +22,24 @@ def _load_session_files(
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """
     Helper function to load files and analysis results from a session into UI store format.
-    
+
     Args:
         mgr: SessionManager instance
         session_id: ID of session to load files from
-        
+
     Returns:
         Tuple of (file_data, wavelength_data, analysis_results) dicts in UI store format
     """
     session_files = mgr.get_session_files(session_id)
-    
+
     if not session_files:
         return {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
-    
+
     # Reconstruct file data from stored files
     file_data = {}
     analysis_results = {}
     loaded_wavelength = 0.1665  # Default
-    
+
     for session_file in session_files:
         # Read DiffractionData from FileStore using stored path
         try:
@@ -48,14 +48,14 @@ def _load_session_files(
             # File was deleted or moved - skip it
             print(f"⚠️ WARNING: Skipping missing file: {session_file.filename}")
             continue
-        
+
         if diffraction is None:
             continue
-        
+
         # Get wavelength from database (first file)
         if not file_data:  # First file
             loaded_wavelength = session_file.wavelength or 0.1665
-        
+
         # Convert to file-data-store format (matching file_upload.py schema)
         filename = diffraction.filename or "unknown.chi"
         file_info = {
@@ -73,24 +73,24 @@ def _load_session_files(
                 float(diffraction.intensities.max()),
             ],
         }
-        
+
         file_data[filename] = file_info
-        
+
         # Load analysis results for this file (Sprint 7)
         latest_peak_analysis = mgr.get_latest_analysis(
             file_id=session_file.id, analysis_type="peak_detection"
         )
-        
+
         if latest_peak_analysis:
             # Store analysis result in same format as analysis tab expects
             analysis_results[filename] = latest_peak_analysis.result_data
-    
+
     # Restore global wavelength (matching wavelength-store schema)
     wavelength_data = {
         "current_wavelength": loaded_wavelength,
         "source_type": "standard",  # Could be enhanced to detect custom values
     }
-    
+
     return file_data, wavelength_data, analysis_results
 
 
@@ -248,7 +248,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 message = f"Session '{session_name}' saved successfully with {num_files} file{'s' if num_files != 1 else ''}!"
             else:
                 message = f"Empty session '{session_name}' created successfully. You can add files via upload or workflow execution."
-            
+
             return (
                 dbc.Alert(
                     [
@@ -411,7 +411,13 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         # Check if this is actually a button click (not just a re-render)
         triggered_value = ctx.triggered[0]["value"]
         if triggered_value is None or triggered_value == 0:
-            return dash.no_update, dash.no_update, dash.no_update, html.Div(), dash.no_update
+            return (
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+                html.Div(),
+                dash.no_update,
+            )
 
         button_id = json.loads(triggered_id)
         session_id = button_id["index"]
@@ -453,7 +459,9 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 )
 
             # Use helper function to load session files and analysis results
-            file_data, wavelength_data, analysis_results = _load_session_files(mgr, session_id)
+            file_data, wavelength_data, analysis_results = _load_session_files(
+                mgr, session_id
+            )
 
             # Analysis results now loaded from database (Sprint 7)
             return (
@@ -1163,69 +1171,104 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         Output("wavelength-store", "data", allow_duplicate=True),
         Output("analysis-results-store", "data", allow_duplicate=True),
         Input("init-interval", "n_intervals"),
-        prevent_initial_call='initial_duplicate',  # Special mode for allow_duplicate on initial load
+        prevent_initial_call="initial_duplicate",  # Special mode for allow_duplicate on initial load
     )
-    def auto_create_default_session(n_intervals: int | None) -> tuple[int | None, str, str, dict, dict, dict]:
+    def auto_create_default_session(
+        n_intervals: int | None,
+    ) -> tuple[int | None, str, str, dict, dict, dict]:
         """
         Auto-create a default session when the dashboard loads and update status display.
-        
+
         This ensures users always have an active session for workflow execution
         without needing to manually create one first.
-        
+
         Also loads any existing files from the session into the UI stores.
-        
+
         Triggered by init-interval which fires once on page load.
-        
+
         Returns:
             Tuple of (session_id, status_text, css_class, file_data, wavelength_data, analysis_results)
         """
-        print(f"🔍 DEBUG: auto_create_default_session called with n_intervals={n_intervals}")
+        print(
+            f"🔍 DEBUG: auto_create_default_session called with n_intervals={n_intervals}"
+        )
         try:
             mgr = SessionManager()
-            
+
             # Check if a default session already exists
             all_sessions = mgr.list_sessions()
             print(f"🔍 DEBUG: Found {len(all_sessions)} total sessions")
-            default_sessions = [s for s in all_sessions if s.name.startswith("Default Session")]
+            default_sessions = [
+                s for s in all_sessions if s.name.startswith("Default Session")
+            ]
             print(f"🔍 DEBUG: Found {len(default_sessions)} default sessions")
-            
+
             if default_sessions:
                 # Use the most recent default session
                 default_session = max(default_sessions, key=lambda s: s.created_at)
                 session_id = default_session.id
                 file_count = len(default_session.files)
                 status_text = f"{default_session.name} ({file_count} file{'s' if file_count != 1 else ''})"
-                print(f"🔍 DEBUG: Using existing session: {status_text}, ID={session_id}")
-                
+                print(
+                    f"🔍 DEBUG: Using existing session: {status_text}, ID={session_id}"
+                )
+
                 # Load files and analysis results from existing session (Sprint 7)
-                file_data, wavelength_data, analysis_results = _load_session_files(mgr, session_id)
+                file_data, wavelength_data, analysis_results = _load_session_files(
+                    mgr, session_id
+                )
                 print(f"🔍 DEBUG: Loaded {len(file_data)} files from session")
-                print(f"🔍 DEBUG: Loaded {len(analysis_results)} analysis results from session")
-                
-                return session_id, status_text, "text-success", file_data, wavelength_data, analysis_results
-            
+                print(
+                    f"🔍 DEBUG: Loaded {len(analysis_results)} analysis results from session"
+                )
+
+                return (
+                    session_id,
+                    status_text,
+                    "text-success",
+                    file_data,
+                    wavelength_data,
+                    analysis_results,
+                )
+
             # Create a new default session
             from datetime import datetime
+
             session_name = f"Default Session {datetime.now().strftime('%Y-%m-%d')}"
-            
+
             session_id = mgr.create_session(
                 name=session_name,
-                description="Auto-created default session for dashboard workflows"
+                description="Auto-created default session for dashboard workflows",
             )
-            
+
             # New session has 0 files
             status_text = f"{session_name} (0 files)"
             print(f"🔍 DEBUG: Created new session: {status_text}, ID={session_id}")
-            
+
             # Empty session - no files to load
-            return session_id, status_text, "text-success", {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
-            
+            return (
+                session_id,
+                status_text,
+                "text-success",
+                {},
+                {"current_wavelength": 0.1665, "source_type": "standard"},
+                {},
+            )
+
         except Exception as e:
             # Log error but don't crash - user can still create manual sessions
             print(f"❌ ERROR in auto_create_default_session: {e}")
             import traceback
+
             traceback.print_exc()
-            return None, "No active session", "text-warning", {}, {"current_wavelength": 0.1665, "source_type": "standard"}, {}
+            return (
+                None,
+                "No active session",
+                "text-warning",
+                {},
+                {"current_wavelength": 0.1665, "source_type": "standard"},
+                {},
+            )
 
     @app.callback(
         Output("session-status", "children"),
@@ -1236,29 +1279,29 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
     def update_session_status_display(session_id: int | None) -> tuple[str, str]:
         """
         Update the session status display when session changes.
-        
+
         This handles updates after save/load operations.
         The initial display is handled by auto_create_default_session.
-        
+
         Args:
             session_id: Current active session ID
-            
+
         Returns:
             Tuple of (status_text, css_class)
         """
         if session_id is None:
             return "No active session", "text-warning"
-        
+
         try:
             mgr = SessionManager()
             session = mgr.get_session(session_id)
-            
+
             if session:
                 file_count = len(session.files)
                 status_text = f"{session.name} ({file_count} file{'s' if file_count != 1 else ''})"
                 return status_text, "text-success"
             else:
                 return "Session not found", "text-danger"
-                
+
         except Exception as e:
             return f"Error: {str(e)}", "text-danger"

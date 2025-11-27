@@ -26,36 +26,38 @@ def test_auto_create_logic():
     print("=" * 60)
     print("TEST 1: Auto-Create Default Session Logic")
     print("=" * 60)
-    
+
     mgr = SessionManager()
-    
+
     # Get all sessions
     all_sessions = mgr.list_sessions()
     print(f"\n📊 Found {len(all_sessions)} total sessions")
-    
+
     # Check for default sessions
     default_sessions = [s for s in all_sessions if s.name.startswith("Default Session")]
     print(f"📊 Found {len(default_sessions)} default sessions")
-    
+
     if default_sessions:
         default_session = max(default_sessions, key=lambda s: s.created_at)
         session_id = default_session.id
         file_count = len(default_session.files)
         status_text = f"{default_session.name} ({file_count} file{'s' if file_count != 1 else ''})"
         css_class = "text-success"
-        print(f"✅ Would use existing: {default_session.name} (ID: {default_session.id})")
+        print(
+            f"✅ Would use existing: {default_session.name} (ID: {default_session.id})"
+        )
         print(f"✅ Status display: '{status_text}' (CSS: {css_class})")
     else:
         session_name = f"Default Session {datetime.now().strftime('%Y-%m-%d')}"
         session_id = mgr.create_session(
             name=session_name,
-            description="Auto-created default session for dashboard workflows"
+            description="Auto-created default session for dashboard workflows",
         )
         status_text = f"{session_name} (0 files)"
         css_class = "text-success"
         print(f"✅ Created new: {session_name} (ID: {session_id})")
         print(f"✅ Status display: '{status_text}' (CSS: {css_class})")
-    
+
     return session_id
 
 
@@ -64,20 +66,22 @@ def test_session_status_display(session_id):
     print("\n" + "=" * 60)
     print("TEST 2: Session Status Display Callback")
     print("=" * 60)
-    
+
     mgr = SessionManager()
-    
+
     # Test with valid session
     session = mgr.get_session(session_id)
     if session:
         file_count = len(session.files)
-        status_text = f"{session.name} ({file_count} file{'s' if file_count != 1 else ''})"
+        status_text = (
+            f"{session.name} ({file_count} file{'s' if file_count != 1 else ''})"
+        )
         css_class = "text-success"
         print(f"\n✅ Session Status: '{status_text}'")
         print(f"✅ CSS Class: {css_class}")
     else:
         print(f"❌ Session {session_id} not found")
-    
+
     # Test with None
     print("\n📊 Testing with session_id=None:")
     print("   Status: 'No active session'")
@@ -89,29 +93,29 @@ def test_session_reload_after_save(session_id):
     print("\n" + "=" * 60)
     print("TEST 3: Session Reload After Workflow Save")
     print("=" * 60)
-    
+
     mgr = SessionManager()
-    
+
     # Get session data
     session = mgr.get_session(session_id)
     session_files = mgr.get_session_files(session_id)
-    
+
     print(f"\n📊 Session: {session.name}")
     print(f"📊 Files: {len(session_files)}")
-    
+
     if session_files:
         # Reconstruct file data (same logic as workflow callback)
         file_data = {}
         loaded_wavelength = 0.1665
-        
+
         for session_file in session_files:
             diffraction = mgr.file_store.load_file(session_file.stored_path)
             if diffraction is None:
                 continue
-            
+
             if not file_data:  # First file
                 loaded_wavelength = session_file.wavelength or 0.1665
-            
+
             filename = diffraction.filename or "unknown.chi"
             file_info = {
                 "filename": filename,
@@ -129,15 +133,15 @@ def test_session_reload_after_save(session_id):
                 ],
             }
             file_data[filename] = file_info
-        
+
         wavelength_data = {
             "current_wavelength": loaded_wavelength,
             "source_type": "standard",
         }
-        
+
         print(f"✅ Would reload {len(file_data)} files to UI")
         print(f"✅ Wavelength: {loaded_wavelength} Å")
-        
+
         for filename, info in list(file_data.items())[:2]:  # Show first 2
             print(f"   - {filename}: {info['num_points']} points")
     else:
@@ -150,17 +154,17 @@ def main():
     print("\n" + "=" * 60)
     print("🧪 SESSION FIXES VERIFICATION TEST")
     print("=" * 60)
-    
+
     try:
         # Test 1: Auto-create
         session_id = test_auto_create_logic()
-        
+
         # Test 2: Status display
         test_session_status_display(session_id)
-        
+
         # Test 3: Reload after save
         test_session_reload_after_save(session_id)
-        
+
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED")
         print("=" * 60)
@@ -170,13 +174,14 @@ def main():
         print("   3. ✅ Workflow save triggers UI refresh")
         print("\n🚀 Ready to test in dashboard!")
         print("   Run: pixi run start-all")
-        
+
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 

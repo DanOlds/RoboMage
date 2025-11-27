@@ -17,19 +17,19 @@ async def peak_analysis_handler(
 ) -> list:
     """
     Perform peak analysis on diffraction data.
-    
+
     Config Parameters:
         - profile_type: str (peak profile: "gaussian", "lorentzian", "voigt")
         - prominence: float (peak prominence threshold, default: 0.1)
         - distance: float (minimum distance between peaks, default: 5)
         - service_url: str (peak analysis service URL, default: http://localhost:8001)
-    
+
     Inputs:
         - input: List of DiffractionData objects
-    
+
     Outputs:
         List of dictionaries with peak analysis results
-    
+
     Example:
         config = {
             "profile_type": "gaussian",
@@ -69,14 +69,14 @@ async def peak_analysis_handler(
     errors = []
     for i, data in enumerate(files):
         try:
-            logger.info(f"Analyzing file {i+1}/{len(files)}: {data.filename}")
+            logger.info(f"Analyzing file {i + 1}/{len(files)}: {data.filename}")
             response = client.analyze_peaks(data, analysis_config)
 
             # Extract results from response
             # Response structure: {peaks: [...], metadata: {...}, background: {...}}
             peaks = response.get("peaks", [])
             metadata = response.get("metadata", {})
-            
+
             # Store result as dict
             result = {
                 "filename": data.filename,
@@ -97,21 +97,26 @@ async def peak_analysis_handler(
             }
             results.append(result)
             logger.info(
-                f"File {i+1}: Found {metadata.get('num_peaks_detected', len(peaks))} peaks, "
+                f"File {i + 1}: Found {metadata.get('num_peaks_detected', len(peaks))} peaks, "
                 f"fitted {metadata.get('num_peaks_fitted', len(peaks))}"
             )
 
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Failed to analyze file {i+1}: {error_msg}")
-            errors.append(f"File {i+1} ({data.filename if hasattr(data, 'filename') else 'unknown'}): {error_msg}")
+            logger.error(f"Failed to analyze file {i + 1}: {error_msg}")
+            errors.append(
+                f"File {i + 1} ({data.filename if hasattr(data, 'filename') else 'unknown'}): {error_msg}"
+            )
 
     if not results:
         # Provide detailed error message
         error_details = "\n  - ".join(errors) if errors else "Unknown error"
-        
+
         # Check if it's likely a service connection issue
-        if errors and any("Connection" in err or "refused" in err.lower() or "timeout" in err.lower() for err in errors):
+        if errors and any(
+            "Connection" in err or "refused" in err.lower() or "timeout" in err.lower()
+            for err in errors
+        ):
             raise ValueError(
                 f"No files were analyzed successfully. "
                 f"Peak analysis service may not be running.\n"
@@ -134,16 +139,16 @@ async def statistics_handler(
 ) -> list:
     """
     Calculate statistical metrics on diffraction data.
-    
+
     Config Parameters:
         - metrics: list[str] (metrics to calculate: ["mean", "std", "range", "peaks"])
-    
+
     Inputs:
         - input: List of DiffractionData objects
-    
+
     Outputs:
         List of dictionaries with statistical summaries
-    
+
     Example:
         config = {"metrics": ["mean", "std", "range"]}
     """
@@ -182,10 +187,10 @@ async def statistics_handler(
                     stats["num_points"] = len(data.q_values)
 
             stats_results.append(stats)
-            logger.debug(f"File {i+1}: Computed {len(stats)} statistics")
+            logger.debug(f"File {i + 1}: Computed {len(stats)} statistics")
 
         except Exception as e:
-            logger.warning(f"Failed to compute statistics for file {i+1}: {e}")
+            logger.warning(f"Failed to compute statistics for file {i + 1}: {e}")
 
     logger.info(f"Computed statistics for {len(stats_results)} files")
     return stats_results

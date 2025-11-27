@@ -359,7 +359,7 @@ class SessionManager:
             >>> session_id = mgr.create_session("Peak Analysis Session")
             >>> workflow_def = {
             ...     "nodes": [{"id": "load_1", "type": "load_files"}],
-            ...     "edges": []
+            ...     "edges": [],
             ... }
             >>> workflow_id = mgr.save_workflow_to_session(
             ...     session_id, workflow_def, "My Workflow"
@@ -547,7 +547,7 @@ class SessionManager:
             ...     analysis_type="peak_detection",
             ...     result_data={"peaks": [...], "num_peaks_detected": 5},
             ...     parameters={"profile": "gaussian", "min_prominence": 0.01},
-            ...     quality_metrics={"overall_r_squared": 0.982}
+            ...     quality_metrics={"overall_r_squared": 0.982},
             ... )
         """
         from robomage.persistence.models import AnalysisResult
@@ -598,8 +598,7 @@ class SessionManager:
             >>>
             >>> # Get only peak detection results
             >>> peak_results = mgr.get_analysis_results(
-            ...     file_id=42,
-            ...     analysis_type="peak_detection"
+            ...     file_id=42, analysis_type="peak_detection"
             ... )
         """
         from robomage.persistence.models import AnalysisResult
@@ -635,11 +634,12 @@ class SessionManager:
 
         Example:
             >>> latest_peak_analysis = mgr.get_latest_analysis(
-            ...     file_id=42,
-            ...     analysis_type="peak_detection"
+            ...     file_id=42, analysis_type="peak_detection"
             ... )
             >>> if latest_peak_analysis:
-            ...     print(f"Found {len(latest_peak_analysis.result_data['peaks'])} peaks")
+            ...     print(
+            ...         f"Found {len(latest_peak_analysis.result_data['peaks'])} peaks"
+            ...     )
         """
         from robomage.persistence.models import AnalysisResult
 

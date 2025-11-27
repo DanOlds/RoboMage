@@ -15,10 +15,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from services.workflow_engine.models import (
+    NodePosition,
     WorkflowDefinition,
     WorkflowNode,
-    WorkflowEdge,
-    NodePosition,
 )
 from src.robomage.orchestrator import WorkflowOrchestrator
 
@@ -61,7 +60,9 @@ async def test_full_serialization():
     if result_summary.node_results:
         output = result_summary.node_results[0].output
         print(f"   Output type: {type(output)}")
-        print(f"   Output keys: {list(output.keys()) if isinstance(output, dict) else 'N/A'}")
+        print(
+            f"   Output keys: {list(output.keys()) if isinstance(output, dict) else 'N/A'}"
+        )
         if isinstance(output, dict) and "summary" in output:
             print(f"   Contains summary: Yes (length: {len(output['summary'])} chars)")
         print()
@@ -83,12 +84,12 @@ async def test_full_serialization():
             if isinstance(first_item, dict):
                 print(f"   First item keys: {list(first_item.keys())[:10]}")
                 if "q_values" in first_item:
-                    print(f"   ✅ SUCCESS: Found q_values in output!")
+                    print("   ✅ SUCCESS: Found q_values in output!")
                     print(f"   q_values length: {len(first_item['q_values'])}")
                     print(f"   Has intensities: {'intensities' in first_item}")
                     print(f"   Has filename: {'filename' in first_item}")
                 else:
-                    print(f"   ❌ FAILED: q_values not found in output")
+                    print("   ❌ FAILED: q_values not found in output")
         else:
             print(f"   ❌ FAILED: Expected list of dicts, got: {type(output)}")
 

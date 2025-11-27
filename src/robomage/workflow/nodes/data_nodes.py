@@ -19,15 +19,15 @@ async def load_files_handler(
 ) -> list:
     """
     Load diffraction files from directory.
-    
+
     Config Parameters:
         - directory: str (path to directory, default: ".")
         - pattern: str (glob pattern, default: "*.chi")
         - wavelength: float (optional, override file wavelength in Angstroms)
-    
+
     Outputs:
         List of DiffractionData objects
-    
+
     Example:
         config = {
             "directory": "/data/experiment_1",
@@ -78,17 +78,17 @@ async def filter_q_range_handler(
 ) -> list:
     """
     Filter diffraction data by Q-range.
-    
+
     Config Parameters:
         - q_min: float (minimum Q value, default: 0)
         - q_max: float (maximum Q value, default: infinity)
-    
+
     Inputs:
         - input: List of DiffractionData objects
-    
+
     Outputs:
         Filtered list of DiffractionData objects
-    
+
     Example:
         config = {
             "q_min": 2.0,
@@ -110,10 +110,10 @@ async def filter_q_range_handler(
             trimmed = data.trim_q_range(q_min, q_max)
             filtered.append(trimmed)
             logger.debug(
-                f"File {i+1}: Trimmed from {len(data.q_values)} to {len(trimmed.q_values)} points"
+                f"File {i + 1}: Trimmed from {len(data.q_values)} to {len(trimmed.q_values)} points"
             )
         except Exception as e:
-            logger.warning(f"Failed to filter file {i+1}: {e}")
+            logger.warning(f"Failed to filter file {i + 1}: {e}")
             # Continue with other files
 
     logger.info(f"Filtered {len(filtered)} files")
@@ -125,16 +125,16 @@ async def normalize_handler(
 ) -> list:
     """
     Normalize intensity values.
-    
+
     Config Parameters:
         - method: str (normalization method: "max", "area", "zscore")
-    
+
     Inputs:
         - input: List of DiffractionData objects
-    
+
     Outputs:
         Normalized list of DiffractionData objects
-    
+
     Example:
         config = {"method": "max"}
     """
@@ -181,10 +181,10 @@ async def normalize_handler(
                 sample_name=data.sample_name,
             )
             normalized.append(normalized_data)
-            logger.debug(f"File {i+1}: Normalized using {method}")
+            logger.debug(f"File {i + 1}: Normalized using {method}")
 
         except Exception as e:
-            logger.warning(f"Failed to normalize file {i+1}: {e}")
+            logger.warning(f"Failed to normalize file {i + 1}: {e}")
 
     logger.info(f"Normalized {len(normalized)} files")
     return normalized

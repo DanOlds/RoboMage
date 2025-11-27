@@ -7,7 +7,6 @@ Tests the integration of workflow definitions with the session persistence layer
 import pytest
 
 from robomage.persistence.api import SessionManager
-from robomage.persistence.models import Workflow
 
 
 @pytest.fixture
@@ -116,7 +115,9 @@ def test_get_workflows_for_session(
     assert all("created_at" in wf for wf in workflows)
 
 
-def test_load_workflow(session_manager, test_session, sample_workflow_definition, request):
+def test_load_workflow(
+    session_manager, test_session, sample_workflow_definition, request
+):
     """Test loading a workflow definition by ID."""
     workflow_id = session_manager.save_workflow_to_session(
         session_id=test_session,
@@ -140,7 +141,9 @@ def test_load_nonexistent_workflow(session_manager):
         session_manager.load_workflow("nonexistent-id")
 
 
-def test_delete_workflow(session_manager, test_session, sample_workflow_definition, request):
+def test_delete_workflow(
+    session_manager, test_session, sample_workflow_definition, request
+):
     """Test deleting a workflow."""
     workflow_id = session_manager.save_workflow_to_session(
         session_id=test_session,
