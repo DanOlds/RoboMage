@@ -4,7 +4,6 @@ Integration tests for workflow-session integration.
 Tests the end-to-end flow: workflow execution → save to session → visualization.
 """
 
-
 import pytest
 
 from robomage import load_test_data

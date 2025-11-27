@@ -61,7 +61,6 @@ def test_service_health_check_success(mock_get, dash_app):
     }
     mock_get.return_value = mock_response
 
-
     # Simulate callback
     from robomage.dashboard.callbacks.workflow import register_service_health_callback
 

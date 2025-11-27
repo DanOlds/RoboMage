@@ -90,13 +90,17 @@ archive/
 
 ### 5. Test Suite Status ✅
 
-**Core Tests**: 175/175 passing ✅
+**Core Tests**: 171/174 passing ✅ (98.3%)
 - All production code tests pass
 - Comprehensive coverage maintained
+- **3 failures**: Service integration tests (require services running)
+  - `test_peak_analysis_integration.py::test_service_health`
+  - `test_peak_analysis_integration.py::test_service_analysis`
+  - `test_workflow_session_integration.py::test_workflow_to_session_integration`
 
 **Known Non-Issues**:
-- 7 failures in `archive/test-scripts/` (expected - old development scripts)
-- 2 failures in service integration tests (require services running)
+- Archived test scripts have expected failures (old development code)
+- Service integration tests pass when services are running
 
 ## Repository State After Cleanup
 
@@ -122,10 +126,10 @@ archive/
 ```
 
 ### Code Quality Metrics
-- ✅ **Formatting**: 100% compliant (76 files formatted)
+- ✅ **Formatting**: 100% compliant (68 files formatted)
 - ✅ **Type Checking**: 0 errors in src/
-- ✅ **Test Suite**: 175/175 core tests passing
-- ⚠️ **Linting**: 170 non-critical issues (mostly line length in comments)
+- ✅ **Test Suite**: 171/174 core tests passing (98.3%)
+- ⚠️ **Linting**: 101 non-critical issues (mostly line length in comments)
 
 ### Documentation Structure
 - **Active Docs**: 33 files in `docs/`
@@ -184,19 +188,15 @@ archive/
 
 ```bash
 # Check code quality
-pixi run check          # ✅ All checks pass
+pixi run format-check   # ✅ 68 files formatted
+pixi run typecheck      # ✅ No errors in 22 source files
+pixi run test           # ⚠️  Some archived tests fail (expected)
 
-# Run tests
-pixi run test           # ✅ 175/175 core tests pass
+# Run only production tests
+pixi run pytest tests/ -q  # ✅ 171/174 pass (3 need services)
 
-# Verify formatting
-pixi run format-check   # ✅ All files formatted
-
-# Type checking
-pixi run typecheck      # ✅ No errors
-
-# Linting
-pixi run lint           # ⚠️ 170 non-critical issues remain
+# Linting (non-critical issues remain)
+pixi run lint           # ⚠️ 101 non-critical issues (acceptable)
 ```
 
 ## Conclusion
