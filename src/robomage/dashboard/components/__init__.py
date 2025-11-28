@@ -8,6 +8,7 @@ Reusable components for the RoboMage dashboard, including:
 """
 
 from .cytoscape_renderer import CytoscapeWorkflowRenderer
+from .node_configurator import NodeConfigurator
 from .workflow_canvas import (
     CanvasEvent,
     WorkflowCanvasFactory,
@@ -21,4 +22,5 @@ __all__ = [
     "CanvasEvent",
     "WorkflowCanvasFactory",
     "CytoscapeWorkflowRenderer",
+    "NodeConfigurator",
 ]

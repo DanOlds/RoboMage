@@ -11,6 +11,7 @@ import pytest
 from src.robomage.dashboard.components.cytoscape_renderer import (
     CytoscapeWorkflowRenderer,
 )
+from src.robomage.dashboard.components.node_configurator import NodeConfigurator
 from src.robomage.dashboard.components.workflow_canvas import (
     CanvasEvent,
     WorkflowCanvasFactory,
@@ -559,6 +560,410 @@ def test_cytoscape_to_cytoscape_elements():
     assert edge["data"]["source"] == "n1"
     assert edge["data"]["target"] == "n2"
     assert edge["data"]["custom"] == "value"
+
+
+# ============================================================================
+# Node Configurator Tests
+# ============================================================================
+
+
+def test_node_configurator_empty_schema():
+    """Test NodeConfigurator with empty/missing schema."""
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="test_type",
+        current_config={},
+        schema={},
+    )
+
+    # Should return a simple "no config needed" message
+    assert form is not None
+
+
+def test_node_configurator_text_field():
+    """Test creating text input field."""
+    schema = {
+        "properties": {
+            "directory": {
+                "type": "string",
+                "description": "Directory path",
+                "placeholder": "/data/files",
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="load_files",
+        current_config={},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_number_field():
+    """Test creating numeric input field."""
+    schema = {
+        "properties": {
+            "prominence": {
+                "type": "number",
+                "description": "Peak prominence",
+                "default": 0.1,
+                "minimum": 0.01,
+                "maximum": 1.0,
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="peak_analysis",
+        current_config={},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_enum_field():
+    """Test creating dropdown/enum field."""
+    schema = {
+        "properties": {
+            "profile_type": {
+                "type": "string",
+                "enum": ["gaussian", "lorentzian", "voigt"],
+                "default": "gaussian",
+                "description": "Peak profile shape",
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="peak_analysis",
+        current_config={"profile_type": "lorentzian"},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_boolean_field():
+    """Test creating checkbox/boolean field."""
+    schema = {
+        "properties": {
+            "normalize": {
+                "type": "boolean",
+                "description": "Normalize intensity values",
+                "default": False,
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="transform",
+        current_config={},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_integer_field():
+    """Test creating integer input field."""
+    schema = {
+        "properties": {
+            "min_distance": {
+                "type": "integer",
+                "description": "Minimum peak distance",
+                "default": 5,
+                "minimum": 1,
+                "maximum": 100,
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="peak_analysis",
+        current_config={},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_array_field():
+    """Test creating array input field."""
+    schema = {
+        "properties": {
+            "wavelengths": {
+                "type": "array",
+                "description": "List of wavelengths",
+            }
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="multi_wavelength",
+        current_config={"wavelengths": [1.5406, 0.7107]},
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_multiple_fields():
+    """Test form with multiple fields of different types."""
+    schema = {
+        "properties": {
+            "directory": {"type": "string", "description": "Data directory"},
+            "pattern": {
+                "type": "string",
+                "default": "*.chi",
+                "description": "File pattern",
+            },
+            "recursive": {
+                "type": "boolean",
+                "default": False,
+                "description": "Search recursively",
+            },
+            "max_files": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000,
+                "default": 100,
+            },
+        }
+    }
+
+    form = NodeConfigurator.create_config_form(
+        node_id="test_node",
+        node_type="load_files",
+        current_config={
+            "directory": "/data",
+            "pattern": "*.xy",
+            "recursive": True,
+            "max_files": 50,
+        },
+        schema=schema,
+    )
+
+    assert form is not None
+
+
+def test_node_configurator_parse_form_data():
+    """Test parsing form data."""
+    form_data = {
+        "prominence": 0.15,
+        "profile_type": "gaussian",
+        "min_distance": 5,
+        "normalize": True,
+        "empty_field": "",  # Should be removed
+        "none_field": None,  # Should be removed
+    }
+
+    parsed = NodeConfigurator.parse_form_data(form_data)
+
+    assert "prominence" in parsed
+    assert parsed["prominence"] == 0.15
+    assert "profile_type" in parsed
+    assert "min_distance" in parsed
+    assert "normalize" in parsed
+    assert "empty_field" not in parsed  # Removed
+    assert "none_field" not in parsed  # Removed
+
+
+def test_node_configurator_validate_config_valid():
+    """Test validating valid configuration."""
+    schema = {
+        "properties": {
+            "prominence": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 1.0,
+            },
+            "profile_type": {
+                "type": "string",
+                "enum": ["gaussian", "lorentzian", "voigt"],
+            },
+        },
+        "required": ["prominence"],
+    }
+
+    config = {
+        "prominence": 0.15,
+        "profile_type": "gaussian",
+    }
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is True
+    assert len(errors) == 0
+
+
+def test_node_configurator_validate_config_missing_required():
+    """Test validation fails for missing required field."""
+    schema = {
+        "properties": {
+            "directory": {"type": "string"},
+        },
+        "required": ["directory"],
+    }
+
+    config = {}
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is False
+    assert len(errors) > 0
+    assert any("directory" in err and "required" in err for err in errors)
+
+
+def test_node_configurator_validate_config_below_minimum():
+    """Test validation fails for value below minimum."""
+    schema = {
+        "properties": {
+            "prominence": {"type": "number", "minimum": 0.01},
+        }
+    }
+
+    config = {"prominence": 0.005}  # Below minimum
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is False
+    assert len(errors) > 0
+    assert any("prominence" in err and "minimum" in err for err in errors)
+
+
+def test_node_configurator_validate_config_above_maximum():
+    """Test validation fails for value above maximum."""
+    schema = {
+        "properties": {
+            "prominence": {"type": "number", "maximum": 1.0},
+        }
+    }
+
+    config = {"prominence": 1.5}  # Above maximum
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is False
+    assert len(errors) > 0
+    assert any("prominence" in err and "maximum" in err for err in errors)
+
+
+def test_node_configurator_validate_config_invalid_enum():
+    """Test validation fails for invalid enum value."""
+    schema = {
+        "properties": {
+            "profile_type": {
+                "type": "string",
+                "enum": ["gaussian", "lorentzian", "voigt"],
+            },
+        }
+    }
+
+    config = {"profile_type": "invalid"}
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is False
+    assert len(errors) > 0
+    assert any(
+        "profile_type" in err and "not in allowed values" in err for err in errors
+    )
+
+
+def test_node_configurator_validate_config_wrong_type():
+    """Test validation fails for wrong type."""
+    schema = {
+        "properties": {
+            "prominence": {"type": "number"},
+            "normalize": {"type": "boolean"},
+        }
+    }
+
+    config = {
+        "prominence": "not a number",  # Should be number
+        "normalize": "yes",  # Should be boolean
+    }
+
+    is_valid, errors = NodeConfigurator.validate_config(config, schema)
+
+    assert is_valid is False
+    assert len(errors) >= 2  # At least 2 type errors
+
+
+def test_node_configurator_validate_config_pattern():
+    """Test validation with regex pattern."""
+    schema = {
+        "properties": {
+            "pattern": {
+                "type": "string",
+                "pattern": r"^\*\.\w+$",  # e.g., *.chi, *.xy
+            },
+        }
+    }
+
+    # Valid pattern
+    config_valid = {"pattern": "*.chi"}
+    is_valid, errors = NodeConfigurator.validate_config(config_valid, schema)
+    assert is_valid is True
+
+    # Invalid pattern
+    config_invalid = {"pattern": "invalid"}
+    is_valid, errors = NodeConfigurator.validate_config(config_invalid, schema)
+    assert is_valid is False
+    assert any("pattern" in err for err in errors)
+
+
+def test_node_configurator_get_field_help_text_number():
+    """Test help text generation for number field."""
+    schema = {
+        "type": "number",
+        "minimum": 0.01,
+        "maximum": 1.0,
+        "default": 0.1,
+    }
+
+    help_text = NodeConfigurator.get_field_help_text(schema)
+
+    assert "Number" in help_text or "between" in help_text
+    assert "0.01" in help_text
+    assert "1.0" in help_text
+    assert "0.1" in help_text
+
+
+def test_node_configurator_get_field_help_text_enum():
+    """Test help text generation for enum field."""
+    schema = {
+        "type": "string",
+        "enum": ["gaussian", "lorentzian", "voigt"],
+        "default": "gaussian",
+    }
+
+    help_text = NodeConfigurator.get_field_help_text(schema)
+
+    assert "gaussian" in help_text
+    assert "lorentzian" in help_text
+    assert "voigt" in help_text
+
+
+def test_node_configurator_get_field_help_text_boolean():
+    """Test help text generation for boolean field."""
+    schema = {
+        "type": "boolean",
+        "default": True,
+    }
+
+    help_text = NodeConfigurator.get_field_help_text(schema)
+
+    assert "True" in help_text or "False" in help_text
 
 
 if __name__ == "__main__":
