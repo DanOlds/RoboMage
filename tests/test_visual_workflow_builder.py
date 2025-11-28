@@ -8,6 +8,9 @@ from typing import Any
 
 import pytest
 
+from src.robomage.dashboard.components.cytoscape_renderer import (
+    CytoscapeWorkflowRenderer,
+)
 from src.robomage.dashboard.components.workflow_canvas import (
     CanvasEvent,
     WorkflowCanvasFactory,
@@ -246,6 +249,316 @@ def test_workflow_element_with_extra_fields():
 
     # Extra fields should be stored
     assert hasattr(element, "custom_field")
+
+
+# ============================================================================
+# Cytoscape Renderer Tests
+# ============================================================================
+
+
+def test_cytoscape_renderer_registration():
+    """Test that CytoscapeWorkflowRenderer auto-registers with factory."""
+    assert "cytoscape" in WorkflowCanvasFactory.available_renderers()
+    assert WorkflowCanvasFactory.is_registered("cytoscape")
+
+
+def test_cytoscape_renderer_creation():
+    """Test creating CytoscapeWorkflowRenderer via factory."""
+    renderer = WorkflowCanvasFactory.create("cytoscape")
+    assert isinstance(renderer, CytoscapeWorkflowRenderer)
+
+    # Test with custom config
+    renderer = WorkflowCanvasFactory.create(
+        "cytoscape", width="800px", height="400px", enable_physics=True
+    )
+    assert renderer.width == "800px"
+    assert renderer.height == "400px"
+    assert renderer.enable_physics is True
+
+
+def test_cytoscape_renderer_workflow_to_elements():
+    """Test Cytoscape-specific workflow to elements conversion."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    workflow = {
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "load_files",
+                "label": "Load Files",
+                "position": {"x": 0, "y": 0},
+                "config": {"directory": "/data"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "label": "Analyze Peaks",
+                "position": {"x": 200, "y": 0},
+                "config": {"prominence": 0.1},
+            },
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+        ],
+    }
+
+    elements = renderer.workflow_to_elements(workflow)
+
+    # Check node conversion
+    assert len(elements) == 3  # 2 nodes + 1 edge
+    node1 = elements[0]
+    assert node1.type == "node"
+    assert node1.id == "n1"
+    assert node1.data["label"] == "Load Files"
+    assert node1.data["node_type"] == "load_files"
+    assert node1.data["category"] == "data"  # Category determined by node type
+    assert node1.data["config"] == {"directory": "/data"}
+    assert node1.position == {"x": 0, "y": 0}
+
+    node2 = elements[1]
+    assert node2.data["node_type"] == "peak_analysis"
+    assert node2.data["category"] == "analysis"
+
+    # Check edge conversion
+    edge = elements[2]
+    assert edge.type == "edge"
+    assert edge.source == "n1"
+    assert edge.target == "n2"
+
+
+def test_cytoscape_renderer_elements_to_workflow():
+    """Test Cytoscape-specific elements to workflow conversion."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    elements = [
+        WorkflowElement(
+            id="n1",
+            type="node",
+            data={
+                "label": "Load Files",
+                "node_type": "load_files",
+                "category": "data",
+                "config": {"directory": "/data"},
+            },
+            position={"x": 0, "y": 0},
+        ),
+        WorkflowElement(
+            id="n2",
+            type="node",
+            data={
+                "label": "Analyze",
+                "node_type": "peak_analysis",
+                "category": "analysis",
+                "config": {"prominence": 0.1},
+            },
+            position={"x": 200, "y": 0},
+        ),
+        WorkflowElement(
+            id="e1",
+            type="edge",
+            source="n1",
+            target="n2",
+        ),
+    ]
+
+    workflow = renderer.elements_to_workflow(elements)
+
+    # Check nodes
+    assert len(workflow["nodes"]) == 2
+    assert workflow["nodes"][0]["id"] == "n1"
+    assert workflow["nodes"][0]["type"] == "load_files"
+    assert workflow["nodes"][0]["label"] == "Load Files"
+    assert workflow["nodes"][0]["config"] == {"directory": "/data"}
+    assert workflow["nodes"][0]["position"] == {"x": 0, "y": 0}
+
+    # Check edges
+    assert len(workflow["edges"]) == 1
+    assert workflow["edges"][0]["id"] == "e1"
+    assert workflow["edges"][0]["source"] == "n1"
+    assert workflow["edges"][0]["target"] == "n2"
+
+
+def test_cytoscape_renderer_parse_event_node_click():
+    """Test parsing Cytoscape node click event."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    cyto_event = {
+        "type": "tap",
+        "target": {
+            "group": "nodes",
+            "data": {"id": "n1", "label": "Load Files"},
+            "position": {"x": 100, "y": 200},
+        },
+    }
+
+    event = renderer.parse_event(cyto_event)
+
+    assert event is not None
+    assert event.event_type == "node_click"
+    assert event.element_id == "n1"
+    assert event.element_data == {"id": "n1", "label": "Load Files"}
+    assert event.position == {"x": 100, "y": 200}
+
+
+def test_cytoscape_renderer_parse_event_edge_click():
+    """Test parsing Cytoscape edge click event."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    cyto_event = {
+        "type": "tap",
+        "target": {
+            "group": "edges",
+            "data": {"id": "e1", "source": "n1", "target": "n2"},
+        },
+    }
+
+    event = renderer.parse_event(cyto_event)
+
+    assert event is not None
+    assert event.event_type == "edge_click"
+    assert event.element_id == "e1"
+
+
+def test_cytoscape_renderer_parse_event_drag():
+    """Test parsing Cytoscape drag event."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    cyto_event = {
+        "type": "drag",
+        "target": {
+            "data": {"id": "n1"},
+            "position": {"x": 150, "y": 250},
+        },
+    }
+
+    event = renderer.parse_event(cyto_event)
+
+    assert event is not None
+    assert event.event_type == "node_drag"
+    assert event.element_id == "n1"
+    assert event.position == {"x": 150, "y": 250}
+
+
+def test_cytoscape_renderer_parse_event_none():
+    """Test parsing None event data."""
+    renderer = CytoscapeWorkflowRenderer()
+    assert renderer.parse_event(None) is None
+
+
+def test_cytoscape_renderer_create_stylesheet():
+    """Test Cytoscape stylesheet creation."""
+    renderer = CytoscapeWorkflowRenderer()
+    stylesheet = renderer.create_stylesheet()
+
+    # Should be a list of style dictionaries
+    assert isinstance(stylesheet, list)
+    assert len(stylesheet) > 0
+
+    # Check for key selectors
+    selectors = [style["selector"] for style in stylesheet]
+    assert "node" in selectors
+    assert "edge" in selectors
+    assert "node:selected" in selectors
+
+    # Check for category styles
+    assert "node[category='data']" in selectors
+    assert "node[category='analysis']" in selectors
+    assert "node[category='transform']" in selectors
+    assert "node[category='output']" in selectors
+
+    # Check for status styles
+    assert "node[status='running']" in selectors
+    assert "node[status='completed']" in selectors
+    assert "node[status='failed']" in selectors
+
+
+def test_cytoscape_renderer_render():
+    """Test Cytoscape component rendering."""
+    renderer = CytoscapeWorkflowRenderer(width="600px", height="400px")
+
+    elements = [
+        WorkflowElement(
+            id="n1",
+            type="node",
+            data={"label": "Test Node", "category": "data"},
+            position={"x": 0, "y": 0},
+        ),
+    ]
+
+    component = renderer.render(elements, id="test-canvas")
+
+    # Check component properties
+    assert hasattr(component, "id")
+    assert component.id == "test-canvas"
+    assert component.style["width"] == "600px"
+    assert component.style["height"] == "400px"
+
+    # Check elements are converted
+    assert len(component.elements) == 1
+
+
+def test_cytoscape_node_category_mapping():
+    """Test node type to category mapping."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    # Test data category
+    assert renderer._get_node_category("load_files") == "data"
+    assert renderer._get_node_category("load_session") == "data"
+
+    # Test analysis category
+    assert renderer._get_node_category("peak_analysis") == "analysis"
+    assert renderer._get_node_category("statistics") == "analysis"
+
+    # Test transform category
+    assert renderer._get_node_category("filter_q_range") == "transform"
+    assert renderer._get_node_category("normalize") == "transform"
+
+    # Test output category
+    assert renderer._get_node_category("export_csv") == "output"
+    assert renderer._get_node_category("export_json") == "output"
+    assert renderer._get_node_category("save_to_session") == "output"
+
+    # Test unknown/default
+    assert renderer._get_node_category("unknown_type") == "data"
+    assert renderer._get_node_category(None) == "data"
+
+
+def test_cytoscape_to_cytoscape_elements():
+    """Test internal conversion to Cytoscape format."""
+    renderer = CytoscapeWorkflowRenderer()
+
+    elements = [
+        WorkflowElement(
+            id="n1",
+            type="node",
+            data={"label": "Test", "category": "data"},
+            position={"x": 100, "y": 200},
+        ),
+        WorkflowElement(
+            id="e1",
+            type="edge",
+            source="n1",
+            target="n2",
+            data={"custom": "value"},
+        ),
+    ]
+
+    cyto_elements = renderer._to_cytoscape_elements(elements)
+
+    # Check node conversion
+    assert len(cyto_elements) == 2
+    node = cyto_elements[0]
+    assert node["data"]["id"] == "n1"
+    assert node["data"]["label"] == "Test"
+    assert node["position"] == {"x": 100, "y": 200}
+    assert node["classes"] == "data"
+
+    # Check edge conversion
+    edge = cyto_elements[1]
+    assert edge["data"]["id"] == "e1"
+    assert edge["data"]["source"] == "n1"
+    assert edge["data"]["target"] == "n2"
+    assert edge["data"]["custom"] == "value"
 
 
 if __name__ == "__main__":
