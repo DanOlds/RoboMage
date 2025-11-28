@@ -12,6 +12,10 @@ dist/
 .coverage
 htmlcov/
 
+# Workflow outputs
+workflow_results.csv
+**/workflow_results.csv
+
 # Temporary: Skip notebook formatting issues
 examples/robomage_data_module_demo.ipynb
 
@@ -20,6 +24,9 @@ examples/robomage_data_module_demo.ipynb
 *.dat
 *.xy
 *.txt
+
+# Archived development files (moved to archive/)
+archive/
 
 # But keep example/test data files
 !examples/*.chi

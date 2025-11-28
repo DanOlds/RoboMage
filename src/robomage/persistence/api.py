@@ -6,6 +6,7 @@ Provides SessionManager class for creating, managing, and loading analysis sessi
 
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -14,6 +15,9 @@ from robomage.data.models import DiffractionData
 from robomage.persistence.database import get_db_manager
 from robomage.persistence.file_store import get_file_store
 from robomage.persistence.models import File, Session
+
+if TYPE_CHECKING:
+    from robomage.persistence.models import AnalysisResult
 
 
 class SessionManager:
@@ -321,5 +325,368 @@ class SessionManager:
         db = self.db_manager.get_session()
         try:
             return db.get(File, file_id)
+        finally:
+            db.close()
+
+    # ========================================================================
+    # Workflow Persistence Methods
+    # ========================================================================
+
+    def save_workflow_to_session(
+        self,
+        session_id: int,
+        workflow_definition: dict,
+        workflow_name: str,
+        workflow_description: str = "",
+    ) -> str:
+        """
+        Save a workflow definition and link it to a session.
+
+        Args:
+            session_id: Target session ID (or None for standalone workflow)
+            workflow_definition: WorkflowDefinition as dict (nodes, edges, etc.)
+            workflow_name: Unique name for workflow
+            workflow_description: Optional description
+
+        Returns:
+            Workflow ID (UUID string)
+
+        Raises:
+            ValueError: If session_id doesn't exist or workflow_name is duplicate
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> session_id = mgr.create_session("Peak Analysis Session")
+            >>> workflow_def = {
+            ...     "nodes": [{"id": "load_1", "type": "load_files"}],
+            ...     "edges": [],
+            ... }
+            >>> workflow_id = mgr.save_workflow_to_session(
+            ...     session_id, workflow_def, "My Workflow"
+            ... )
+        """
+        import uuid
+
+        from robomage.persistence.models import Workflow
+
+        workflow_id = str(uuid.uuid4())
+
+        db = self.db_manager.get_session()
+        try:
+            # Verify session exists if provided
+            if session_id is not None:
+                session = db.get(Session, session_id)
+                if not session:
+                    raise ValueError(f"Session {session_id} not found")
+
+            workflow = Workflow(
+                id=workflow_id,
+                name=workflow_name,
+                description=workflow_description,
+                definition=workflow_definition,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+                session_id=session_id,
+            )
+            db.add(workflow)
+            db.commit()
+
+            return workflow_id
+
+        finally:
+            db.close()
+
+    def get_workflows_for_session(self, session_id: int) -> list[dict]:
+        """
+        Get all workflows linked to a session.
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            List of workflow dictionaries with id, name, description, definition
+
+        Raises:
+            ValueError: If session doesn't exist
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> workflows = mgr.get_workflows_for_session(session_id)
+            >>> for wf in workflows:
+            ...     print(f"Workflow: {wf['name']}")
+        """
+        db = self.db_manager.get_session()
+        try:
+            session = (
+                db.query(Session)
+                .options(selectinload(Session.workflows))
+                .filter_by(id=session_id)
+                .first()
+            )
+            if not session:
+                raise ValueError(f"Session {session_id} not found")
+
+            return [
+                {
+                    "id": wf.id,
+                    "name": wf.name,
+                    "description": wf.description,
+                    "definition": wf.definition,
+                    "created_at": wf.created_at.isoformat(),
+                    "updated_at": wf.updated_at.isoformat(),
+                }
+                for wf in session.workflows
+            ]
+
+        finally:
+            db.close()
+
+    def load_workflow(self, workflow_id: str) -> dict:
+        """
+        Load a workflow definition by ID.
+
+        Args:
+            workflow_id: Workflow ID (UUID string)
+
+        Returns:
+            Dictionary with workflow details:
+                - id, name, description, definition
+                - session_id, created_at, updated_at
+
+        Raises:
+            ValueError: If workflow not found
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> workflow = mgr.load_workflow(workflow_id)
+            >>> definition = workflow["definition"]
+        """
+        from robomage.persistence.models import Workflow
+
+        db = self.db_manager.get_session()
+        try:
+            workflow = db.query(Workflow).filter_by(id=workflow_id).first()
+            if not workflow:
+                raise ValueError(f"Workflow {workflow_id} not found")
+
+            return {
+                "id": workflow.id,
+                "name": workflow.name,
+                "description": workflow.description,
+                "definition": workflow.definition,
+                "session_id": workflow.session_id,
+                "created_at": workflow.created_at.isoformat(),
+                "updated_at": workflow.updated_at.isoformat(),
+            }
+
+        finally:
+            db.close()
+
+    def delete_workflow(self, workflow_id: str) -> None:
+        """
+        Delete a workflow by ID.
+
+        Args:
+            workflow_id: Workflow ID (UUID string)
+
+        Raises:
+            ValueError: If workflow not found
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> mgr.delete_workflow(workflow_id)
+        """
+        from robomage.persistence.models import Workflow
+
+        db = self.db_manager.get_session()
+        try:
+            workflow = db.query(Workflow).filter_by(id=workflow_id).first()
+            if not workflow:
+                raise ValueError(f"Workflow {workflow_id} not found")
+
+            db.delete(workflow)
+            db.commit()
+
+        finally:
+            db.close()
+
+    # ========================================================================
+    # Analysis Result Persistence Methods
+    # ========================================================================
+
+    def save_analysis_result(
+        self,
+        file_id: int,
+        analysis_type: str,
+        result_data: dict,
+        parameters: dict | None = None,
+        quality_metrics: dict | None = None,
+        analysis_version: str | None = None,
+    ) -> int:
+        """
+        Save an analysis result to the database.
+
+        Args:
+            file_id: Database ID of the file analyzed
+            analysis_type: Type identifier ('peak_detection', 'rietveld', etc.)
+            result_data: Analysis-specific results (schema varies by type)
+            parameters: Analysis parameters used (for reproducibility)
+            quality_metrics: Quality/goodness-of-fit metrics (optional)
+            analysis_version: Tool version string (optional)
+
+        Returns:
+            Database ID of the created AnalysisResult record
+
+        Raises:
+            ValueError: If file_id doesn't exist
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> result_id = mgr.save_analysis_result(
+            ...     file_id=42,
+            ...     analysis_type="peak_detection",
+            ...     result_data={"peaks": [...], "num_peaks_detected": 5},
+            ...     parameters={"profile": "gaussian", "min_prominence": 0.01},
+            ...     quality_metrics={"overall_r_squared": 0.982},
+            ... )
+        """
+        from robomage.persistence.models import AnalysisResult
+
+        db = self.db_manager.get_session()
+        try:
+            # Verify file exists
+            file_obj = db.get(File, file_id)
+            if not file_obj:
+                raise ValueError(f"File {file_id} not found")
+
+            # Create analysis result
+            result = AnalysisResult(
+                file_id=file_id,
+                analysis_type=analysis_type,
+                result_data=result_data,
+                parameters=parameters,
+                quality_metrics=quality_metrics,
+                analysis_version=analysis_version,
+                created_at=datetime.now(),
+            )
+
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+
+            return result.id
+
+        finally:
+            db.close()
+
+    def get_analysis_results(
+        self, file_id: int, analysis_type: str | None = None
+    ) -> list:
+        """
+        Get all analysis results for a file.
+
+        Args:
+            file_id: Database ID of the file
+            analysis_type: Optional filter by analysis type
+
+        Returns:
+            List of AnalysisResult objects, ordered by created_at descending
+
+        Example:
+            >>> # Get all analysis results for a file
+            >>> results = mgr.get_analysis_results(file_id=42)
+            >>>
+            >>> # Get only peak detection results
+            >>> peak_results = mgr.get_analysis_results(
+            ...     file_id=42, analysis_type="peak_detection"
+            ... )
+        """
+        from robomage.persistence.models import AnalysisResult
+
+        db = self.db_manager.get_session()
+        try:
+            query = (
+                db.query(AnalysisResult)
+                .filter(AnalysisResult.file_id == file_id)
+                .order_by(AnalysisResult.created_at.desc())
+            )
+
+            if analysis_type is not None:
+                query = query.filter(AnalysisResult.analysis_type == analysis_type)
+
+            return list(query.all())
+
+        finally:
+            db.close()
+
+    def get_latest_analysis(
+        self, file_id: int, analysis_type: str
+    ) -> "AnalysisResult | None":
+        """
+        Get the most recent analysis result of a specific type for a file.
+
+        Args:
+            file_id: Database ID of the file
+            analysis_type: Type identifier to filter by
+
+        Returns:
+            Most recent AnalysisResult or None if not found
+
+        Example:
+            >>> latest_peak_analysis = mgr.get_latest_analysis(
+            ...     file_id=42, analysis_type="peak_detection"
+            ... )
+            >>> if latest_peak_analysis:
+            ...     print(
+            ...         f"Found {len(latest_peak_analysis.result_data['peaks'])} peaks"
+            ...     )
+        """
+        from robomage.persistence.models import AnalysisResult
+
+        db = self.db_manager.get_session()
+        try:
+            result = (
+                db.query(AnalysisResult)
+                .filter(
+                    AnalysisResult.file_id == file_id,
+                    AnalysisResult.analysis_type == analysis_type,
+                )
+                .order_by(AnalysisResult.created_at.desc())
+                .first()
+            )
+
+            return result
+
+        finally:
+            db.close()
+
+    def delete_analysis_result(self, analysis_id: int) -> bool:
+        """
+        Delete an analysis result by ID.
+
+        Args:
+            analysis_id: Database ID of the AnalysisResult
+
+        Returns:
+            True if deleted, False if not found
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> deleted = mgr.delete_analysis_result(123)
+            >>> if deleted:
+            ...     print("Analysis result removed")
+        """
+        from robomage.persistence.models import AnalysisResult
+
+        db = self.db_manager.get_session()
+        try:
+            result = db.get(AnalysisResult, analysis_id)
+            if not result:
+                return False
+
+            db.delete(result)
+            db.commit()
+            return True
+
         finally:
             db.close()

@@ -2,11 +2,13 @@
 Main Dashboard Layout
 
 Phase 1.5: Professional tab-based layout for the RoboMage dashboard
-with Data Import, Visualization, and Analysis tabs.
+with Data Import, Visualization, Analysis, and Workflow tabs.
 """
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
+
+from .workflow_layout import create_workflow_tab
 
 
 def create_main_layout() -> html.Div:
@@ -18,6 +20,8 @@ def create_main_layout() -> html.Div:
     """
     return dbc.Container(
         [
+            # Location for URL tracking
+            dcc.Location(id="url", refresh=False),
             # Header
             create_header(),
             html.Hr(),
@@ -39,6 +43,11 @@ def create_main_layout() -> html.Div:
                         tab_id="analysis",
                         children=[create_analysis_tab()],
                     ),
+                    dbc.Tab(
+                        label="⚙️ Workflow Builder",
+                        tab_id="workflow",
+                        children=[create_workflow_tab()],
+                    ),
                 ],
                 id="main-tabs",
                 active_tab="import",
@@ -59,6 +68,8 @@ def create_main_layout() -> html.Div:
             # Session management stores
             dcc.Store(id="current-session-id"),
             dcc.Store(id="storage-location-store", data=None),  # Custom storage path
+            # Interval to trigger initial session creation (runs once on load)
+            dcc.Interval(id="init-interval", interval=100, max_intervals=1),
         ],
         fluid=True,
     )
@@ -1192,7 +1203,23 @@ def create_status_bar() -> dbc.Row:
                         className="text-muted",
                     )
                 ],
-                width=6,
+                width=4,
+            ),
+            dbc.Col(
+                [
+                    html.Small(
+                        [
+                            html.Span("Session: ", className="text-muted"),
+                            html.Span(
+                                "No active session",
+                                id="session-status",
+                                className="text-warning",
+                            ),
+                        ]
+                    )
+                ],
+                width=4,
+                className="text-center",
             ),
             dbc.Col(
                 [
@@ -1209,7 +1236,7 @@ def create_status_bar() -> dbc.Row:
                         ]
                     )
                 ],
-                width=6,
+                width=4,
                 className="text-end",
             ),
         ]
