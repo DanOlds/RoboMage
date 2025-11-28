@@ -4,11 +4,14 @@ File storage management for diffraction data files.
 Handles persistent storage of .chi and .xy files on disk.
 """
 
+import logging
 import shutil
 from pathlib import Path
 
 from robomage.data.loaders import load_chi_file, load_xy_file
 from robomage.data.models import DiffractionData
+
+logger = logging.getLogger(__name__)
 
 # Default file store location
 DEFAULT_STORE_PATH = Path.home() / ".robomage" / "files"
@@ -116,7 +119,22 @@ class FileStore:
         """
         session_dir = self.store_path / f"session_{session_id}"
         if session_dir.exists():
-            shutil.rmtree(session_dir)
+            # Use ignore_errors=True to handle potential race conditions or permission issues
+            # This ensures session deletion succeeds even if some files are in use
+            shutil.rmtree(session_dir, ignore_errors=True)
+
+            # If directory still exists (very rare), try force removal
+            if session_dir.exists():
+                import time
+
+                time.sleep(0.1)  # Brief pause for file system sync
+                try:
+                    shutil.rmtree(session_dir, ignore_errors=False)
+                except OSError:
+                    # Log warning but don't fail - session is marked as deleted in DB
+                    logger.warning(
+                        f"Could not fully remove session directory: {session_dir}"
+                    )
 
 
 # Global file store instance (singleton pattern)

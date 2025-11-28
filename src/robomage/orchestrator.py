@@ -239,16 +239,42 @@ class WorkflowOrchestrator:
         Raises:
             ValueError: If workflow contains cycles or invalid structure
         """
-        from services.workflow_engine.models import (
-            ExecutionStatus,
-            WorkflowExecutionResult,
-        )
+        # Handle imports from services directory
+        # In production: services.workflow_engine is in PYTHONPATH
+        # In tests: Need to add services directory to path
+        try:
+            from services.workflow_engine.models import (
+                ExecutionStatus,
+                WorkflowExecutionResult,
+            )
+        except ModuleNotFoundError:
+            # Fallback for test environment
+            import sys
+            from pathlib import Path
+
+            services_path = Path(__file__).parent.parent.parent / "services"
+            if services_path.exists() and str(services_path) not in sys.path:
+                sys.path.insert(0, str(services_path))
+
+            from workflow_engine.models import (  # type: ignore
+                ExecutionStatus,
+                WorkflowExecutionResult,
+            )
 
         execution_id = f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         started_at = datetime.now()
 
+        # Handle both dict and object workflow representations
+        workflow_name = getattr(
+            workflow,
+            "name",
+            workflow.get("name", "unnamed")
+            if isinstance(workflow, dict)
+            else "unnamed",
+        )
+
         logger.info(
-            f"Starting workflow execution: {execution_id} for workflow: {workflow.name}"
+            f"Starting workflow execution: {execution_id} for workflow: {workflow_name}"
         )
 
         # Initialize context
@@ -401,7 +427,20 @@ class WorkflowOrchestrator:
         Returns:
             NodeExecutionResult with status and output
         """
-        from services.workflow_engine.models import ExecutionStatus, NodeExecutionResult
+        # Handle imports with fallback for test environment
+        try:
+            from services.workflow_engine.models import (
+                ExecutionStatus,
+                NodeExecutionResult,
+            )
+        except ModuleNotFoundError:
+            import sys
+            from pathlib import Path
+
+            services_path = Path(__file__).parent.parent.parent / "services"
+            if services_path.exists() and str(services_path) not in sys.path:
+                sys.path.insert(0, str(services_path))
+            from workflow_engine.models import ExecutionStatus, NodeExecutionResult  # type: ignore
 
         logger.info(f"Executing node: {node.id} ({node.type}) - {node.label}")
         started_at = datetime.now()

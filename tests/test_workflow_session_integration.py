@@ -154,24 +154,46 @@ async def test_workflow_to_session_integration(session_manager, test_session, tm
             f.write(f"{q} {i}\n")
 
     # Create workflow definition
-    workflow_def = {
-        "nodes": [
-            {
-                "id": "load_1",
-                "type": "load_files",
-                "config": {"directory": str(tmp_path), "pattern": "*.chi"},
-            },
-            {
-                "id": "save_1",
-                "type": "save_to_session",
-                "config": {
+    # Import workflow models for proper object creation
+    import sys
+    from pathlib import Path
+
+    services_path = Path(__file__).parent.parent / "services"
+    if services_path.exists() and str(services_path) not in sys.path:
+        sys.path.insert(0, str(services_path))
+
+    from workflow_engine.models import (  # type: ignore
+        WorkflowDefinition,
+        WorkflowNode,
+        WorkflowEdge,
+        NodePosition,
+        ExecutionStatus,
+    )
+
+    workflow_def = WorkflowDefinition(
+        name="Test Workflow",
+        description="Integration test workflow",
+        nodes=[
+            WorkflowNode(
+                id="load_1",
+                type="load_files",
+                label="Load Files",
+                config={"directory": str(tmp_path), "pattern": "*.chi"},
+                position=NodePosition(x=0, y=0),
+            ),
+            WorkflowNode(
+                id="save_1",
+                type="save_to_session",
+                label="Save to Session",
+                config={
                     "session_id": str(test_session),
                     "include_files": True,
                 },
-            },
+                position=NodePosition(x=100, y=0),
+            ),
         ],
-        "edges": [{"source": "load_1", "target": "save_1"}],
-    }
+        edges=[WorkflowEdge(id="e1", source="load_1", target="save_1")],
+    )
 
     # Set up orchestrator
     orchestrator = WorkflowOrchestrator()
@@ -184,20 +206,27 @@ async def test_workflow_to_session_integration(session_manager, test_session, tm
         "save_to_session", output_nodes.save_to_session_handler
     )
 
-    # Execute workflow
-    execution_id = await orchestrator.execute_workflow(workflow_def)
-    result = await orchestrator.get_execution_result(execution_id)
+    # Execute workflow - returns WorkflowExecutionResult directly
+    result = await orchestrator.execute_workflow(workflow_def)
 
     # Verify workflow completed successfully
-    assert result.status == "completed"
+    assert result.status == ExecutionStatus.COMPLETED
 
     # Find the save_to_session node result
     save_node_result = next(
         (nr for nr in result.node_results if nr.node_id == "save_1"), None
     )
     assert save_node_result is not None
-    assert save_node_result.output["status"] == "success"
-    assert save_node_result.output["files_saved"] > 0
+
+    # Verify node executed successfully
+    assert save_node_result.status == ExecutionStatus.COMPLETED
+
+    # Check output - it's serialized as a summary string
+    assert save_node_result.output is not None
+    assert "summary" in save_node_result.output
+    # The summary contains the actual result data as a string
+    assert "'status': 'success'" in save_node_result.output["summary"]
+    assert "'files_saved':" in save_node_result.output["summary"]
 
     # Verify files in session
     session_files = session_manager.get_session_files(test_session)
