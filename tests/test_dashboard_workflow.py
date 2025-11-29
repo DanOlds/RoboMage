@@ -24,9 +24,9 @@ def test_workflow_tab_layout(dash_app):
 
     layout = create_workflow_tab()
     assert layout is not None
-    # Check for key components
+    # Check for key components (Sprint 8: visual workflow canvas)
     children = str(layout)
-    assert "workflow-json-editor" in children
+    assert "workflow-canvas" in children  # Visual workflow canvas
     assert "workflow-service-status" in children
     assert "execute-workflow-btn" in children
 

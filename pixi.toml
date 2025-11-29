@@ -29,6 +29,7 @@ h5py = "*"
 
 [pypi-dependencies]
 robomage = { path = ".", editable = true }
+dash-cytoscape = ">=1.0.0"
 
 [tasks]
 test = "pytest -q"

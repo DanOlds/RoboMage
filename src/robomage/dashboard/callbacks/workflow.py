@@ -26,6 +26,8 @@ def register_callbacks(app):
     register_execution_callbacks(app)
     register_saved_workflows_callback(app)
     register_session_integration_callback(app)
+    # Sprint 8: Visual workflow builder callbacks
+    register_visual_workflow_callbacks(app)
 
 
 def register_service_health_callback(app):
@@ -169,27 +171,29 @@ def create_node_palette_ui(node_types: list[dict]) -> list:
                         className="text-primary mt-3 mb-2",
                     ),
                     *[
-                        dbc.Card(
-                            dbc.CardBody(
-                                [
-                                    html.Div(
-                                        [
-                                            html.I(
-                                                className=f"{node.get('icon', 'fas fa-cube')} me-2"
-                                            ),
-                                            html.Strong(node["name"]),
-                                        ]
-                                    ),
-                                    html.Small(
-                                        node["description"],
-                                        className="text-muted d-block",
-                                    ),
-                                ],
-                                className="py-2",
-                            ),
-                            className="mb-2 node-palette-item",
-                            style={"cursor": "pointer"},
+                        dbc.Button(
+                            [
+                                html.Div(
+                                    [
+                                        html.I(
+                                            className=f"{node.get('icon', 'fas fa-cube')} me-2"
+                                        ),
+                                        html.Strong(node["name"]),
+                                    ]
+                                ),
+                                html.Small(
+                                    node["description"],
+                                    className="text-muted d-block mt-1",
+                                ),
+                            ],
                             id={"type": "node-palette-item", "node_type": node["type"]},
+                            color="light",
+                            className="mb-2 text-start w-100",
+                            style={
+                                "whiteSpace": "normal",
+                                "height": "auto",
+                                "padding": "0.75rem",
+                            },
                         )
                         for node in nodes
                     ],
@@ -270,19 +274,27 @@ def register_execution_callbacks(app):
         Output("workflow-execution-result", "data"),
         Output("workflow-execution-log", "children"),
         Input("execute-workflow-btn", "n_clicks"),
-        State("workflow-json-editor", "value"),
-        State("workflow-name-input", "value"),
         State("current-workflow-data", "data"),
+        State("workflow-name-input", "value"),
         prevent_initial_call=True,
     )
-    def execute_workflow(n_clicks, json_value, workflow_name, current_workflow):
+    def execute_workflow(n_clicks, current_workflow, workflow_name):
         """Execute the current workflow."""
         if not n_clicks:
             raise PreventUpdate
 
+        if not current_workflow or not current_workflow.get("nodes"):
+            return (
+                None,
+                dbc.Alert(
+                    "Cannot execute empty workflow. Add nodes to the canvas first.",
+                    color="warning",
+                ),
+            )
+
         try:
-            # Parse workflow JSON
-            workflow_data = json.loads(json_value)
+            # Use workflow data directly from store
+            workflow_data = current_workflow.copy()
             workflow_data["name"] = workflow_name or "Untitled Workflow"
 
             # First save the workflow if not already saved
@@ -324,7 +336,7 @@ def register_execution_callbacks(app):
                     error_detail = exec_response.json().get(
                         "detail", exec_response.text
                     )
-                except:
+                except Exception:
                     error_detail = exec_response.text
 
                 logger.error(f"Workflow execution failed: {error_detail}")
@@ -340,17 +352,6 @@ def register_execution_callbacks(app):
                     ),
                 )
 
-        except json.JSONDecodeError as e:
-            return (
-                None,
-                dbc.Alert(
-                    [
-                        html.Strong("Invalid JSON: "),
-                        str(e),
-                    ],
-                    color="danger",
-                ),
-            )
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}", exc_info=True)
             return (
@@ -972,7 +973,6 @@ def register_session_integration_callback(app):
             if files_saved > 0:
                 # Reload session data to refresh UI
                 try:
-                    session = manager.get_session(session_id)
                     session_files = manager.get_session_files(session_id)
 
                     # Reconstruct file data (same as load_session callback)
@@ -1065,3 +1065,843 @@ def register_session_integration_callback(app):
                 dash.no_update,
                 dash.no_update,
             )
+
+
+def register_visual_workflow_callbacks(app):
+    """
+    Register callbacks for Sprint 8 visual workflow builder.
+
+    Handles:
+    - Storing node type metadata from service
+    - Adding nodes to canvas via palette clicks
+    - Node selection and properties panel
+    - Configuration updates
+    - Canvas interactions (delete, validation)
+    - Workflow state synchronization
+    """
+
+    @app.callback(
+        Output("node-types-data", "data"),
+        Input("workflow-service-check-interval", "n_intervals"),
+    )
+    def store_node_types(n_intervals):
+        """Fetch and store node type metadata from workflow service."""
+        try:
+            response = requests.get(f"{WORKFLOW_SERVICE_URL}/node-types", timeout=2)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            logger.debug(f"Failed to fetch node types: {e}")
+        return []
+
+    @app.callback(
+        Output("workflow-canvas", "elements"),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Input({"type": "node-palette-item", "node_type": ALL}, "n_clicks"),
+        State({"type": "node-palette-item", "node_type": ALL}, "id"),
+        State("workflow-canvas", "elements"),
+        State("current-workflow-data", "data"),
+        State("node-types-data", "data"),
+        prevent_initial_call=True,
+    )
+    def add_node_to_canvas(
+        n_clicks_list, button_ids, current_elements, current_workflow, node_types_data
+    ):
+        """Add a node to the canvas when palette item is clicked."""
+        ctx = callback_context
+        if not ctx.triggered or not any(n_clicks_list):
+            raise PreventUpdate
+
+        # Find which palette item was clicked
+        triggered_prop = ctx.triggered[0]["prop_id"]
+        if not triggered_prop or triggered_prop == ".":
+            raise PreventUpdate
+
+        # Extract the node type from triggered button
+        import json as json_module
+
+        triggered_id = json_module.loads(triggered_prop.split(".")[0])
+        node_type = triggered_id["node_type"]
+
+        # Find the node type metadata
+        node_metadata = next(
+            (nt for nt in (node_types_data or []) if nt["type"] == node_type), None
+        )
+
+        if not node_metadata:
+            logger.warning(f"Node type metadata not found for: {node_type}")
+            raise PreventUpdate
+
+        # Generate unique node ID
+        import uuid
+
+        node_id = f"{node_type}_{str(uuid.uuid4())[:8]}"
+
+        # Create default config from schema
+        config_schema = node_metadata.get("config_schema", {})
+        properties = config_schema.get("properties", {})
+        config = {}
+        for prop_name, prop_def in properties.items():
+            if "default" in prop_def:
+                config[prop_name] = prop_def["default"]
+
+        # Calculate position (place new nodes in a cascading pattern)
+        existing_nodes = [
+            el for el in (current_elements or []) if "source" not in el["data"]
+        ]
+        base_x = 150
+        base_y = 100
+        offset = len(existing_nodes) * 30
+        position = {"x": base_x + offset, "y": base_y + offset}
+
+        # Create new node element using CytoscapeWorkflowRenderer
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+
+        # Create workflow with new node
+        new_node = {
+            "id": node_id,
+            "type": node_type,
+            "label": node_metadata.get("name", node_type),
+            "config": config,
+            "position": position,
+        }
+
+        # Update workflow data
+        workflow = current_workflow or {"nodes": [], "edges": []}
+        workflow["nodes"] = workflow.get("nodes", []) + [new_node]
+
+        # Convert to Cytoscape elements (WorkflowElement objects)
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+
+        # Convert WorkflowElement objects to plain dicts for JSON serialization
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(f"Added node {node_id} ({node_type}) to canvas")
+
+        return new_elements, workflow
+
+    @app.callback(
+        Output("selected-node-id", "data"),
+        Output("workflow-node-properties", "children"),
+        Input("workflow-canvas", "tapNodeData"),
+        State("node-types-data", "data"),
+        State("current-workflow-data", "data"),
+    )
+    def handle_node_selection(tap_node_data, node_types_data, current_workflow):
+        """Handle node selection and display properties panel."""
+        if not tap_node_data:
+            return None, html.P(
+                [
+                    html.I(className="fas fa-mouse-pointer me-2"),
+                    "Select a node to configure its properties",
+                ],
+                className="text-muted text-center mt-4",
+            )
+
+        node_id = tap_node_data.get("id")
+
+        # Find node in workflow to get the actual node type
+        workflow = current_workflow or {"nodes": [], "edges": []}
+        node = next((n for n in workflow.get("nodes", []) if n["id"] == node_id), None)
+
+        if not node:
+            logger.warning(f"Node {node_id} not found in workflow data")
+            raise PreventUpdate
+
+        # Get node type from workflow data (not from tap event which may not have it)
+        node_type = node.get("type")
+
+        # Find node type metadata
+        node_metadata = next(
+            (nt for nt in (node_types_data or []) if nt["type"] == node_type), None
+        )
+
+        if not node_metadata:
+            return node_id, html.Div(
+                [
+                    html.P(
+                        f"Node type metadata not found for: {node_type}",
+                        className="text-warning",
+                    ),
+                    html.Small(
+                        f"Node ID: {node_id}",
+                        className="text-muted d-block",
+                    ),
+                    html.Small(
+                        "Make sure the workflow service is running.",
+                        className="text-muted d-block mt-2",
+                    ),
+                ]
+            )
+
+        # Create configuration form using NodeConfigurator
+        from robomage.dashboard.components import NodeConfigurator
+
+        config_schema = node_metadata.get("config_schema", {})
+        current_config = node.get("config", {})
+
+        form = NodeConfigurator.create_config_form(
+            node_id=node_id,
+            node_type=node_type,
+            schema=config_schema,
+            current_config=current_config,
+        )
+
+        # Wrap in a nice panel with node info header and feedback area
+        properties_panel = html.Div(
+            [
+                html.Div(
+                    [
+                        html.H6(
+                            [
+                                html.I(
+                                    className=f"{node_metadata.get('icon', 'fas fa-cube')} me-2"
+                                ),
+                                node_metadata.get("name", node_type),
+                            ]
+                        ),
+                        dbc.Badge(node_type, color="secondary", className="mb-2"),
+                    ],
+                    className="mb-3",
+                ),
+                html.Hr(),
+                html.Div(
+                    id={"type": "config-feedback", "node_id": node_id}, className="mb-2"
+                ),
+                form,
+            ]
+        )
+
+        return node_id, properties_panel
+
+    @app.callback(
+        Output({"type": "config-feedback", "node_id": ALL}, "children"),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Input({"type": "apply-node-config", "node_id": ALL}, "n_clicks"),
+        State({"type": "apply-node-config", "node_id": ALL}, "id"),
+        State({"type": "node-config-input", "node_id": ALL, "prop": ALL}, "value"),
+        State({"type": "node-config-input", "node_id": ALL, "prop": ALL}, "id"),
+        State("current-workflow-data", "data"),
+        State("node-types-data", "data"),
+        prevent_initial_call=True,
+    )
+    def apply_node_configuration(
+        n_clicks_list,
+        button_ids,
+        input_values,
+        input_ids,
+        current_workflow,
+        node_types_data,
+    ):
+        """Apply configuration changes to a node."""
+        ctx = callback_context
+        if not ctx.triggered or not any(n_clicks_list or []):
+            raise PreventUpdate
+
+        # Find which button was clicked
+        triggered_prop = ctx.triggered[0]["prop_id"]
+        if not triggered_prop or triggered_prop == ".":
+            raise PreventUpdate
+
+        import json as json_module
+
+        triggered_id = json_module.loads(triggered_prop.split(".")[0])
+        node_id = triggered_id["node_id"]
+
+        # Gather form values for this node
+        updated_config = {}
+        for i, input_id in enumerate(input_ids):
+            if input_id["node_id"] == node_id:
+                param_name = input_id["prop"]
+                param_value = input_values[i]
+                if param_value is not None:  # Skip None values
+                    updated_config[param_name] = param_value
+
+        # Validate configuration
+        from robomage.dashboard.components import NodeConfigurator
+
+        # Find node type metadata for validation
+        node = next(
+            (n for n in current_workflow.get("nodes", []) if n["id"] == node_id), None
+        )
+
+        if not node:
+            feedback = dbc.Alert(
+                "Node not found in workflow",
+                color="danger",
+                dismissable=True,
+            )
+            feedbacks = [
+                feedback if btn_id["node_id"] == node_id else no_update
+                for btn_id in button_ids
+            ]
+            return feedbacks, no_update, no_update
+
+        node_type = node["type"]
+        node_metadata = next(
+            (nt for nt in (node_types_data or []) if nt["type"] == node_type), None
+        )
+
+        if not node_metadata:
+            feedback = dbc.Alert(
+                "Node type metadata not found",
+                color="danger",
+                dismissable=True,
+            )
+            feedbacks = [
+                feedback if btn_id["node_id"] == node_id else no_update
+                for btn_id in button_ids
+            ]
+            return feedbacks, no_update, no_update
+
+        # Validate config against schema
+        config_schema = node_metadata.get("config_schema", {})
+        is_valid, errors = NodeConfigurator.validate_config(
+            updated_config, config_schema
+        )
+
+        if not is_valid:
+            error_msg = "; ".join(errors)
+            feedback = dbc.Alert(
+                [html.I(className="fas fa-exclamation-triangle me-2"), error_msg],
+                color="warning",
+                dismissable=True,
+            )
+            feedbacks = [
+                feedback if btn_id["node_id"] == node_id else no_update
+                for btn_id in button_ids
+            ]
+            return feedbacks, no_update, no_update
+
+        # Update node configuration in workflow
+        workflow = current_workflow.copy()
+        for n in workflow.get("nodes", []):
+            if n["id"] == node_id:
+                n["config"] = updated_config
+                break
+
+        # Convert to canvas elements
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(f"Updated config for node {node_id}: {updated_config}")
+
+        feedback = dbc.Alert(
+            [
+                html.I(className="fas fa-check me-2"),
+                "Configuration applied successfully",
+            ],
+            color="success",
+            dismissable=True,
+            duration=3000,
+        )
+
+        # Return feedback for the specific node
+        feedbacks = [
+            feedback if btn_id["node_id"] == node_id else no_update
+            for btn_id in button_ids
+        ]
+
+        return feedbacks, workflow, new_elements
+
+    @app.callback(
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Input("delete-selected-btn", "n_clicks"),
+        State("workflow-canvas", "selectedNodeData"),
+        State("workflow-canvas", "selectedEdgeData"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def delete_selected_elements(
+        n_clicks, selected_nodes, selected_edges, current_workflow
+    ):
+        """Delete selected nodes and edges from canvas."""
+        if not n_clicks:
+            raise PreventUpdate
+
+        if not selected_nodes and not selected_edges:
+            logger.info("Delete clicked but nothing selected")
+            raise PreventUpdate
+
+        workflow = current_workflow or {"nodes": [], "edges": []}
+
+        # Get IDs to delete
+        node_ids_to_delete = {node["id"] for node in (selected_nodes or [])}
+        edge_ids_to_delete = {edge["id"] for edge in (selected_edges or [])}
+
+        # Filter out deleted elements
+        workflow["nodes"] = [
+            n for n in workflow.get("nodes", []) if n["id"] not in node_ids_to_delete
+        ]
+
+        # Also delete edges connected to deleted nodes
+        workflow["edges"] = [
+            e
+            for e in workflow.get("edges", [])
+            if (
+                e["id"] not in edge_ids_to_delete
+                and e.get("source") not in node_ids_to_delete
+                and e.get("target") not in node_ids_to_delete
+            )
+        ]
+
+        # Convert to elements
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+
+        # Convert WorkflowElement objects to plain dicts for JSON serialization
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(
+            f"Deleted {len(node_ids_to_delete)} nodes and {len(edge_ids_to_delete)} edges"
+        )
+
+        return new_elements, workflow
+
+    @app.callback(
+        Output("workflow-validation-status", "children"),
+        Input("current-workflow-data", "data"),
+        Input("workflow-canvas", "elements"),
+    )
+    def validate_workflow(workflow_data, canvas_elements):
+        """Validate workflow and show status."""
+        if not workflow_data or not workflow_data.get("nodes"):
+            return dbc.Alert(
+                [
+                    html.I(className="fas fa-info-circle me-2"),
+                    "Add nodes to start building your workflow",
+                ],
+                color="info",
+                className="py-2 mb-2",
+            )
+
+        from robomage.dashboard.components import WorkflowValidator
+
+        is_valid, errors = WorkflowValidator.validate(workflow_data)
+
+        if is_valid:
+            return dbc.Alert(
+                [
+                    html.I(className="fas fa-check-circle me-2"),
+                    f"Workflow is valid ({len(workflow_data.get('nodes', []))} nodes, "
+                    f"{len(workflow_data.get('edges', []))} edges)",
+                ],
+                color="success",
+                className="py-2 mb-2",
+            )
+        else:
+            # Check if errors are only about disconnected nodes (informational)
+            disconnected_only = all("Disconnected nodes:" in err for err in errors)
+
+            # Use info color for disconnected nodes (normal during construction)
+            # Use warning for other validation issues
+            alert_color = "info" if disconnected_only else "warning"
+            alert_icon = (
+                "fa-info-circle" if disconnected_only else "fa-exclamation-triangle"
+            )
+
+            return dbc.Alert(
+                [
+                    html.Div(
+                        [
+                            html.I(className=f"fas {alert_icon} me-2"),
+                            html.Strong(
+                                "Connect your nodes:"
+                                if disconnected_only
+                                else f"{len(errors)} validation error(s):"
+                            ),
+                        ],
+                        className="mb-2",
+                    ),
+                    html.Ul(
+                        [html.Li(err) for err in errors[:5]]
+                    ),  # Show first 5 errors
+                    (
+                        html.Small(
+                            f"... and {len(errors) - 5} more", className="text-muted"
+                        )
+                        if len(errors) > 5
+                        else None
+                    ),
+                ],
+                color=alert_color,
+                className="py-2 mb-2",
+            )
+
+    @app.callback(
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Input("workflow-canvas", "elements"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def sync_canvas_to_workflow(canvas_elements, current_workflow):
+        """Sync canvas element changes back to workflow data.
+
+        This captures:
+        - User-created edges (by dragging between nodes)
+        - Node position changes (dragging nodes around)
+        """
+        if not canvas_elements or not current_workflow:
+            raise PreventUpdate
+
+        # Extract nodes and edges from canvas elements
+        canvas_nodes = []
+        canvas_edges = []
+
+        for elem in canvas_elements:
+            elem_data = elem.get("data", {})
+            if "source" in elem_data and "target" in elem_data:
+                # This is an edge
+                canvas_edges.append(
+                    {
+                        "id": elem_data.get("id"),
+                        "source": elem_data.get("source"),
+                        "target": elem_data.get("target"),
+                    }
+                )
+            else:
+                # This is a node
+                node_id = elem_data.get("id")
+                if node_id:
+                    # Find corresponding node in workflow to preserve config
+                    existing_node = next(
+                        (
+                            n
+                            for n in current_workflow.get("nodes", [])
+                            if n["id"] == node_id
+                        ),
+                        None,
+                    )
+                    if existing_node:
+                        # Update position from canvas
+                        updated_node = existing_node.copy()
+                        if "position" in elem:
+                            updated_node["position"] = elem["position"]
+                        canvas_nodes.append(updated_node)
+
+        # Only update if there are actual changes
+        current_edges = current_workflow.get("edges", [])
+        current_nodes = current_workflow.get("nodes", [])
+
+        # Check if edges changed (new edge created or deleted)
+        if len(canvas_edges) != len(current_edges) or set(
+            e["id"] for e in canvas_edges
+        ) != set(e["id"] for e in current_edges):
+            # Update workflow with new edge list
+            updated_workflow = current_workflow.copy()
+            updated_workflow["edges"] = canvas_edges
+            updated_workflow["nodes"] = canvas_nodes if canvas_nodes else current_nodes
+
+            logger.info(
+                f"Canvas sync: {len(canvas_edges)} edges, {len(canvas_nodes)} nodes"
+            )
+            return updated_workflow
+
+        raise PreventUpdate
+
+    # Use clientside callback for reset view (direct JS access to Cytoscape)
+    app.clientside_callback(
+        """
+        function(n_clicks) {
+            if (!n_clicks) {
+                return window.dash_clientside.no_update;
+            }
+            
+            // Get the Cytoscape instance
+            const cytoscape_component = document.getElementById('workflow-canvas');
+            if (cytoscape_component && cytoscape_component._cyreg && cytoscape_component._cyreg.cy) {
+                const cy = cytoscape_component._cyreg.cy;
+                
+                // Reset zoom and pan to fit all elements
+                cy.fit();
+                cy.zoom(1.0);
+                cy.center();
+                
+                return true;
+            }
+            
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("reset-canvas-view-btn", "n_clicks_timestamp"),
+        Input("reset-canvas-view-btn", "n_clicks"),
+        prevent_initial_call=True,
+    )
+
+    @app.callback(
+        Output("add-connection-modal", "is_open"),
+        Output("connection-source-dropdown", "options"),
+        Output("connection-target-dropdown", "options"),
+        Input("add-connection-btn", "n_clicks"),
+        Input("cancel-connection-btn", "n_clicks"),
+        Input("confirm-connection-btn", "n_clicks"),
+        State("current-workflow-data", "data"),
+        State("add-connection-modal", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_connection_modal(
+        add_clicks, cancel_clicks, confirm_clicks, workflow_data, is_open
+    ):
+        """Toggle connection modal and populate node dropdowns."""
+        ctx = callback_context
+        if not ctx.triggered:
+            raise PreventUpdate
+
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # Get node options from workflow
+        node_options = []
+        if workflow_data and workflow_data.get("nodes"):
+            node_options = [
+                {"label": f"{n.get('label', n['id'])} ({n['id']})", "value": n["id"]}
+                for n in workflow_data["nodes"]
+            ]
+
+        if triggered_id == "add-connection-btn":
+            # Open modal
+            return True, node_options, node_options
+
+        elif triggered_id in ["cancel-connection-btn", "confirm-connection-btn"]:
+            # Close modal
+            return False, node_options, node_options
+
+        raise PreventUpdate
+
+    @app.callback(
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("connection-feedback", "children"),
+        Input("confirm-connection-btn", "n_clicks"),
+        State("connection-source-dropdown", "value"),
+        State("connection-target-dropdown", "value"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def create_connection(n_clicks, source_id, target_id, workflow_data):
+        """Create a new edge between two nodes."""
+        if not n_clicks or not source_id or not target_id:
+            raise PreventUpdate
+
+        if source_id == target_id:
+            return (
+                no_update,
+                no_update,
+                dbc.Alert(
+                    "Cannot connect a node to itself", color="danger", dismissable=True
+                ),
+            )
+
+        # Check if edge already exists
+        existing_edges = workflow_data.get("edges", [])
+        if any(
+            e["source"] == source_id and e["target"] == target_id
+            for e in existing_edges
+        ):
+            return (
+                no_update,
+                no_update,
+                dbc.Alert(
+                    "Connection already exists", color="warning", dismissable=True
+                ),
+            )
+
+        # Create new edge
+        import uuid
+
+        new_edge = {
+            "id": f"edge_{str(uuid.uuid4())[:8]}",
+            "source": source_id,
+            "target": target_id,
+        }
+
+        # Update workflow
+        workflow = workflow_data.copy()
+        workflow["edges"] = workflow.get("edges", []) + [new_edge]
+
+        # Convert to canvas elements
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(f"Created edge: {source_id} -> {target_id}")
+
+        return (
+            new_elements,
+            workflow,
+            dbc.Alert("Connection added successfully!", color="success", duration=2000),
+        )
+
+    @app.callback(
+        Output("edit-edge-modal", "is_open"),
+        Output("edge-info-display", "children"),
+        Output("edge-target-dropdown", "options"),
+        Output("edge-target-dropdown", "value"),
+        Input("workflow-canvas", "tapEdgeData"),
+        Input("cancel-edge-edit-btn", "n_clicks"),
+        Input("delete-edge-btn", "n_clicks"),
+        Input("confirm-edge-edit-btn", "n_clicks"),
+        State("current-workflow-data", "data"),
+        State("edit-edge-modal", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_edge_edit_modal(
+        tap_edge_data,
+        cancel_clicks,
+        delete_clicks,
+        confirm_clicks,
+        workflow_data,
+        is_open,
+    ):
+        """Toggle edge edit modal when edge is clicked."""
+        ctx = callback_context
+        if not ctx.triggered:
+            raise PreventUpdate
+
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # Get node options from workflow
+        node_options = []
+        if workflow_data and workflow_data.get("nodes"):
+            node_options = [
+                {"label": f"{n.get('label', n['id'])} ({n['id']})", "value": n["id"]}
+                for n in workflow_data["nodes"]
+            ]
+
+        if triggered_id == "workflow-canvas" and tap_edge_data:
+            # Edge was clicked - open modal
+            edge_source = tap_edge_data.get("source")
+            edge_target = tap_edge_data.get("target")
+            edge_id = tap_edge_data.get("id")
+
+            # Find node labels
+            source_label = edge_source
+            target_label = edge_target
+            if workflow_data:
+                for node in workflow_data.get("nodes", []):
+                    if node["id"] == edge_source:
+                        source_label = node.get("label", edge_source)
+                    if node["id"] == edge_target:
+                        target_label = node.get("label", edge_target)
+
+            edge_info = html.Div(
+                [
+                    html.P(
+                        [
+                            html.Strong("From: "),
+                            f"{source_label} ({edge_source})",
+                        ]
+                    ),
+                    html.P(
+                        [
+                            html.Strong("To: "),
+                            f"{target_label} ({edge_target})",
+                        ]
+                    ),
+                    html.Small(f"Edge ID: {edge_id}", className="text-muted"),
+                ]
+            )
+
+            return True, edge_info, node_options, edge_target
+
+        elif triggered_id in [
+            "cancel-edge-edit-btn",
+            "delete-edge-btn",
+            "confirm-edge-edit-btn",
+        ]:
+            # Close modal
+            return False, no_update, node_options, no_update
+
+        raise PreventUpdate
+
+    @app.callback(
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("edge-edit-feedback", "children"),
+        Input("delete-edge-btn", "n_clicks"),
+        State("workflow-canvas", "tapEdgeData"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def delete_edge(n_clicks, tap_edge_data, workflow_data):
+        """Delete the selected edge."""
+        if not n_clicks or not tap_edge_data:
+            raise PreventUpdate
+
+        edge_id = tap_edge_data.get("id")
+
+        # Remove edge from workflow
+        workflow = workflow_data.copy()
+        workflow["edges"] = [e for e in workflow.get("edges", []) if e["id"] != edge_id]
+
+        # Convert to canvas elements
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(f"Deleted edge: {edge_id}")
+
+        return (
+            new_elements,
+            workflow,
+            dbc.Alert("Edge deleted!", color="success", duration=2000),
+        )
+
+    @app.callback(
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("edge-edit-feedback", "children", allow_duplicate=True),
+        Input("confirm-edge-edit-btn", "n_clicks"),
+        State("workflow-canvas", "tapEdgeData"),
+        State("edge-target-dropdown", "value"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def update_edge_target(n_clicks, tap_edge_data, new_target, workflow_data):
+        """Update the target node of an edge."""
+        if not n_clicks or not tap_edge_data or not new_target:
+            raise PreventUpdate
+
+        edge_id = tap_edge_data.get("id")
+        old_target = tap_edge_data.get("target")
+
+        if new_target == old_target:
+            return (
+                no_update,
+                no_update,
+                dbc.Alert("No change made", color="info", dismissable=True),
+            )
+
+        # Update edge target in workflow
+        workflow = workflow_data.copy()
+        for edge in workflow.get("edges", []):
+            if edge["id"] == edge_id:
+                edge["target"] = new_target
+                break
+
+        # Convert to canvas elements
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+        new_elements_objs = renderer.workflow_to_elements(workflow)
+        new_elements = renderer._to_cytoscape_elements(new_elements_objs)
+
+        logger.info(f"Updated edge {edge_id}: target changed to {new_target}")
+
+        return (
+            new_elements,
+            workflow,
+            dbc.Alert("Connection updated!", color="success", duration=2000),
+        )
