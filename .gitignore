@@ -12,6 +12,9 @@ dist/
 .coverage
 htmlcov/
 
+# NFS lock files (temporary files created by Network File System)
+.nfs*
+
 # Workflow outputs
 workflow_results.csv
 **/workflow_results.csv
