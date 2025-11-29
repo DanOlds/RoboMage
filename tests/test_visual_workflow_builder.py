@@ -8,15 +8,16 @@ from typing import Any
 
 import pytest
 
-from src.robomage.dashboard.components.cytoscape_renderer import (
+from robomage.dashboard.components.cytoscape_renderer import (
     CytoscapeWorkflowRenderer,
 )
-from src.robomage.dashboard.components.node_configurator import NodeConfigurator
-from src.robomage.dashboard.components.workflow_canvas import (
+from robomage.dashboard.components.node_configurator import NodeConfigurator
+from robomage.dashboard.components.workflow_canvas import (
     CanvasEvent,
     WorkflowCanvasFactory,
     WorkflowElement,
 )
+from robomage.dashboard.components.workflow_validator import WorkflowValidator
 
 
 class MockWorkflowRenderer:
@@ -964,6 +965,307 @@ def test_node_configurator_get_field_help_text_boolean():
     help_text = NodeConfigurator.get_field_help_text(schema)
 
     assert "True" in help_text or "False" in help_text
+
+
+# ============================================================================
+# Workflow Validator Tests
+# ============================================================================
+
+
+def test_workflow_validator_valid_workflow():
+    """Test validation of a valid workflow."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {"id": "n3", "type": "export_csv", "config": {"output_path": "results.csv"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n2", "target": "n3"},
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is True
+    assert len(errors) == 0
+
+
+def test_workflow_validator_empty_workflow():
+    """Test validation fails for empty workflow."""
+    workflow = {"nodes": [], "edges": []}
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert len(errors) > 0
+    assert any("no nodes" in err.lower() for err in errors)
+
+
+def test_workflow_validator_cycle_detection():
+    """Test workflow cycle detection."""
+    workflow_with_cycle = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n2", "target": "n3"},
+            {"id": "e3", "source": "n3", "target": "n1"},  # Creates cycle!
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow_with_cycle)
+
+    assert is_valid is False
+    assert any("cycle" in err.lower() for err in errors)
+
+
+def test_workflow_validator_self_loop():
+    """Test detection of self-loop edge."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n1"},  # Self-loop
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("self-loop" in err.lower() for err in errors)
+
+
+def test_workflow_validator_disconnected_nodes():
+    """Test detection of disconnected nodes."""
+    workflow_disconnected = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},  # Not connected!
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow_disconnected)
+
+    assert is_valid is False
+    assert any("disconnected" in err.lower() for err in errors)
+    assert any("n3" in err for err in errors)
+
+
+def test_workflow_validator_invalid_edge_source():
+    """Test detection of edge with invalid source."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "nonexistent", "target": "n2"},
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("source" in err and "not found" in err for err in errors)
+
+
+def test_workflow_validator_invalid_edge_target():
+    """Test detection of edge with invalid target."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "nonexistent"},
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("target" in err and "not found" in err for err in errors)
+
+
+def test_workflow_validator_missing_node_type():
+    """Test detection of node with missing type."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "config": {}},  # Missing type
+        ],
+        "edges": [],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("missing type" in err.lower() for err in errors)
+
+
+def test_workflow_validator_unknown_node_type():
+    """Test detection of unknown node type."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "unknown_type", "config": {}},
+        ],
+        "edges": [],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("unknown type" in err.lower() for err in errors)
+
+
+def test_workflow_validator_missing_required_config():
+    """Test detection of missing required configuration."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {}},  # Missing directory and pattern
+        ],
+        "edges": [],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is False
+    assert any("directory" in err.lower() for err in errors)
+    assert any("pattern" in err.lower() for err in errors)
+
+
+def test_workflow_validator_get_execution_order_valid():
+    """Test getting execution order for valid workflow."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n2", "target": "n3"},
+        ],
+    }
+
+    order = WorkflowValidator.get_execution_order(workflow)
+
+    assert order is not None
+    assert len(order) == 3
+    # n1 must come before n2, n2 must come before n3
+    assert order.index("n1") < order.index("n2")
+    assert order.index("n2") < order.index("n3")
+
+
+def test_workflow_validator_get_execution_order_with_cycle():
+    """Test execution order returns None for workflow with cycle."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n2", "target": "n1"},  # Cycle
+        ],
+    }
+
+    order = WorkflowValidator.get_execution_order(workflow)
+
+    assert order is None
+
+
+def test_workflow_validator_get_execution_order_parallel():
+    """Test execution order for workflow with parallel branches."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {"id": "n3", "type": "filter_q_range", "config": {"q_min": 0.5, "q_max": 5.0}},
+            {"id": "n4", "type": "export_csv", "config": {"output_path": "out.csv"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n1", "target": "n3"},
+            {"id": "e3", "source": "n2", "target": "n4"},
+            {"id": "e4", "source": "n3", "target": "n4"},
+        ],
+    }
+
+    order = WorkflowValidator.get_execution_order(workflow)
+
+    assert order is not None
+    assert len(order) == 4
+    # n1 must be first
+    assert order[0] == "n1"
+    # n4 must be last
+    assert order[3] == "n4"
+    # n2 and n3 can be in any order (parallel), but both after n1 and before n4
+    assert order.index("n2") > order.index("n1")
+    assert order.index("n3") > order.index("n1")
+    assert order.index("n2") < order.index("n4")
+    assert order.index("n3") < order.index("n4")
+
+
+def test_workflow_validator_visualize_errors():
+    """Test error visualization."""
+    errors = [
+        "Workflow contains cycles",
+        "Disconnected nodes: n3, n4",
+        "Node 'n1': missing required config 'directory'",
+    ]
+
+    output = WorkflowValidator.visualize_errors(errors)
+
+    assert "❌" in output
+    assert "3" in output  # Number of errors
+    assert "cycles" in output
+    assert "Disconnected" in output
+    assert "directory" in output
+
+
+def test_workflow_validator_visualize_no_errors():
+    """Test visualization for valid workflow."""
+    output = WorkflowValidator.visualize_errors([])
+
+    assert "✅" in output
+    assert "valid" in output.lower()
+
+
+def test_workflow_validator_complex_dag():
+    """Test validation of complex DAG (diamond pattern)."""
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {"id": "n2", "type": "filter_q_range", "config": {"q_min": 0.5, "q_max": 5.0}},
+            {"id": "n3", "type": "filter_q_range", "config": {"q_min": 1.0, "q_max": 10.0}},
+            {"id": "n4", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2"},
+            {"id": "e2", "source": "n1", "target": "n3"},
+            {"id": "e3", "source": "n2", "target": "n4"},
+            {"id": "e4", "source": "n3", "target": "n4"},
+        ],
+    }
+
+    is_valid, errors = WorkflowValidator.validate(workflow)
+
+    assert is_valid is True
+    assert len(errors) == 0
+
+    # Should be able to get execution order
+    order = WorkflowValidator.get_execution_order(workflow)
+    assert order is not None
 
 
 if __name__ == "__main__":

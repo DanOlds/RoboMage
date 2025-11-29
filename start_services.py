@@ -43,10 +43,13 @@ def main():
     print("🚀 Starting RoboMage Workflow System...")
     print()
 
+    # Use the current Python executable (should be from pixi when run via 'pixi run start-all')
+    python_exe = sys.executable
+
     # Start Peak Analysis Service
     print("📊 Starting Peak Analysis Service (port 8001)...")
     peak_proc = subprocess.Popen(
-        [sys.executable, "services/peak_analysis/main.py", "--port", "8001"],
+        [python_exe, "services/peak_analysis/main.py", "--port", "8001"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
@@ -58,7 +61,7 @@ def main():
     print()
     print("⚙️  Starting Workflow Service (port 8002)...")
     workflow_proc = subprocess.Popen(
-        [sys.executable, "services/workflow_engine/main.py", "--port", "8002"],
+        [python_exe, "services/workflow_engine/main.py", "--port", "8002"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
@@ -76,7 +79,7 @@ def main():
     try:
         # Run dashboard in foreground (blocking)
         dashboard_proc = subprocess.run(
-            [sys.executable, "-m", "robomage.dashboard"],
+            [python_exe, "-m", "robomage.dashboard"],
             check=False,
         )
     except KeyboardInterrupt:

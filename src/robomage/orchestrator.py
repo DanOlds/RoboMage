@@ -558,7 +558,9 @@ class WorkflowOrchestrator:
                 inputs[input_key] = source_output
 
                 logger.debug(
-                    f"Collected input '{input_key}' for node {node.id} from {edge.source}"
+                    f"Collected input '{input_key}' for node {node.id} from {edge.source}: "
+                    f"type={type(source_output).__name__}, "
+                    f"len={len(source_output) if isinstance(source_output, (list, dict)) else 'N/A'}"
                 )
 
         return inputs

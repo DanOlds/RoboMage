@@ -144,13 +144,14 @@ async def normalize_handler(
     logger.info(f"Normalizing intensities using method: {method}")
 
     files = inputs.get("input", [])
+    
     if not files:
         raise ValueError("No input files provided to normalize")
 
     normalized = []
     for i, data in enumerate(files):
         try:
-            intensities = data.intensity_values.copy()
+            intensities = data.intensities.copy()
 
             if method == "max":
                 # Normalize to maximum value

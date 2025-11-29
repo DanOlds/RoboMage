@@ -1,24 +1,31 @@
 """
 Workflow Builder Tab Layout
 
-Provides interface for creating, managing, and executing analysis workflows.
-Phase 1: JSON-based workflow editor with node palette and execution controls.
-Future: Visual drag-and-drop interface with ReactFlow.
+Visual drag-and-drop workflow editor with Cytoscape canvas.
+Sprint 8 Phase 2: Full visual workflow builder with node palette,
+properties panel, and validation.
 """
+
+# ruff: noqa: E501
+# Line length exceptions for Dash UI code where breaking lines hurts readability
 
 from pathlib import Path
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from robomage.dashboard.components import WorkflowCanvasFactory
+
 
 def create_workflow_tab() -> html.Div:
     """
-    Create the Workflow Builder tab.
+    Create the Workflow Builder tab with visual canvas.
 
-    Phase 1 Implementation:
-    - Node type palette (clickable cards)
-    - JSON workflow editor (for MVP)
+    Sprint 8 Phase 2 Implementation:
+    - Visual Cytoscape canvas for drag-and-drop workflow creation
+    - Node type palette (fetched from workflow service)
+    - Properties panel with dynamic forms (NodeConfigurator)
+    - Validation panel with real-time feedback (WorkflowValidator)
     - Workflow management (save/load/execute)
     - Execution log viewer
     - Service health indicator
@@ -26,11 +33,18 @@ def create_workflow_tab() -> html.Div:
     Returns:
         Workflow tab layout component
     """
+    # Get Cytoscape renderer
+    renderer = WorkflowCanvasFactory.create("cytoscape")
+
+    # Get default workflow and convert to WorkflowElement objects
+    default_workflow = get_default_workflow()
+    initial_elements = renderer.workflow_to_elements(default_workflow)
+
     return html.Div(
         [
             dbc.Row(
                 [
-                    # Left sidebar - Node palette and templates
+                    # Left sidebar - Node palette
                     dbc.Col(
                         [
                             dbc.Card(
@@ -42,7 +56,7 @@ def create_workflow_tab() -> html.Div:
                                                     html.I(
                                                         className="fas fa-puzzle-piece me-2"
                                                     ),
-                                                    "Node Types",
+                                                    "Node Palette",
                                                 ]
                                             )
                                         ]
@@ -58,12 +72,27 @@ def create_workflow_tab() -> html.Div:
                                                 className="mb-3",
                                             ),
                                             html.Hr(),
+                                            # Instructions
+                                            dbc.Alert(
+                                                [
+                                                    html.I(
+                                                        className="fas fa-info-circle me-2"
+                                                    ),
+                                                    "Click a node below to add it to the canvas",
+                                                ],
+                                                color="info",
+                                                className="py-2 mb-3",
+                                            ),
                                             # Node palette (loaded dynamically from service)
-                                            html.Div(id="workflow-node-palette"),
-                                            html.Hr(),
-                                            # Workflow templates
-                                            html.H6("Quick Start Templates"),
-                                            html.Div(id="workflow-templates"),
+                                            html.Div(
+                                                id="workflow-node-palette",
+                                                children=[
+                                                    html.P(
+                                                        "Loading node types...",
+                                                        className="text-muted text-center",
+                                                    )
+                                                ],
+                                            ),
                                         ],
                                         style={
                                             "maxHeight": "700px",
@@ -76,7 +105,7 @@ def create_workflow_tab() -> html.Div:
                         ],
                         width=3,
                     ),
-                    # Center - Workflow editor and controls
+                    # Center - Workflow canvas
                     dbc.Col(
                         [
                             dbc.Card(
@@ -92,7 +121,7 @@ def create_workflow_tab() -> html.Div:
                                                                     html.I(
                                                                         className="fas fa-project-diagram me-2"
                                                                     ),
-                                                                    "Workflow Editor",
+                                                                    "Workflow Canvas",
                                                                 ]
                                                             )
                                                         ],
@@ -159,7 +188,7 @@ def create_workflow_tab() -> html.Div:
                                     ),
                                     dbc.CardBody(
                                         [
-                                            # Workflow name input
+                                            # Workflow metadata
                                             dbc.Row(
                                                 [
                                                     dbc.Col(
@@ -188,35 +217,77 @@ def create_workflow_tab() -> html.Div:
                                                 ]
                                             ),
                                             html.Hr(),
-                                            # Workflow JSON editor (Phase 1)
+                                            # Validation status
                                             html.Div(
+                                                id="workflow-validation-status",
+                                                className="mb-2",
+                                            ),
+                                            # Cytoscape canvas
+                                            html.Div(
+                                                renderer.render(
+                                                    elements=initial_elements,
+                                                    id="workflow-canvas",
+                                                ),
+                                                style={
+                                                    "height": "500px",
+                                                    "border": "1px solid #ddd",
+                                                },
+                                            ),
+                                            # Canvas controls
+                                            dbc.Row(
                                                 [
-                                                    dbc.Label(
-                                                        "Workflow Definition (JSON):"
-                                                    ),
-                                                    html.Small(
-                                                        " Phase 1: Manual JSON editing (drag-and-drop coming in Phase 2)",
-                                                        className="text-muted",
-                                                    ),
-                                                    dcc.Textarea(
-                                                        id="workflow-json-editor",
-                                                        value=get_default_workflow_json(),
-                                                        style={
-                                                            "width": "100%",
-                                                            "height": "400px",
-                                                            "fontFamily": "monospace",
-                                                            "fontSize": "12px",
-                                                        },
-                                                        className="form-control mt-2",
-                                                    ),
-                                                    html.Small(
+                                                    dbc.Col(
                                                         [
-                                                            html.I(
-                                                                className="fas fa-info-circle me-1"
+                                                            dbc.ButtonGroup(
+                                                                [
+                                                                    dbc.Button(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-link me-1"
+                                                                            ),
+                                                                            "Add Connection",
+                                                                        ],
+                                                                        id="add-connection-btn",
+                                                                        color="primary",
+                                                                        size="sm",
+                                                                        outline=True,
+                                                                    ),
+                                                                    dbc.Button(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-trash me-1"
+                                                                            ),
+                                                                            "Delete Selected",
+                                                                        ],
+                                                                        id="delete-selected-btn",
+                                                                        color="danger",
+                                                                        size="sm",
+                                                                        outline=True,
+                                                                    ),
+                                                                    dbc.Button(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-compress-arrows-alt me-1"
+                                                                            ),
+                                                                            "Reset View",
+                                                                        ],
+                                                                        id="reset-canvas-view-btn",
+                                                                        color="secondary",
+                                                                        size="sm",
+                                                                        outline=True,
+                                                                    ),
+                                                                ],
+                                                                className="mt-2",
                                                             ),
-                                                            "Edit the JSON directly. Reference the node types on the left for available options.",
-                                                        ],
-                                                        className="text-info mt-1",
+                                                        ]
+                                                    ),
+                                                    dbc.Col(
+                                                        [
+                                                            html.Small(
+                                                                "Click nodes to configure • Drag to move • Use 'Add Connection' to link nodes",
+                                                                className="text-muted mt-3 d-block text-end",
+                                                            ),
+                                                        ]
                                                     ),
                                                 ]
                                             ),
@@ -227,7 +298,7 @@ def create_workflow_tab() -> html.Div:
                         ],
                         width=6,
                     ),
-                    # Right sidebar - Execution results and logs
+                    # Right sidebar - Properties & Results
                     dbc.Col(
                         [
                             dbc.Card(
@@ -237,9 +308,9 @@ def create_workflow_tab() -> html.Div:
                                             html.H5(
                                                 [
                                                     html.I(
-                                                        className="fas fa-list-alt me-2"
+                                                        className="fas fa-cogs me-2"
                                                     ),
-                                                    "Execution & Results",
+                                                    "Properties & Results",
                                                 ]
                                             )
                                         ]
@@ -248,6 +319,30 @@ def create_workflow_tab() -> html.Div:
                                         [
                                             dbc.Tabs(
                                                 [
+                                                    dbc.Tab(
+                                                        label="Node Properties",
+                                                        children=[
+                                                            html.Div(
+                                                                id="workflow-node-properties",
+                                                                children=[
+                                                                    html.P(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-mouse-pointer me-2"
+                                                                            ),
+                                                                            "Select a node to configure its properties",
+                                                                        ],
+                                                                        className="text-muted text-center mt-4",
+                                                                    )
+                                                                ],
+                                                                className="mt-3",
+                                                                style={
+                                                                    "maxHeight": "600px",
+                                                                    "overflowY": "auto",
+                                                                },
+                                                            )
+                                                        ],
+                                                    ),
                                                     dbc.Tab(
                                                         label="Execution Log",
                                                         children=[
@@ -283,7 +378,7 @@ def create_workflow_tab() -> html.Div:
                                                                             )
                                                                         ],
                                                                         style={
-                                                                            "maxHeight": "600px",
+                                                                            "maxHeight": "550px",
                                                                             "overflowY": "auto",
                                                                         },
                                                                     ),
@@ -315,12 +410,99 @@ def create_workflow_tab() -> html.Div:
                 className="mt-3",
             ),
             # Hidden stores
-            dcc.Store(id="current-workflow-data"),
+            dcc.Store(id="current-workflow-data", data=default_workflow),
             dcc.Store(id="workflow-execution-result"),
+            dcc.Store(
+                id="selected-node-id"
+            ),  # Track selected node for properties panel
+            dcc.Store(id="node-types-data"),  # Store node type metadata from service
             dcc.Interval(
                 id="workflow-service-check-interval",
                 interval=5000,  # Check every 5 seconds
                 n_intervals=0,
+            ),
+            # Add Connection Modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Add Connection Between Nodes")),
+                    dbc.ModalBody(
+                        [
+                            dbc.Label("From Node:"),
+                            dcc.Dropdown(
+                                id="connection-source-dropdown",
+                                placeholder="Select source node...",
+                                className="mb-3",
+                            ),
+                            dbc.Label("To Node:"),
+                            dcc.Dropdown(
+                                id="connection-target-dropdown",
+                                placeholder="Select target node...",
+                                className="mb-3",
+                            ),
+                            html.Div(id="connection-feedback"),
+                        ]
+                    ),
+                    dbc.ModalFooter(
+                        [
+                            dbc.Button(
+                                "Cancel",
+                                id="cancel-connection-btn",
+                                color="secondary",
+                                className="me-2",
+                            ),
+                            dbc.Button(
+                                "Add Connection",
+                                id="confirm-connection-btn",
+                                color="primary",
+                            ),
+                        ]
+                    ),
+                ],
+                id="add-connection-modal",
+                is_open=False,
+            ),
+            # Edit Edge Modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Edit Connection")),
+                    dbc.ModalBody(
+                        [
+                            html.Div(id="edge-info-display"),
+                            html.Hr(),
+                            dbc.Label("Change Target Node:"),
+                            dcc.Dropdown(
+                                id="edge-target-dropdown",
+                                placeholder="Select new target...",
+                                className="mb-3",
+                            ),
+                            html.Div(id="edge-edit-feedback"),
+                        ]
+                    ),
+                    dbc.ModalFooter(
+                        [
+                            dbc.Button(
+                                [html.I(className="fas fa-trash me-1"), "Delete Edge"],
+                                id="delete-edge-btn",
+                                color="danger",
+                                outline=True,
+                                className="me-auto",
+                            ),
+                            dbc.Button(
+                                "Cancel",
+                                id="cancel-edge-edit-btn",
+                                color="secondary",
+                                className="me-2",
+                            ),
+                            dbc.Button(
+                                "Update Connection",
+                                id="confirm-edge-edit-btn",
+                                color="primary",
+                            ),
+                        ]
+                    ),
+                ],
+                id="edit-edge-modal",
+                is_open=False,
             ),
         ]
     )
@@ -339,6 +521,104 @@ def create_service_status_indicator() -> html.Div:
                 className="mb-0 py-2",
             )
         ]
+    )
+
+
+def get_default_workflow() -> dict:
+    """Get default workflow structure for initial canvas state."""
+    # Get absolute path to examples directory
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    examples_dir = str(project_root / "examples")
+
+    return {
+        "name": "Example Workflow",
+        "description": "Load files and analyze peaks",
+        "nodes": [
+            {
+                "id": "load_1",
+                "type": "load_files",
+                "label": "Load Data Files",
+                "config": {
+                    "directory": examples_dir,
+                    "pattern": "*.chi",
+                },
+                "position": {"x": 100, "y": 100},
+            },
+            {
+                "id": "analyze_1",
+                "type": "peak_analysis",
+                "label": "Detect Peaks",
+                "config": {
+                    "profile_type": "gaussian",
+                    "prominence": 0.1,
+                    "distance": 5,
+                },
+                "position": {"x": 400, "y": 100},
+            },
+            {
+                "id": "export_1",
+                "type": "export_csv",
+                "label": "Export Results",
+                "config": {
+                    "output_path": "workflow_results.csv",
+                    "format": "peaks",
+                },
+                "position": {"x": 700, "y": 100},
+            },
+        ],
+        "edges": [
+            {"id": "edge_1", "source": "load_1", "target": "analyze_1"},
+            {"id": "edge_2", "source": "analyze_1", "target": "export_1"},
+        ],
+    }
+
+
+def create_node_palette_card(node_type: dict) -> dbc.Card:
+    """
+    Create a clickable card for a node type in the palette.
+
+    Args:
+        node_type: Node type metadata from workflow service
+
+    Returns:
+        Dash Bootstrap Card component
+    """
+    # Category color mapping
+    category_colors = {
+        "data": "primary",
+        "transform": "warning",
+        "analysis": "success",
+        "output": "danger",
+    }
+
+    color = category_colors.get(node_type.get("category", ""), "secondary")
+
+    return dbc.Card(
+        [
+            dbc.CardBody(
+                [
+                    html.Div(
+                        [
+                            html.I(
+                                className=f"{node_type.get('icon', 'fas fa-cube')} fa-2x mb-2"
+                            ),
+                            html.H6(node_type.get("name", "Unknown"), className="mb-1"),
+                            html.Small(
+                                node_type.get("description", ""),
+                                className="text-muted",
+                            ),
+                        ],
+                        className="text-center",
+                    )
+                ],
+                className="py-2",
+            )
+        ],
+        id={"type": "node-palette-card", "node_type": node_type.get("type", "")},
+        color=color,
+        outline=True,
+        className="mb-2 node-palette-card",
+        style={"cursor": "pointer"},
     )
 
 

@@ -15,6 +15,7 @@ from .workflow_canvas import (
     WorkflowCanvasRenderer,
     WorkflowElement,
 )
+from .workflow_validator import WorkflowValidator
 
 __all__ = [
     "WorkflowCanvasRenderer",
@@ -23,4 +24,5 @@ __all__ = [
     "WorkflowCanvasFactory",
     "CytoscapeWorkflowRenderer",
     "NodeConfigurator",
+    "WorkflowValidator",
 ]
