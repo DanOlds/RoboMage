@@ -208,6 +208,20 @@ def create_inspector_tab() -> html.Div:
                                     ),
                                     dbc.CardBody(
                                         [
+                                            # Compact view toggle
+                                            dbc.Row(
+                                                [
+                                                    dbc.Col(
+                                                        dbc.Checkbox(
+                                                            id="inspector-compact-view",
+                                                            label="Compact View (show first 5 items only)",
+                                                            value=True,  # Default to compact
+                                                            className="mb-3",
+                                                        ),
+                                                        width=12,
+                                                    )
+                                                ]
+                                            ),
                                             # Tabbed interface for I/O and stats
                                             dbc.Tabs(
                                                 [

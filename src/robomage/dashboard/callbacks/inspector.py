@@ -307,17 +307,18 @@ def register_callbacks(app: dash.Dash) -> None:
 
     @app.callback(
         Output("inspector-input-panel", "children"),
-        [Input("inspector-selected-node", "data")],
+        [Input("inspector-selected-node", "data"), Input("inspector-compact-view", "value")],
         [State("inspector-workflow-data", "data")],
     )
     def display_input_data(
-        node_id: str | None, workflow_data: list[dict] | None
+        node_id: str | None, compact_view: bool, workflow_data: list[dict] | None
     ) -> html.Div:
         """
         Display input data for the selected node.
 
         Args:
             node_id: Selected node ID
+            compact_view: Whether to use compact display mode
             workflow_data: Workflow inspection data
 
         Returns:
@@ -348,22 +349,26 @@ def register_callbacks(app: dash.Dash) -> None:
 
         input_data = node_data.get("input_data")
         return NodeInspectorPanel.create_data_display(
-            input_data, title=f"Input Data - {node_id}", data_type="input"
+            input_data,
+            title=f"Input Data - {node_id}",
+            data_type="input",
+            compact=compact_view,
         )
 
     @app.callback(
         Output("inspector-output-panel", "children"),
-        [Input("inspector-selected-node", "data")],
+        [Input("inspector-selected-node", "data"), Input("inspector-compact-view", "value")],
         [State("inspector-workflow-data", "data")],
     )
     def display_output_data(
-        node_id: str | None, workflow_data: list[dict] | None
+        node_id: str | None, compact_view: bool, workflow_data: list[dict] | None
     ) -> html.Div:
         """
         Display output data for the selected node.
 
         Args:
             node_id: Selected node ID
+            compact_view: Whether to use compact display mode
             workflow_data: Workflow inspection data
 
         Returns:
@@ -394,7 +399,10 @@ def register_callbacks(app: dash.Dash) -> None:
 
         output_data = node_data.get("output_data")
         return NodeInspectorPanel.create_data_display(
-            output_data, title=f"Output Data - {node_id}", data_type="output"
+            output_data,
+            title=f"Output Data - {node_id}",
+            data_type="output",
+            compact=compact_view,
         )
 
     @app.callback(

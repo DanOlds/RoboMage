@@ -20,6 +20,7 @@ class NodeInspectorPanel:
         data: dict[str, Any] | None,
         title: str = "Data",
         data_type: str = "input",
+        compact: bool = False,
     ) -> html.Div:
         """
         Create a formatted display for node I/O data.
@@ -28,6 +29,7 @@ class NodeInspectorPanel:
             data: Data dictionary to display (from inspection record)
             title: Title for the panel
             data_type: Type of data ("input" or "output")
+            compact: If True, show only first 5 items of long lists/dicts
 
         Returns:
             Div containing formatted data display
@@ -86,12 +88,24 @@ class NodeInspectorPanel:
                                 if count is not None
                                 else None,
                                 html.Hr(),
+                                # Compact mode indicator
+                                dbc.Alert(
+                                    [
+                                        html.I(className="fas fa-compress-alt me-2"),
+                                        "Showing first 5 items only. Uncheck 'Compact View' to see all data.",
+                                    ],
+                                    color="info",
+                                    className="mb-2",
+                                )
+                                if compact
+                                else None,
                                 # Sample data preview
                                 html.Div(
                                     [
                                         html.Strong("Sample Data:"),
                                         NodeInspectorPanel._create_json_viewer(
-                                            sample if sample else data
+                                            sample if sample else data,
+                                            compact=compact,
                                         ),
                                     ]
                                 ),
@@ -327,17 +341,25 @@ class NodeInspectorPanel:
         )
 
     @staticmethod
-    def _create_json_viewer(data: Any, max_height: str = "400px") -> html.Div:
+    def _create_json_viewer(
+        data: Any, max_height: str = "400px", compact: bool = False, max_items: int = 5
+    ) -> html.Div:
         """
-        Create a JSON viewer with syntax highlighting.
+        Create a JSON viewer with syntax highlighting and optional compact mode.
 
         Args:
             data: Data to display as JSON
             max_height: Maximum height for scrollable container
+            compact: If True, truncate long lists/dicts to max_items
+            max_items: Maximum items to show in compact mode
 
         Returns:
             Div containing formatted JSON
         """
+        # Apply compact mode if requested
+        if compact:
+            data = NodeInspectorPanel._make_compact(data, max_items)
+        
         try:
             json_str = json.dumps(data, indent=2, default=str)
         except Exception as e:
@@ -360,6 +382,47 @@ class NodeInspectorPanel:
                 )
             ]
         )
+
+    @staticmethod
+    def _make_compact(data: Any, max_items: int = 5) -> Any:
+        """
+        Recursively truncate long lists and dicts for compact display.
+
+        Args:
+            data: Data to compact
+            max_items: Maximum items to show before truncating
+
+        Returns:
+            Compacted version of data
+        """
+        if isinstance(data, dict):
+            if len(data) > max_items:
+                # Show first max_items keys
+                compact_dict = {}
+                for i, (k, v) in enumerate(data.items()):
+                    if i < max_items:
+                        compact_dict[k] = NodeInspectorPanel._make_compact(v, max_items)
+                    else:
+                        break
+                compact_dict[f"... ({len(data) - max_items} more items)"] = "..."
+                return compact_dict
+            else:
+                # Recursively compact values
+                return {k: NodeInspectorPanel._make_compact(v, max_items) for k, v in data.items()}
+        
+        elif isinstance(data, list):
+            if len(data) > max_items:
+                # Show first max_items elements
+                compact_list = [NodeInspectorPanel._make_compact(item, max_items) for item in data[:max_items]]
+                compact_list.append(f"... ({len(data) - max_items} more items)")
+                return compact_list
+            else:
+                # Recursively compact elements
+                return [NodeInspectorPanel._make_compact(item, max_items) for item in data]
+        
+        else:
+            # Primitives, return as-is
+            return data
 
     @staticmethod
     def create_timeline_visualization(
