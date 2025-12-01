@@ -237,28 +237,33 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 **🎯 NEXT PRIORITIES (Post-Sprint 8)**:
 
-**Week 1 Completed (December 1, 2025)** ✅:
-- ✅ Fixed all failing tests (233/233 passing, 100%)
-- ✅ Cleaned up test suite structure (archived old tests)
-- ✅ Resolved deprecation warnings (449 → 11 warnings)
-- ✅ Created comprehensive troubleshooting guide
-- ✅ Updated all documentation to current status
+**December 1, 2025 - Latest Updates** ✅:
+- ✅ **Workflow Canvas Save/Load Buttons** - Fixed non-functional Save/Load buttons
+  - Added modal dialogs for saving and loading workflows
+  - Fixed modal closing bugs (toggle logic and pattern-matched button rendering)
+  - Both modals now work correctly (tested by user)
+  - Documentation: `docs/WORKFLOW-CANVAS-BUTTONS-FIX.md`
+- ✅ **Week 1 Quick Wins Complete** - 233/233 tests passing (100%)
+- ✅ **Test Suite Cleanup** - Archived old tests, resolved deprecation warnings
+- ✅ **Comprehensive Troubleshooting Guide** - Problem-solving documentation
 
-**Week 2+ Planning - Advanced Inspection & Debugging Tools**:
-- 🎯 **Node I/O Inspector** - Visualize data flowing through workflow nodes
-- 🎯 **Analysis Result Viewer** - Detailed inspection of peak analysis results
-- 🎯 **Workflow Debugger** - Step-through execution with breakpoints
-- 🎯 **Data Profiler** - Statistical summaries and quality metrics
-- 🎯 **Session Comparison** - Diff tool for comparing analysis sessions
-
-**Waiting on External Development**:
-- ⏸️ **GSAS-II Integration** - Automated Rietveld refinement (in development by another team)
+**🚀 NEXT MAJOR FEATURE: Custom Services Architecture (2-3 weeks)**:
+- 🎯 **Service Registry System** - Replace hardcoded services with discoverable registry
+- 🎯 **Service Template** - Cookiecutter template for creating custom analysis services
+- 🎯 **Generic Service Integration** - Dashboard auto-discovers and monitors custom services
+- 🎯 **Workflow Service Nodes** - Custom services automatically available as workflow nodes
+- 🎯 **Comprehensive Documentation** - Guide with 3+ worked examples
+- 📋 **Detailed Plan**: `docs/CUSTOM-SERVICES-PLAN.md` (complete implementation roadmap)
 
 **Future Enhancements**:
+- 🔄 **Advanced Inspection Tools** - Node I/O Inspector, Analysis Result Viewer, Workflow Debugger
 - 🔄 **Workflow Templates** - Pre-built common analysis patterns
 - 🔄 **ReactFlow Migration** - Modern drag-and-drop UX
 - 🔄 **ML Integration** - AI-enhanced parameter optimization
 - 🔄 **Multi-User Support** - PostgreSQL backend, collaboration
+
+**Waiting on External Development**:
+- ⏸️ **GSAS-II Integration** - Automated Rietveld refinement (in development by another team)
 
 ## Integration Points
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
@@ -290,17 +295,17 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
-- `docs/node-development-guide.md` - **NEW**: Comprehensive guide for creating custom workflow nodes (820 lines)
-- `docs/node-quick-reference.md` - **NEW**: Copy-paste templates for rapid node development (530 lines)
-- `docs/NODE-DEVELOPMENT-EXAMPLES-COMPLETE.md` - **NEW**: Node development implementation summary
-- `examples/custom_nodes/` - **NEW**: Working examples (template, background subtraction, peak width analysis)
-- `docs/NEXT-STEPS-WEEK-2.md` - **NEW**: Detailed Week 2 implementation plan (Node I/O Inspector)
-- `docs/WEEK-1-COMPLETION.md` - **NEW**: Week 1 quick wins completion summary
-- `docs/inspection-tools-design.md` - **NEW**: Complete architecture for 5 inspection tools (4-5 week plan)
-- `docs/TROUBLESHOOTING.md` - **NEW**: Comprehensive troubleshooting guide for common issues
-- `docs/SPRINT-8-COMPLETION.md` - **Sprint 8 complete**: Visual workflow builder
+- `docs/node-development-guide.md` - Comprehensive guide for creating custom workflow nodes (820 lines)
+- `docs/node-quick-reference.md` - Copy-paste templates for rapid node development (530 lines)
+- `docs/NODE-DEVELOPMENT-EXAMPLES-COMPLETE.md` - Node development implementation summary
+- `examples/custom_nodes/` - Working examples (template, background subtraction, peak width analysis)
+- `docs/NEXT-STEPS-WEEK-2.md` - Detailed Week 2 implementation plan (Node I/O Inspector)
+- `docs/WEEK-1-COMPLETION.md` - Week 1 quick wins completion summary
+- `docs/inspection-tools-design.md` - Complete architecture for 5 inspection tools (4-5 week plan)
+- `docs/TROUBLESHOOTING.md` - Comprehensive troubleshooting guide for common issues
+- `docs/SPRINT-8-COMPLETION.md` - Sprint 8 complete: Visual workflow builder
 - `docs/visual-workflow-builder-guide.md` - User guide for workflow builder
-- `docs/SPRINT-7-COMPLETION.md` - **Sprint 7 complete**: Extensible analysis result persistence
+- `docs/SPRINT-7-COMPLETION.md` - Sprint 7 complete: Extensible analysis result persistence
 - `docs/sprint-7-analysis-persistence-mvp.md` - Sprint 7 planning document
 - `docs/sprint-6-days-5-6-COMPLETE.md` - Workflow-session integration completion summary
 - `docs/sprint-5-persistence-architecture.md` - Persistence layer design philosophy
@@ -309,5 +314,7 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `docs/dashboard-persistence-guide.md` - Complete session persistence user guide
 - `docs/persistence-quick-reference.md` - Code examples for persistence API
 - `docs/session-storage-expansion-guide.md` - Guide for extending persistence layer
+- `docs/WORKFLOW-CANVAS-BUTTONS-FIX.md` - **NEW**: Save/Load buttons fix (Dec 1, 2025)
+- `docs/CUSTOM-SERVICES-PLAN.md` - **NEW**: Custom services architecture plan (2-3 weeks)
 - `STORAGE-DEBUG-FEATURES.md` - Storage configuration and debug tools documentation
 - `README.md` - User-facing project overview and API documentation

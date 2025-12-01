@@ -167,6 +167,37 @@ Load workflow triggers sequence:
 ✅ **Linting:** Code formatted with ruff (88 char line limit)  
 ✅ **Integration:** Callbacks properly registered in app initialization
 
+## Bug Fix: Modal Closing Issue (December 1, 2025)
+
+### **Issue Found**
+After initial implementation, both modals were closing immediately when opened.
+
+### **Root Causes**
+
+**1. Toggle Callback Logic (Both Modals)**
+- Original: `return not is_open` - toggled on every button click
+- Problem: Clicking button when modal open would close it
+- **Fix:** Use `callback_context` to check which button triggered:
+  - Open button → always return `True`
+  - Cancel/Confirm buttons → return `False`
+
+**2. Pattern-Matched Button Rendering (Load Modal Only)**
+- Problem: `load_workflow_from_modal()` callback fired when buttons were first rendered
+- When modal opened and workflow cards created, Dash triggered the callback
+- Callback returned `False` for modal state → immediate close
+- **Fix:** Added click validation check:
+  ```python
+  if not any(n_clicks_list) or all(clicks is None for clicks in n_clicks_list):
+      raise PreventUpdate
+  ```
+
+### **Final Status**
+✅ **Load Modal:** Opens and stays open until workflow selected or canceled  
+✅ **Save Modal:** Opens and stays open until confirmed or canceled  
+✅ **User tested and verified working**
+
 ## Summary
 
 This fix completes the workflow canvas UI by implementing the missing Save and Load button functionality. Users can now save and load workflows directly from the canvas header with professional modal dialogs, validation, and visual feedback. The implementation follows established patterns from the session persistence feature and integrates seamlessly with the existing visual workflow builder.
+
+**Final verification (December 1, 2025):** All modal closing bugs resolved and tested by user.
