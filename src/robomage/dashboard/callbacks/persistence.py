@@ -171,6 +171,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             State("session-description-input", "value"),
             State("file-data-store", "data"),
             State("wavelength-store", "data"),
+            State("analysis-results-store", "data"),
         ],
         prevent_initial_call=True,
     )
@@ -180,6 +181,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         description: str | None,
         file_data: dict[str, Any] | None,
         wavelength_data: dict[str, Any] | None,
+        analysis_results: dict[str, Any] | None,
     ) -> tuple[Any, int | None]:
         """
         Save current dashboard state to a session.
@@ -191,6 +193,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
             file_data: Dict mapping filenames to file data
             wavelength_data: Global wavelength settings with schema:
                 {"current_wavelength": float, "source_type": str}
+            analysis_results: Dict mapping filenames to analysis results
 
         Returns:
             Tuple of (feedback message, session ID)
@@ -251,7 +254,7 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                     )
 
                     # Save to FileStore via SessionManager
-                    mgr.add_file_to_session(
+                    file_obj = mgr.add_file_to_session(
                         session_id=session_id,
                         filename=filename,
                         wavelength=global_wavelength,
@@ -259,9 +262,57 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                     )
                     num_files += 1
 
+                    # Save analysis results for this file (Sprint 7)
+                    if analysis_results and filename in analysis_results:
+                        try:
+                            result_data = analysis_results[filename]
+
+                            # Extract parameters from analysis results
+                            # (these come from the Analysis tab UI)
+                            parameters = {
+                                "prominence": result_data.get("metadata", {}).get(
+                                    "prominence", 0.1
+                                ),
+                                "distance": result_data.get("metadata", {}).get(
+                                    "distance", 10
+                                ),
+                                "profile": result_data.get("metadata", {}).get(
+                                    "profile", "gaussian"
+                                ),
+                            }
+
+                            # Extract quality metrics
+                            quality_metrics = {
+                                "overall_r_squared": result_data.get(
+                                    "metadata", {}
+                                ).get("overall_r_squared", 0.0)
+                            }
+
+                            mgr.save_analysis_result(
+                                file_id=file_obj.id,
+                                analysis_type="peak_detection",
+                                result_data=result_data,
+                                parameters=parameters,
+                                quality_metrics=quality_metrics,
+                                analysis_version="robomage-gui-0.1.0",
+                            )
+                        except Exception as analysis_error:
+                            # Don't fail the entire save if analysis save fails
+                            print(
+                                f"⚠️ Warning: Could not save analysis for {filename}: {analysis_error}"
+                            )
+
             # Build success message
+            num_analysis = 0
+            if analysis_results:
+                num_analysis = len(analysis_results)
+
             if num_files > 0:
-                message = f"Session '{session_name}' saved successfully with {num_files} file{'s' if num_files != 1 else ''}!"
+                base_msg = f"Session '{session_name}' saved successfully with {num_files} file{'s' if num_files != 1 else ''}"
+                if num_analysis > 0:
+                    message = f"{base_msg} and {num_analysis} analysis result{'s' if num_analysis != 1 else ''}!"
+                else:
+                    message = f"{base_msg}!"
             else:
                 message = f"Empty session '{session_name}' created successfully. You can add files via upload or workflow execution."
 
