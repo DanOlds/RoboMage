@@ -14,6 +14,8 @@ import logging
 import sys
 from pathlib import Path
 
+import pytest
+
 # Setup logging to see debug messages
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -35,6 +37,7 @@ from workflow_engine.models import (
 )
 
 
+@pytest.mark.asyncio
 async def test_normalize_workflow():
     """Test workflow with normalize node."""
 

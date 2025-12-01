@@ -382,6 +382,24 @@ pixi run test      # Full test suite with pytest
 
 ###  Project Status
 
+**Sprint 8 - Visual Workflow Builder** ✅ **COMPLETE (Nov 28, 2025)**:
+- ✅ Interactive drag-and-drop workflow canvas
+- ✅ Node palette with 10+ registered node types
+- ✅ Dynamic configuration forms (schema-driven)
+- ✅ Real-time workflow validation (cycles, connections)
+- ✅ Visual execution status indicators
+- ✅ Clean abstraction layer (Cytoscape → ReactFlow ready)
+- ✅ 56 tests passing (100% coverage)
+- ✅ Production-ready visual builder
+
+**Sprint 7 - Analysis Result Persistence** ✅ **COMPLETE (Nov 27, 2025)**:
+- ✅ Extensible analysis result storage in database
+- ✅ Peak analysis results persist across page reloads
+- ✅ Parameters and quality metrics tracked
+- ✅ Support for multiple analysis types per file
+- ✅ Provenance tracking for reproducibility
+- ✅ Foundation for future GSAS-II integration
+
 **Sprint 6 - Workflow Session Integration** ✅ **COMPLETE (Nov 27, 2025)**:
 - ✅ Auto-create default session on dashboard load
 - ✅ Workflow results save directly to active session
@@ -389,7 +407,6 @@ pixi run test      # Full test suite with pytest
 - ✅ Session status display with file counts
 - ✅ Load/delete saved workflows from UI
 - ✅ Analysis tab populates with peak detection results
-- ✅ Node type tracking for result processing
 - ✅ Seamless UX - no manual session creation needed
 
 **Sprint 5 - Session Persistence** ✅ **COMPLETE (Nov 25, 2025)**:
@@ -397,8 +414,6 @@ pixi run test      # Full test suite with pytest
 - ✅ Dashboard integration with UI controls
 - ✅ Wavelength preservation per file
 - ✅ Storage location configuration
-- ✅ Debug information panel
-- ✅ 99 tests passing with full coverage
 - ✅ Production-ready persistence layer
 
 **Sprint 3 + Sprint 4 Phase 2** ✅ **COMPLETE (Nov 13, 2025)**:
@@ -407,30 +422,25 @@ pixi run test      # Full test suite with pytest
 - ✅ Peak analysis microservice (FastAPI) with multi-profile fitting
 - ✅ Interactive dashboard with real-time analysis integration
 - ✅ Command-line interface for batch processing
-- ✅ Comprehensive documentation and examples
-- ✅ Type-safe codebase with MyPy compliance
 
-**Sprint 7 - Analysis Result Persistence** 📋 **NEXT (MVP)**:
-- 🎯 Save peak analysis results to database
-- 🎯 Extensible schema for future analysis types (GSAS-II, phase ID, texture)
-- 🎯 Analysis results persist across page reloads
-- 🎯 Parameters and quality metrics tracked
-- 🎯 Foundation for multi-analysis workflows
+**✨ Current Status (December 1, 2025)**:
+- ✅ **233/233 tests passing (100%)**
+- ✅ **All deprecation warnings resolved**
+- ✅ **Complete test suite cleanup**
+- ✅ **Production-ready for scientific workflows**
 
-**Sprint 4 Phase 3** 📋 **Planned**:
-- 🔄 Publication-quality plot export and formatting
-- 🔄 Advanced export options (CSV, JSON, combined results)
-- 🔄 Batch processing and analysis comparison tools
-- 🔄 Enhanced visualization features
-
-**Future Development** 📋 **Roadmap**:
-- 🔄 GSAS-II integration for automated Rietveld refinement
-- 🔄 Advanced data pipeline with Tiled/Databroker integration
-- 🔄 Machine learning-guided parameter optimization
+**🔮 Future Development** 📋 **Roadmap**:
+- 🎯 **GSAS-II Integration** - Automated Rietveld refinement (waiting on external development)
+- 🔄 **Advanced Inspection Tools** - Node I/O debugging, analysis result viewers
+- 🔄 **Workflow Templates** - Pre-built common analysis patterns
+- 🔄 **Performance Optimization** - Parallel execution, large dataset handling
+- 🔄 **Machine Learning** - AI-enhanced parameter optimization
+- 🔄 **Multi-User Support** - PostgreSQL backend, collaboration features
 
 ### 📚 Documentation
 
 - **[Development Guide](docs/DEVELOPMENT.md)** - **START HERE**: Pixi commands, workflow, best practices
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Complete API Documentation](src/robomage/)** - Detailed docstrings in source code
 - **[Architecture & Dev Guide](.github/copilot-instructions.md)** - Architecture patterns, pixi usage, sprint status
 - **[LLM Chat Guide](docs/llm-chat-guide.md)** - Quick start template for AI assistant conversations

@@ -4334,7 +4334,7 @@ packages:
 - pypi: ./
   name: robomage
   version: 0.0.1
-  sha256: 78e5496ce3dabdae7e929684f92c7f3e2dd25b70e3dadceb3bb86ad30d672553
+  sha256: 601373d98e0329dd3d2f52c4538939c0c03c752ef9ae79b25062a1c9c3e8d408
   requires_dist:
   - pydantic>=2
   - numpy

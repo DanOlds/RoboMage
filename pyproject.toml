@@ -91,3 +91,19 @@ module = [
     "robomage.dashboard.*",
 ]
 ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Exclude archived test scripts from discovery
+norecursedirs = ["archive", ".git", ".pixi", "__pycache__", "*.egg-info"]
+# Async test support
+asyncio_mode = "auto"
+# Show warnings
+filterwarnings = [
+    "default",
+    # Ignore specific deprecation warnings from external libraries
+    "ignore::DeprecationWarning:dash._callback",
+]

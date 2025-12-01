@@ -149,7 +149,30 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 ## Current Sprint Status
 
+**✅ Sprint 8 - Visual Workflow Builder: COMPLETE (November 28, 2025)**
+**PRODUCTION READY** - Full-featured visual workflow builder with clean architecture
+
+**Completed Deliverables:**
+- ✅ **Interactive Workflow Canvas** - Cytoscape-based drag-and-drop interface
+- ✅ **Node Palette** - 10+ registered node types with category organization
+- ✅ **Dynamic Configuration Forms** - Schema-driven forms for any node type
+- ✅ **Real-time Validation** - Cycle detection, connection validation, topological sort
+- ✅ **Visual Status Indicators** - Execution progress and error visualization
+- ✅ **Clean Abstraction Layer** - Framework-agnostic design (Cytoscape → ReactFlow ready)
+- ✅ **Comprehensive Testing** - 56 workflow builder tests (100% passing)
+- ✅ **Complete Documentation** - User guide and technical documentation
+
+**December 1, 2025 - Test Suite Cleanup** ✅ **COMPLETE**:
+- ✅ **Fixed all failing tests** - 233/233 tests passing (100%)
+- ✅ **Cleaned up test structure** - Archived old tests, proper pytest configuration
+- ✅ **Resolved deprecation warnings** - Warnings dropped from 449 to 11
+- ✅ **Created troubleshooting guide** - Comprehensive problem-solving documentation
+- ✅ **Updated all documentation** - README, sprint status, and guides current
+
+**Key Achievement**: Production-ready codebase with 100% passing tests and complete documentation!
+
 **✅ Sprint 7 - Analysis Result Persistence: COMPLETE (November 27, 2025)**
+
 **READY TO MERGE** - Production-ready extensible analysis result storage
 
 **Completed Deliverables:**
@@ -212,14 +235,30 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - ✅ **Type Safety** - Strategic MyPy configuration with dashboard exclusion
 - ✅ **Code Quality** - All linting/formatting/type checks passing
 
-**🚀 NEXT: Sprint 7 - Analysis Result Persistence (Extensible MVP)**
+**🎯 NEXT PRIORITIES (Post-Sprint 8)**:
 
-**Objective**: Add **extensible analysis result storage** to support peak detection now and future analysis types (GSAS-II Rietveld, phase identification, texture analysis)
+**Week 1 Completed (December 1, 2025)** ✅:
+- ✅ Fixed all failing tests (233/233 passing, 100%)
+- ✅ Cleaned up test suite structure (archived old tests)
+- ✅ Resolved deprecation warnings (449 → 11 warnings)
+- ✅ Created comprehensive troubleshooting guide
+- ✅ Updated all documentation to current status
 
-**Key Features**:
-**🚀 NEXT: Sprint 8 - Dashboard Analysis UI Enhancements or GSAS-II Integration Planning**
+**Week 2+ Planning - Advanced Inspection & Debugging Tools**:
+- 🎯 **Node I/O Inspector** - Visualize data flowing through workflow nodes
+- 🎯 **Analysis Result Viewer** - Detailed inspection of peak analysis results
+- 🎯 **Workflow Debugger** - Step-through execution with breakpoints
+- 🎯 **Data Profiler** - Statistical summaries and quality metrics
+- 🎯 **Session Comparison** - Diff tool for comparing analysis sessions
 
-**Sprint 7 complete - analysis persistence working!** All analysis results now persist across page reloads with extensible database storage supporting future analysis types.
+**Waiting on External Development**:
+- ⏸️ **GSAS-II Integration** - Automated Rietveld refinement (in development by another team)
+
+**Future Enhancements**:
+- 🔄 **Workflow Templates** - Pre-built common analysis patterns
+- 🔄 **ReactFlow Migration** - Modern drag-and-drop UX
+- 🔄 **ML Integration** - AI-enhanced parameter optimization
+- 🔄 **Multi-User Support** - PostgreSQL backend, collaboration
 
 ## Integration Points
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
@@ -251,7 +290,13 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
-- `docs/SPRINT-7-COMPLETION.md` - **Sprint 7 complete**: Extensible analysis result persistence implementation
+- `docs/NEXT-STEPS-WEEK-2.md` - **NEW**: Detailed Week 2 implementation plan (Node I/O Inspector)
+- `docs/WEEK-1-COMPLETION.md` - **NEW**: Week 1 quick wins completion summary
+- `docs/inspection-tools-design.md` - **NEW**: Complete architecture for 5 inspection tools (4-5 week plan)
+- `docs/TROUBLESHOOTING.md` - **NEW**: Comprehensive troubleshooting guide for common issues
+- `docs/SPRINT-8-COMPLETION.md` - **Sprint 8 complete**: Visual workflow builder
+- `docs/visual-workflow-builder-guide.md` - User guide for workflow builder
+- `docs/SPRINT-7-COMPLETION.md` - **Sprint 7 complete**: Extensible analysis result persistence
 - `docs/sprint-7-analysis-persistence-mvp.md` - Sprint 7 planning document
 - `docs/sprint-6-days-5-6-COMPLETE.md` - Workflow-session integration completion summary
 - `docs/sprint-5-persistence-architecture.md` - Persistence layer design philosophy

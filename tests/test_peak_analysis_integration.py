@@ -170,14 +170,14 @@ class TestPeakAnalysisService:
 
         # Start service
         process = subprocess.Popen(
-            ["python", str(main_py), "--port", "8002"],
+            ["python", str(main_py), "--port", "8001"],
             cwd=str(services_dir),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
 
         # Wait for service to start
-        client = PeakAnalysisClient("http://127.0.0.1:8002")
+        client = PeakAnalysisClient("http://127.0.0.1:8001")
         if not client.wait_for_service(max_wait=15.0):
             process.terminate()
             pytest.skip("Service failed to start")
@@ -194,7 +194,7 @@ class TestPeakAnalysisService:
 
     def test_service_health(self, service_process):
         """Test service health endpoint."""
-        client = PeakAnalysisClient("http://127.0.0.1:8002")
+        client = PeakAnalysisClient("http://127.0.0.1:8001")
 
         health = client.health_check()
         assert health["status"] == "healthy"
@@ -204,7 +204,7 @@ class TestPeakAnalysisService:
 
     def test_service_analysis(self, service_process, sample_diffraction_data):
         """Test service analysis endpoint."""
-        client = PeakAnalysisClient("http://127.0.0.1:8002")
+        client = PeakAnalysisClient("http://127.0.0.1:8001")
 
         # Perform analysis
         result = client.analyze_peaks(sample_diffraction_data)
