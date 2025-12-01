@@ -1,0 +1,198 @@
+{
+  "metadata": {
+    "name": "Custom Nodes Example Workflow",
+    "description": "Complete analysis pipeline demonstrating template, background subtraction, and peak width analysis nodes",
+    "author": "RoboMage Team",
+    "created": "2025-12-01",
+    "version": "1.0"
+  },
+  "nodes": [
+    {
+      "id": "load_1",
+      "type": "load_files",
+      "config": {
+        "directory": "examples",
+        "pattern": "pdf_SRM_660b_q.chi",
+        "wavelength": 0.1665
+      },
+      "position": {"x": 100, "y": 100},
+      "comment": "Load standard reference material (NIST SRM 660b LaB6)"
+    },
+    {
+      "id": "template_1",
+      "type": "template_node",
+      "config": {
+        "scale_factor": 1.0,
+        "description": "Pass-through with monitoring"
+      },
+      "position": {"x": 300, "y": 100},
+      "comment": "Demonstrates template node - no modification in this example"
+    },
+    {
+      "id": "bg_subtract_1",
+      "type": "background_subtraction",
+      "config": {
+        "method": "linear",
+        "q_fit_min": 1.0,
+        "q_fit_max": 2.0,
+        "return_backgrounds": true
+      },
+      "position": {"x": 500, "y": 100},
+      "comment": "Subtract linear background fitted in Q=[1.0, 2.0] range"
+    },
+    {
+      "id": "peak_analysis_1",
+      "type": "peak_analysis",
+      "config": {
+        "profile_type": "gaussian",
+        "prominence": 0.1,
+        "distance": 5,
+        "service_url": "http://localhost:8001"
+      },
+      "position": {"x": 700, "y": 100},
+      "comment": "Detect and fit peaks using peak analysis microservice"
+    },
+    {
+      "id": "width_analysis_1",
+      "type": "peak_width_analysis",
+      "config": {
+        "fit_profile": "gaussian",
+        "window_size": 0.5,
+        "min_height": 100.0,
+        "classify_widths": true,
+        "narrow_threshold": 0.1,
+        "broad_threshold": 0.3
+      },
+      "position": {"x": 900, "y": 100},
+      "comment": "Analyze peak widths (FWHM) and classify peaks"
+    },
+    {
+      "id": "export_peaks_1",
+      "type": "export_csv",
+      "config": {
+        "output_path": "test_output/custom_nodes_peaks.csv",
+        "format": "peaks"
+      },
+      "position": {"x": 1100, "y": 50},
+      "comment": "Export peak positions and parameters to CSV"
+    },
+    {
+      "id": "export_widths_1",
+      "type": "export_json",
+      "config": {
+        "output_path": "test_output/custom_nodes_widths.json",
+        "pretty": true
+      },
+      "position": {"x": 1100, "y": 150},
+      "comment": "Export width analysis results to JSON"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "load_1",
+      "target": "template_1",
+      "sourceHandle": "output",
+      "targetHandle": "input",
+      "comment": "Load → Template"
+    },
+    {
+      "id": "e2",
+      "source": "template_1",
+      "target": "bg_subtract_1",
+      "sourceHandle": "output",
+      "targetHandle": "input",
+      "comment": "Template → Background Subtraction"
+    },
+    {
+      "id": "e3",
+      "source": "bg_subtract_1",
+      "target": "peak_analysis_1",
+      "sourceHandle": "output",
+      "targetHandle": "input",
+      "comment": "Background Subtraction → Peak Analysis"
+    },
+    {
+      "id": "e4_files",
+      "source": "bg_subtract_1",
+      "target": "width_analysis_1",
+      "sourceHandle": "output",
+      "targetHandle": "files",
+      "comment": "Pass corrected files to width analysis"
+    },
+    {
+      "id": "e4_results",
+      "source": "peak_analysis_1",
+      "target": "width_analysis_1",
+      "sourceHandle": "output",
+      "targetHandle": "peak_results",
+      "comment": "Pass peak results to width analysis"
+    },
+    {
+      "id": "e5",
+      "source": "peak_analysis_1",
+      "target": "export_peaks_1",
+      "sourceHandle": "output",
+      "targetHandle": "input",
+      "comment": "Peak Analysis → Export Peaks CSV"
+    },
+    {
+      "id": "e6",
+      "source": "width_analysis_1",
+      "target": "export_widths_1",
+      "sourceHandle": "output",
+      "targetHandle": "input",
+      "comment": "Width Analysis → Export Widths JSON"
+    }
+  ],
+  "execution_notes": [
+    "This workflow demonstrates a complete analysis pipeline using custom nodes:",
+    "",
+    "1. Load Files: Load NIST SRM 660b LaB6 standard reference material",
+    "2. Template Node: Pass-through demonstration (scale_factor=1.0)",
+    "3. Background Subtraction: Remove linear background fitted in Q=[1.0, 2.0]",
+    "4. Peak Analysis: Detect and fit peaks with Gaussian profiles",
+    "5. Width Analysis: Calculate FWHM and classify peaks (narrow/medium/broad)",
+    "6. Export: Save results to both CSV (peaks) and JSON (widths)",
+    "",
+    "Prerequisites:",
+    "- Peak analysis service running: pixi run python services/peak_analysis/main.py --port 8001",
+    "- scipy installed for width analysis: pixi add scipy",
+    "",
+    "Expected outputs:",
+    "- test_output/custom_nodes_peaks.csv: Peak positions, heights, widths",
+    "- test_output/custom_nodes_widths.json: FWHM analysis and statistics",
+    "",
+    "This workflow demonstrates:",
+    "- Linear data flow (load → process → analyze → export)",
+    "- Multiple outputs from single node (files + results)",
+    "- Custom node integration with built-in nodes",
+    "- Service-based analysis (peak_analysis microservice)",
+    "- Multiple export formats (CSV + JSON)"
+  ],
+  "alternative_configurations": {
+    "polynomial_background": {
+      "node": "bg_subtract_1",
+      "config": {
+        "method": "polynomial",
+        "polynomial_degree": 3,
+        "q_fit_min": 1.0,
+        "q_fit_max": 8.0
+      }
+    },
+    "lorentzian_peaks": {
+      "node": "peak_analysis_1",
+      "config": {
+        "profile_type": "lorentzian",
+        "prominence": 0.15
+      }
+    },
+    "voigt_widths": {
+      "node": "width_analysis_1",
+      "config": {
+        "fit_profile": "voigt",
+        "window_size": 0.8
+      }
+    }
+  }
+}
