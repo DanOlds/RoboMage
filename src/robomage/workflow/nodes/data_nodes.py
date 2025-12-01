@@ -10,10 +10,32 @@ from pathlib import Path
 from typing import Any
 
 import robomage
+from robomage.workflow.nodes.registry import register_node
 
 logger = logging.getLogger(__name__)
 
 
+@register_node(
+    type="load_files",
+    category="data",
+    name="Load Files",
+    description="Load diffraction files from directory",
+    icon="fas fa-folder-open",
+    inputs=[],
+    outputs=[{"name": "output", "type": "DiffractionData[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "directory": {"type": "string", "default": "."},
+            "pattern": {"type": "string", "default": "*.chi"},
+            "wavelength": {
+                "type": "number",
+                "description": "Optional wavelength override (Angstroms)",
+            },
+        },
+        "required": ["directory", "pattern"],
+    },
+)
 async def load_files_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> list:
@@ -73,6 +95,22 @@ async def load_files_handler(
     return loaded_files
 
 
+@register_node(
+    type="filter_q_range",
+    category="transform",
+    name="Filter Q-Range",
+    description="Filter data by Q-space range",
+    icon="fas fa-filter",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "DiffractionData[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "q_min": {"type": "number", "default": 0},
+            "q_max": {"type": "number", "default": 20},
+        },
+    },
+)
 async def filter_q_range_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> list:
@@ -120,6 +158,25 @@ async def filter_q_range_handler(
     return filtered
 
 
+@register_node(
+    type="normalize",
+    category="transform",
+    name="Normalize",
+    description="Normalize intensity values",
+    icon="fas fa-balance-scale",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "DiffractionData[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "method": {
+                "type": "string",
+                "enum": ["max", "area", "zscore"],
+                "default": "max",
+            }
+        },
+    },
+)
 async def normalize_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> list:

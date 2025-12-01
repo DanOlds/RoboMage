@@ -446,96 +446,187 @@ async def process_diffraction_handler(config, inputs, context):
 
 ## Integration
 
-### Registering Your Node
+### Registering Your Node (Plugin System)
 
-Nodes are registered with the workflow orchestrator at runtime:
+**NEW**: RoboMage uses an automatic plugin registration system. Simply add the `@register_node()` decorator to your handler function - no need to modify service code!
+
+#### Quick Start: 3 Steps
+
+1. **Create your node file** in `src/robomage/workflow/nodes/custom/`
+2. **Add the decorator** to your handler function
+3. **Restart the workflow service** - your node appears in the dashboard!
+
+**✨ Automatic Integration**: Your custom node will:
+- ✅ Appear in the dashboard workflow builder palette
+- ✅ Be recognized by the workflow validator (no "unknown type" errors)
+- ✅ Show up in the `/node-types` API endpoint
+- ✅ Generate configuration forms from your JSON schema
+
+**No manual registration needed** - the plugin system discovers your node at service startup.
+
+#### Example: Complete Custom Node
 
 ```python
-# In services/workflow_engine/main.py or your custom orchestrator
+# File: src/robomage/workflow/nodes/custom/my_analysis.py
 
-from robomage.orchestrator import WorkflowOrchestrator
-from robomage.workflow.nodes.data_nodes import load_files_handler
-from my_custom_nodes import my_new_handler
+from robomage.workflow.nodes.registry import register_node
+from robomage.orchestrator import ExecutionContext
+from robomage.data.models import DiffractionData
 
-# Create orchestrator
-orchestrator = WorkflowOrchestrator()
-
-# Register built-in nodes
-orchestrator.register_node_handler("load_files", load_files_handler)
-
-# Register your custom node
-orchestrator.register_node_handler("my_new_node", my_new_handler)
+@register_node(
+    type="my_custom_analysis",           # Unique identifier
+    category="custom",                     # Category in palette (data/analysis/transform/output/custom)
+    name="My Custom Analysis",            # Display name in UI
+    description="Custom diffraction analysis algorithm",  # Tooltip text
+    icon="fas fa-star",                   # Font Awesome icon
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "AnalysisResults[]"}],
+    config_schema={                       # JSON Schema for config form
+        "type": "object",
+        "properties": {
+            "threshold": {
+                "type": "number",
+                "default": 0.5,
+                "minimum": 0,
+                "maximum": 1
+            },
+            "method": {
+                "type": "string",
+                "enum": ["fast", "accurate"],
+                "default": "fast"
+            }
+        }
+    }
+)
+async def my_custom_handler(config, inputs, context):
+    """
+    Perform custom analysis on diffraction data.
+    
+    Config Parameters:
+        - threshold: float (detection threshold, 0-1)
+        - method: str (analysis method: "fast" or "accurate")
+    
+    Inputs:
+        - input: List[DiffractionData]
+    
+    Outputs:
+        List of analysis result dictionaries
+    """
+    threshold = config.get("threshold", 0.5)
+    method = config.get("method", "fast")
+    
+    files = inputs.get("input", [])
+    if not files:
+        raise ValueError("No input files provided")
+    
+    results = []
+    for file in files:
+        # Your custom analysis logic here
+        result = {"filename": file.filename, "value": 42.0}
+        results.append(result)
+    
+    return results
 ```
+
+That's it! The node automatically appears in the dashboard's Workflow Builder palette under the "Custom" category.
+
+### Decorator Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | `str` | ✅ Yes | Unique node type identifier (e.g., `"my_node"`) |
+| `category` | `str` | ✅ Yes | Palette category: `"data"`, `"analysis"`, `"transform"`, `"output"`, `"custom"` |
+| `name` | `str` | ✅ Yes | Display name shown in UI |
+| `description` | `str` | ✅ Yes | Brief description (shows as tooltip) |
+| `icon` | `str` | No | Font Awesome class (default: `"fas fa-cube"`) |
+| `inputs` | `list[dict]` | No | Input specifications |
+| `outputs` | `list[dict]` | No | Output specifications |
+| `config_schema` | `dict` | No | JSON Schema for configuration form |
+
+### Configuration Schema
+
+The `config_schema` defines the configuration form in the dashboard. Use JSON Schema:
+
+```python
+config_schema={
+    "type": "object",
+    "properties": {
+        "my_param": {
+            "type": "number",          # number, string, integer, boolean, array
+            "default": 0.5,            # Default value
+            "minimum": 0,              # Optional: min value (numbers)
+            "maximum": 1,              # Optional: max value (numbers)
+            "description": "Help text" # Optional: field description
+        },
+        "method": {
+            "type": "string",
+            "enum": ["opt1", "opt2"],  # Creates dropdown menu
+            "default": "opt1"
+        },
+        "enabled": {
+            "type": "boolean",
+            "default": true
+        }
+    }
+}
+```
+
+The dashboard automatically generates a form from this schema with:
+- Number inputs with min/max validation
+- Dropdowns for enum fields
+- Checkboxes for booleans
+- Text inputs for strings
+- Help text from descriptions
 
 ### Making Nodes Visible in Workflow Builder
 
-The visual workflow builder auto-discovers registered nodes. To make your node user-friendly:
+Nodes with the `@register_node()` decorator are **automatically discovered** when the workflow service starts. The visual workflow builder fetches the node list from the service's `/node-types` endpoint.
 
-1. **Provide clear docstring** - Used as node description in UI:
+To make your node user-friendly:
 
-```python
-async def my_handler(config, inputs, context):
-    """
-    Perform custom peak width analysis.
-    
-    Calculates FWHM for detected peaks using Gaussian fitting.
-    """
+1. **Use descriptive names**: `"Chebyshev Background"` not `"CB"`
+2. **Provide helpful descriptions**: Tell users what the node does
+3. **Choose appropriate icons**: See [Font Awesome](https://fontawesome.com/icons) for available icons
+4. **Document config parameters**: Add clear descriptions in the schema
+5. **Use appropriate category**: Helps users find your node quickly
+
+### File Organization
+
+```
+src/robomage/workflow/nodes/
+├── __init__.py                   # Built-in nodes module
+├── registry.py                   # Plugin registration system
+├── data_nodes.py                 # Built-in data nodes
+├── analysis_nodes.py             # Built-in analysis nodes
+├── output_nodes.py               # Built-in output nodes
+└── custom/                       # 👈 Put your custom nodes here
+    ├── __init__.py
+    ├── README.md                 # Plugin system documentation
+    ├── my_analysis.py            # Your custom node
+    ├── background_fitting.py     # Another custom node
+    └── ...
 ```
 
-2. **Document configuration parameters** in docstring:
+**Important**: Custom nodes go in the `custom/` directory. They are auto-discovered on service startup.
+
+### Legacy Registration (Not Recommended)
+
+For backward compatibility or special cases, you can still manually register nodes:
 
 ```python
-async def my_handler(config, inputs, context):
-    """
-    Perform peak width analysis.
-    
-    Config Parameters:
-        - fit_profile: str (profile type: "gaussian", "lorentzian", "voigt")
-        - q_range: list[float] (optional Q-range [min, max])
-        - max_peaks: int (maximum peaks to analyze, default: 50)
-    
-    Inputs:
-        - input: List of DiffractionData objects
-    
-    Outputs:
-        List of dictionaries with FWHM analysis results
-    """
+from robomage.workflow.nodes.registry import register_node_handler
+
+register_node_handler(
+    type="my_node",
+    handler=my_handler_function,
+    category="custom",
+    name="My Node",
+    description="Does something",
+    # ... other parameters
+)
 ```
 
-3. **Use consistent naming**:
-   - Node type: `snake_case` (e.g., `peak_width_analysis`)
-   - Config parameters: `snake_case` (e.g., `fit_profile`)
-   - Input/output keys: `snake_case` (e.g., `peak_list`)
-
-### Node Discovery Patterns
-
-For organization, group related handlers in modules:
-
-```python
-# src/robomage/workflow/nodes/analysis_nodes.py
-
-async def peak_analysis_handler(...):
-    """Peak detection and fitting."""
-    pass
-
-async def peak_width_handler(...):
-    """Peak width (FWHM) analysis."""
-    pass
-
-async def phase_id_handler(...):
-    """Phase identification from peaks."""
-    pass
-```
-
-Then register all at once:
-
-```python
-from robomage.workflow.nodes import analysis_nodes
-
-orchestrator.register_node_handler("peak_analysis", analysis_nodes.peak_analysis_handler)
-orchestrator.register_node_handler("peak_width", analysis_nodes.peak_width_handler)
-orchestrator.register_node_handler("phase_id", analysis_nodes.phase_id_handler)
-```
+But the decorator approach is **strongly recommended** for simplicity and maintainability.
 
 ### Inspection Integration
 

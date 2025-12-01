@@ -67,172 +67,52 @@ orchestrator: WorkflowOrchestrator | None = None
 
 
 async def register_node_handlers(orch: WorkflowOrchestrator) -> None:
-    """Register all available node type handlers with the orchestrator."""
-    from src.robomage.workflow.nodes import analysis_nodes, data_nodes, output_nodes
-
-    # Data input/transform nodes
-    orch.register_node_handler("load_files", data_nodes.load_files_handler)
-    orch.register_node_handler("filter_q_range", data_nodes.filter_q_range_handler)
-    orch.register_node_handler("normalize", data_nodes.normalize_handler)
-
-    # Analysis nodes
-    orch.register_node_handler("peak_analysis", analysis_nodes.peak_analysis_handler)
-    orch.register_node_handler("statistics", analysis_nodes.statistics_handler)
-
-    # Output nodes
-    orch.register_node_handler("export_csv", output_nodes.export_csv_handler)
-    orch.register_node_handler("export_json", output_nodes.export_json_handler)
-    orch.register_node_handler("save_results", output_nodes.save_results_handler)
-    orch.register_node_handler("save_to_session", output_nodes.save_to_session_handler)
-
-    print(f"✅ Registered {len(orch.node_handlers)} node types")
+    """
+    Register all available node type handlers with the orchestrator.
+    
+    Uses the NodeRegistry auto-discovery system to find and register all nodes:
+    - Built-in nodes from robomage/workflow/nodes/
+    - Custom nodes from robomage/workflow/nodes/custom/
+    
+    No manual registration needed - just add @register_node decorator to your handler!
+    """
+    from robomage.workflow.nodes.registry import NodeRegistry
+    
+    # Auto-discover and register all nodes (built-in + custom)
+    NodeRegistry.discover_and_register_all()
+    
+    # Transfer all handlers from registry to orchestrator
+    for node_type, handler in NodeRegistry.get_all_handlers().items():
+        orch.register_node_handler(node_type, handler)
+    
+    print(f"✅ Registered {len(orch.node_handlers)} node types via NodeRegistry")
+    print(f"   Node types: {', '.join(sorted(orch.node_handlers.keys()))}")
 
 
 def get_registered_node_types() -> list[NodeTypeMetadata]:
-    """Return metadata for all registered node types for UI palette."""
+    """
+    Return metadata for all registered node types for UI palette.
+    
+    Retrieves metadata from the NodeRegistry which was populated by
+    @register_node decorators on handler functions.
+    """
+    from robomage.workflow.nodes.registry import NodeRegistry
+    
+    # Get metadata from registry and convert to API model
+    registry_metadata = NodeRegistry.get_all_metadata()
+    
     return [
-        # Data Input Nodes
         NodeTypeMetadata(
-            type="load_files",
-            category="data",
-            name="Load Files",
-            description="Load diffraction files from directory",
-            icon="fas fa-folder-open",
-            inputs=[],
-            outputs=[{"name": "output", "type": "DiffractionData[]"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "directory": {"type": "string", "default": "."},
-                    "pattern": {"type": "string", "default": "*.chi"},
-                    "wavelength": {
-                        "type": "number",
-                        "description": "Optional wavelength override",
-                    },
-                },
-                "required": ["directory", "pattern"],
-            },
-        ),
-        # Transform Nodes
-        NodeTypeMetadata(
-            type="filter_q_range",
-            category="transform",
-            name="Filter Q-Range",
-            description="Filter data by Q-space range",
-            icon="fas fa-filter",
-            inputs=[{"name": "input", "type": "DiffractionData[]"}],
-            outputs=[{"name": "output", "type": "DiffractionData[]"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "q_min": {"type": "number", "default": 0},
-                    "q_max": {"type": "number", "default": 20},
-                },
-            },
-        ),
-        NodeTypeMetadata(
-            type="normalize",
-            category="transform",
-            name="Normalize",
-            description="Normalize intensity values",
-            icon="fas fa-balance-scale",
-            inputs=[{"name": "input", "type": "DiffractionData[]"}],
-            outputs=[{"name": "output", "type": "DiffractionData[]"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "method": {
-                        "type": "string",
-                        "enum": ["max", "area", "zscore"],
-                        "default": "max",
-                    }
-                },
-            },
-        ),
-        # Analysis Nodes
-        NodeTypeMetadata(
-            type="peak_analysis",
-            category="analysis",
-            name="Peak Detection",
-            description="Detect and fit crystallographic peaks",
-            icon="fas fa-mountain",
-            inputs=[{"name": "input", "type": "DiffractionData[]"}],
-            outputs=[{"name": "output", "type": "PeakAnalysisResults[]"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "profile_type": {
-                        "type": "string",
-                        "enum": ["gaussian", "lorentzian", "voigt"],
-                        "default": "gaussian",
-                    },
-                    "prominence": {"type": "number", "default": 0.1},
-                    "distance": {"type": "number", "default": 5},
-                    "service_url": {
-                        "type": "string",
-                        "default": "http://localhost:8001",
-                    },
-                },
-            },
-        ),
-        NodeTypeMetadata(
-            type="statistics",
-            category="analysis",
-            name="Statistics",
-            description="Calculate statistical metrics",
-            icon="fas fa-chart-bar",
-            inputs=[{"name": "input", "type": "DiffractionData[]"}],
-            outputs=[{"name": "output", "type": "Statistics[]"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "metrics": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "default": ["mean", "std", "range"],
-                    }
-                },
-            },
-        ),
-        # Output Nodes
-        NodeTypeMetadata(
-            type="export_csv",
-            category="output",
-            name="Export CSV",
-            description="Export results to CSV file",
-            icon="fas fa-file-csv",
-            inputs=[{"name": "input", "type": "Any"}],
-            outputs=[{"name": "output", "type": "ExportInfo"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "output_path": {"type": "string", "default": "results.csv"},
-                    "format": {
-                        "type": "string",
-                        "enum": ["peaks", "statistics"],
-                        "default": "peaks",
-                    },
-                },
-                "required": ["output_path"],
-            },
-        ),
-        NodeTypeMetadata(
-            type="export_json",
-            category="output",
-            name="Export JSON",
-            description="Export results to JSON file",
-            icon="fas fa-file-code",
-            inputs=[{"name": "input", "type": "Any"}],
-            outputs=[{"name": "output", "type": "ExportInfo"}],
-            config_schema={
-                "type": "object",
-                "properties": {
-                    "output_path": {"type": "string", "default": "results.json"},
-                    "pretty": {"type": "boolean", "default": True},
-                },
-                "required": ["output_path"],
-            },
-        ),
+            type=meta.type,
+            category=meta.category,
+            name=meta.name,
+            description=meta.description,
+            icon=meta.icon,
+            inputs=meta.inputs,
+            outputs=meta.outputs,
+            config_schema=meta.config_schema,
+        )
+        for meta in registry_metadata
     ]
 
 

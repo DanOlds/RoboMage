@@ -1472,8 +1472,9 @@ def register_visual_workflow_callbacks(app):
         Output("workflow-validation-status", "children"),
         Input("current-workflow-data", "data"),
         Input("workflow-canvas", "elements"),
+        State("node-types-data", "data"),
     )
-    def validate_workflow(workflow_data, canvas_elements):
+    def validate_workflow(workflow_data, canvas_elements, node_types_data):
         """Validate workflow and show status."""
         if not workflow_data or not workflow_data.get("nodes"):
             return dbc.Alert(
@@ -1487,7 +1488,12 @@ def register_visual_workflow_callbacks(app):
 
         from robomage.dashboard.components import WorkflowValidator
 
-        is_valid, errors = WorkflowValidator.validate(workflow_data)
+        # Extract valid node types from service data
+        valid_node_types = None
+        if node_types_data and isinstance(node_types_data, list):
+            valid_node_types = {nt["type"] for nt in node_types_data if "type" in nt}
+
+        is_valid, errors = WorkflowValidator.validate(workflow_data, valid_node_types)
 
         if is_valid:
             return dbc.Alert(

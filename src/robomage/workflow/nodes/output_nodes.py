@@ -11,9 +11,32 @@ from csv import DictWriter
 from pathlib import Path
 from typing import Any
 
+from robomage.workflow.nodes.registry import register_node
+
 logger = logging.getLogger(__name__)
 
 
+@register_node(
+    type="export_csv",
+    category="output",
+    name="Export CSV",
+    description="Export results to CSV file",
+    icon="fas fa-file-csv",
+    inputs=[{"name": "input", "type": "Any[]"}],
+    outputs=[{"name": "output", "type": "ExportInfo"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "output_path": {"type": "string", "default": "workflow_output.csv"},
+            "format": {
+                "type": "string",
+                "enum": ["peaks", "statistics", "data"],
+                "default": "peaks",
+            },
+        },
+        "required": ["output_path"],
+    },
+)
 async def export_csv_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> dict:
@@ -101,6 +124,23 @@ async def export_csv_handler(
     }
 
 
+@register_node(
+    type="export_json",
+    category="output",
+    name="Export JSON",
+    description="Export results to JSON file",
+    icon="fas fa-file-code",
+    inputs=[{"name": "input", "type": "Any"}],
+    outputs=[{"name": "output", "type": "ExportInfo"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "output_path": {"type": "string", "default": "workflow_output.json"},
+            "pretty": {"type": "boolean", "default": True},
+        },
+        "required": ["output_path"],
+    },
+)
 async def export_json_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> dict:
@@ -140,6 +180,21 @@ async def export_json_handler(
     return {"output_file": str(output_file), "format": "json"}
 
 
+@register_node(
+    type="save_results",
+    category="output",
+    name="Save Results",
+    description="Save results to execution context",
+    icon="fas fa-save",
+    inputs=[{"name": "input", "type": "Any"}],
+    outputs=[{"name": "output", "type": "SaveInfo"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "key": {"type": "string", "default": "results"},
+        },
+    },
+)
 async def save_results_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> dict:
@@ -169,6 +224,24 @@ async def save_results_handler(
     return {"saved": True, "key": key, "data_type": type(data).__name__}
 
 
+@register_node(
+    type="save_to_session",
+    category="output",
+    name="Save to Session",
+    description="Save workflow results to dashboard session",
+    icon="fas fa-database",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "SessionInfo"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "session_name": {
+                "type": "string",
+                "description": "Session name (leave empty to use active session)",
+            },
+        },
+    },
+)
 async def save_to_session_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> dict:

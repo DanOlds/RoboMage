@@ -8,10 +8,36 @@ import logging
 from typing import Any
 
 from robomage.clients.peak_analysis_client import PeakAnalysisClient
+from robomage.workflow.nodes.registry import register_node
 
 logger = logging.getLogger(__name__)
 
 
+@register_node(
+    type="peak_analysis",
+    category="analysis",
+    name="Peak Detection",
+    description="Detect and fit crystallographic peaks",
+    icon="fas fa-mountain",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "PeakAnalysisResults[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "profile_type": {
+                "type": "string",
+                "enum": ["gaussian", "lorentzian", "voigt"],
+                "default": "gaussian",
+            },
+            "prominence": {"type": "number", "default": 0.1},
+            "distance": {"type": "number", "default": 5},
+            "service_url": {
+                "type": "string",
+                "default": "http://localhost:8001",
+            },
+        },
+    },
+)
 async def peak_analysis_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> list:
@@ -134,6 +160,25 @@ async def peak_analysis_handler(
     return results
 
 
+@register_node(
+    type="statistics",
+    category="analysis",
+    name="Statistics",
+    description="Calculate statistical metrics",
+    icon="fas fa-chart-bar",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "Statistics[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "metrics": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": ["mean", "std", "range"],
+            }
+        },
+    },
+)
 async def statistics_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
 ) -> list:

@@ -4,17 +4,36 @@
 
 ---
 
-## Basic Handler Template
+## Basic Handler Template (With Plugin Registration)
 
 ```python
+# File: src/robomage/workflow/nodes/custom/my_node.py
+
 import logging
 from typing import Any
 
 from robomage.orchestrator import ExecutionContext
+from robomage.workflow.nodes.registry import register_node
 
 logger = logging.getLogger(__name__)
 
 
+@register_node(
+    type="my_node",                    # Unique identifier
+    category="custom",                  # data/analysis/transform/output/custom
+    name="My Node",                    # Display name in UI
+    description="Brief description",   # Tooltip text
+    icon="fas fa-cube",                # Font Awesome icon
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "Results[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "param1": {"type": "string", "default": "value"},
+            "param2": {"type": "number", "default": 0.1}
+        }
+    }
+)
 async def my_node_handler(
     config: dict[str, Any],
     inputs: dict[str, Any],
@@ -75,6 +94,22 @@ async def my_node_handler(
 
 ---
 
+## Quick Start: 3 Steps to Add a Node
+
+1. **Create file**: `src/robomage/workflow/nodes/custom/my_node.py`
+2. **Add decorator**: Use `@register_node()` above your handler
+3. **Restart service**: `pixi run python services/workflow_engine/main.py --port 8002`
+
+**✨ Automatic Integration**: Your node will:
+- ✅ Appear in the dashboard workflow builder palette
+- ✅ Be recognized by the workflow validator (no "unknown type" errors)
+- ✅ Show up in `/node-types` API for service discovery
+- ✅ Generate configuration forms from your JSON schema
+
+**No manual registration in service code required!**
+
+---
+
 ## Common Imports Checklist
 
 ```python
@@ -82,6 +117,9 @@ async def my_node_handler(
 import logging
 from pathlib import Path
 from typing import Any
+
+# RoboMage plugin system
+from robomage.workflow.nodes.registry import register_node  # ⭐ Required for auto-discovery
 
 # RoboMage core
 from robomage.orchestrator import ExecutionContext
@@ -91,12 +129,75 @@ from robomage.data.models import DiffractionData
 import numpy as np
 
 # Optional: For external service calls
-import httpx  # or: from robomage.clients.peak_analysis_client import PeakAnalysisClient
-
-# Optional: For analysis
-from scipy import signal, optimize
+import httpx
 
 logger = logging.getLogger(__name__)
+```
+
+---
+
+## Decorator Configuration Examples
+
+### Minimal Node
+
+```python
+@register_node(
+    type="simple_node",
+    category="custom",
+    name="Simple Node",
+    description="Does something simple"
+)
+async def simple_handler(config, inputs, context):
+    return inputs.get("input", [])
+```
+
+### Node with Full Configuration
+
+```python
+@register_node(
+    type="advanced_node",
+    category="analysis",
+    name="Advanced Analysis",
+    description="Performs advanced diffraction analysis",
+    icon="fas fa-brain",
+    inputs=[
+        {"name": "input", "type": "DiffractionData[]"},
+        {"name": "reference", "type": "DiffractionData"}  # Optional second input
+    ],
+    outputs=[
+        {"name": "output", "type": "AnalysisResults[]"}
+    ],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "method": {
+                "type": "string",
+                "enum": ["fast", "accurate", "balanced"],
+                "default": "balanced"
+            },
+            "threshold": {
+                "type": "number",
+                "default": 0.5,
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Detection threshold (0-1)"
+            },
+            "iterations": {
+                "type": "integer",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 1000
+            },
+            "enabled": {
+                "type": "boolean",
+                "default": true
+            }
+        }
+    }
+)
+async def advanced_handler(config, inputs, context):
+    # Implementation here
+    pass
 ```
 
 ---
@@ -550,53 +651,57 @@ async def test_config_defaults(sample_diffraction):
 
 ---
 
-## Registration Code
+## Registration (Automatic via Plugin System)
 
-### In Workflow Service
+### Location
 
-```python
-# services/workflow_engine/main.py
+Place your node file in: **`src/robomage/workflow/nodes/custom/`**
 
-from robomage.orchestrator import WorkflowOrchestrator
-from robomage.workflow.nodes.data_nodes import load_files_handler
-from robomage.workflow.nodes.analysis_nodes import peak_analysis_handler
-from my_custom_nodes import my_new_handler
+### File Structure
 
-# Create orchestrator
-orchestrator = WorkflowOrchestrator()
-
-# Register handlers
-orchestrator.register_node_handler("load_files", load_files_handler)
-orchestrator.register_node_handler("peak_analysis", peak_analysis_handler)
-orchestrator.register_node_handler("my_new_node", my_new_handler)
+```
+src/robomage/workflow/nodes/custom/
+├── __init__.py                      # Auto-loaded by registry
+├── README.md                        # Plugin documentation
+├── my_analysis.py                   # Your custom node ⭐
+├── background_subtraction.py        # Another custom node
+└── advanced_fitting.py              # More custom nodes
 ```
 
-### In Custom Script
+### Auto-Discovery
+
+1. **Create file** with `@register_node()` decorator
+2. **Restart workflow service**: Service auto-discovers all `.py` files in `custom/`
+3. **Node appears** in dashboard palette immediately
+
+**No manual registration needed!** The decorator does everything.
+
+### Manual Registration (Legacy)
+
+If you can't use the decorator (backward compatibility):
 
 ```python
-# custom_workflow.py
+from robomage.workflow.nodes.registry import register_node_handler
 
-import asyncio
-from robomage.orchestrator import WorkflowOrchestrator
-from my_nodes import my_handler
-
-async def main():
-    orch = WorkflowOrchestrator()
-    orch.register_node_handler("my_node", my_handler)
-    
-    workflow = {
-        "nodes": [
-            {"id": "node1", "type": "my_node", "config": {"param": "value"}}
-        ],
-        "edges": []
+register_node_handler(
+    type="my_node",
+    handler=my_handler_function,
+    category="custom",
+    name="My Node",
+    description="Does something",
+    icon="fas fa-cube",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "Results[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "param": {"type": "number", "default": 0.5}
+        }
     }
-    
-    result = await orch.execute_workflow(workflow)
-    print(result)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+)
 ```
+
+But **use the decorator** - it's simpler and more maintainable.
 
 ---
 
@@ -655,9 +760,17 @@ if __name__ == "__main__":
 ## See Also
 
 - **[Node Development Guide](node-development-guide.md)** - Complete documentation
-- **[Examples](../examples/custom_nodes/)** - Working example nodes
+- **[Custom Nodes README](../src/robomage/workflow/nodes/custom/README.md)** - Plugin system guide
+- **[Examples](../examples/custom_nodes/)** - Reference implementations
 - **[Existing Nodes](../src/robomage/workflow/nodes/)** - Production reference code
+- **[Registry Source](../src/robomage/workflow/nodes/registry.py)** - Plugin system implementation
 
 ---
 
-**Quick Start**: Copy the basic handler template, implement your logic in the `# TODO` section, test with the testing template, and register your node. That's it!
+**Quick Start**: 
+1. Create `src/robomage/workflow/nodes/custom/my_node.py`
+2. Add `@register_node()` decorator to your handler
+3. Restart workflow service
+
+Your node appears in the dashboard automatically - no service code modification needed!
+

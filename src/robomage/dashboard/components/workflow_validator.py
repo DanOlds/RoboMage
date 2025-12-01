@@ -37,12 +37,15 @@ class WorkflowValidator:
     """
 
     @staticmethod
-    def validate(workflow: dict[str, Any]) -> tuple[bool, list[str]]:
+    def validate(
+        workflow: dict[str, Any], valid_node_types: set[str] | None = None
+    ) -> tuple[bool, list[str]]:
         """
         Validate a workflow definition.
 
         Args:
             workflow: Workflow definition dict with 'nodes' and 'edges' keys
+            valid_node_types: Optional set of valid node types. If None, uses default set.
 
         Returns:
             Tuple of (is_valid, list_of_errors)
@@ -80,7 +83,7 @@ class WorkflowValidator:
         errors.extend(edge_errors)
 
         # Check for missing/invalid node types
-        type_errors = WorkflowValidator._check_node_types(workflow)
+        type_errors = WorkflowValidator._check_node_types(workflow, valid_node_types)
         errors.extend(type_errors)
 
         # Check for missing required configuration
@@ -203,12 +206,15 @@ class WorkflowValidator:
         return errors
 
     @staticmethod
-    def _check_node_types(workflow: dict[str, Any]) -> list[str]:
+    def _check_node_types(
+        workflow: dict[str, Any], valid_node_types: set[str] | None = None
+    ) -> list[str]:
         """
         Check that all nodes have valid types.
 
         Args:
             workflow: Workflow definition dict
+            valid_node_types: Optional set of valid node types. If None, uses default set.
 
         Returns:
             List of error messages for nodes with missing/invalid types
@@ -216,19 +222,22 @@ class WorkflowValidator:
         errors = []
         nodes = workflow.get("nodes", [])
 
-        # Known valid node types (can be extended)
-        valid_types = {
-            "load_files",
-            "load_session",
-            "filter_q_range",
-            "normalize",
-            "peak_analysis",
-            "statistics",
-            "export_csv",
-            "export_json",
-            "plot_results",
-            "save_to_session",
-        }
+        # Use provided valid types or fall back to default set
+        if valid_node_types is None:
+            valid_types = {
+                "load_files",
+                "load_session",
+                "filter_q_range",
+                "normalize",
+                "peak_analysis",
+                "statistics",
+                "export_csv",
+                "export_json",
+                "plot_results",
+                "save_to_session",
+            }
+        else:
+            valid_types = valid_node_types
 
         for node in nodes:
             node_id = node.get("id", "unknown")
