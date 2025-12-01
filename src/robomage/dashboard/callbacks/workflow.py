@@ -219,7 +219,20 @@ def register_workflow_management_callbacks(app):
     )
     def toggle_load_workflow_modal(load_clicks, cancel_clicks, is_open):
         """Toggle load workflow modal."""
-        return not is_open
+        ctx = callback_context
+        if not ctx.triggered:
+            raise PreventUpdate
+
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        if button_id == "load-workflow-btn":
+            # Open modal
+            return True
+        elif button_id == "load-workflow-modal-cancel":
+            # Close modal
+            return False
+
+        raise PreventUpdate
 
     # Populate Load Workflow Modal with saved workflows
     @app.callback(
@@ -321,6 +334,10 @@ def register_workflow_management_callbacks(app):
         if not ctx.triggered:
             raise PreventUpdate
 
+        # Check if any button was actually clicked (not just rendered)
+        if not any(n_clicks_list) or all(clicks is None for clicks in n_clicks_list):
+            raise PreventUpdate
+
         # Find which button was clicked
         triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if triggered_id == "":
@@ -384,7 +401,20 @@ def register_workflow_management_callbacks(app):
     )
     def toggle_save_workflow_modal(save_clicks, cancel_clicks, confirm_clicks, is_open):
         """Toggle save workflow modal."""
-        return not is_open
+        ctx = callback_context
+        if not ctx.triggered:
+            raise PreventUpdate
+
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        if button_id == "save-workflow-btn":
+            # Open modal
+            return True
+        elif button_id in ["save-workflow-modal-cancel", "save-workflow-modal-confirm"]:
+            # Close modal
+            return False
+
+        raise PreventUpdate
 
     # Populate save modal with current workflow metadata
     @app.callback(
