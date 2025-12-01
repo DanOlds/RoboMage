@@ -20,7 +20,6 @@ from datetime import datetime
 import pytest
 
 from robomage.persistence.api import SessionManager
-from robomage.persistence.models import NodeInspection
 
 
 @pytest.fixture(scope="function")

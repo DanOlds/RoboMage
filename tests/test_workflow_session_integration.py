@@ -163,11 +163,11 @@ async def test_workflow_to_session_integration(session_manager, test_session, tm
         sys.path.insert(0, str(services_path))
 
     from workflow_engine.models import (  # type: ignore
-        WorkflowDefinition,
-        WorkflowNode,
-        WorkflowEdge,
-        NodePosition,
         ExecutionStatus,
+        NodePosition,
+        WorkflowDefinition,
+        WorkflowEdge,
+        WorkflowNode,
     )
 
     workflow_def = WorkflowDefinition(

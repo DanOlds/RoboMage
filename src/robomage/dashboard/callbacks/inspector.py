@@ -5,8 +5,6 @@ Callbacks for the Node I/O Inspector tab, handling workflow selection,
 node selection, and data display.
 """
 
-from datetime import datetime
-
 import dash
 import dash_bootstrap_components as dbc
 from dash import ALL, Input, Output, State, html
@@ -71,7 +69,10 @@ def register_callbacks(app: dash.Dash) -> None:
                 # No inspections found
                 options = [
                     {
-                        "label": "No workflow executions found (run a workflow with inspection enabled)",
+                        "label": (
+                            "No workflow executions found "
+                            "(run a workflow with inspection enabled)"
+                        ),
                         "value": "none",
                         "disabled": True,
                     }
@@ -307,7 +308,10 @@ def register_callbacks(app: dash.Dash) -> None:
 
     @app.callback(
         Output("inspector-input-panel", "children"),
-        [Input("inspector-selected-node", "data"), Input("inspector-compact-view", "value")],
+        [
+            Input("inspector-selected-node", "data"),
+            Input("inspector-compact-view", "value"),
+        ],
         [State("inspector-workflow-data", "data")],
     )
     def display_input_data(
@@ -357,7 +361,10 @@ def register_callbacks(app: dash.Dash) -> None:
 
     @app.callback(
         Output("inspector-output-panel", "children"),
-        [Input("inspector-selected-node", "data"), Input("inspector-compact-view", "value")],
+        [
+            Input("inspector-selected-node", "data"),
+            Input("inspector-compact-view", "value"),
+        ],
         [State("inspector-workflow-data", "data")],
     )
     def display_output_data(

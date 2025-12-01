@@ -4,8 +4,6 @@ Tests for Inspector Tab
 Tests the Node I/O Inspector dashboard tab layout, components, and callbacks.
 """
 
-import json
-from datetime import datetime
 
 import pytest
 from dash import html

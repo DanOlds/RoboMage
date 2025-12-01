@@ -431,6 +431,7 @@ async def execute_workflow(
             # Save inspection data to database for later viewing in Inspector tab
             try:
                 from datetime import datetime
+
                 from robomage.persistence.api import SessionManager
                 
                 mgr = SessionManager()

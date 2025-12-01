@@ -106,7 +106,8 @@ class NodeIOSnapshot(BaseModel):
     )
 
     # Additional context
-    metadata: InspectionMetadata | None = Field(
+    # Can be InspectionMetadata object or dict (for flexibility during construction)
+    metadata: InspectionMetadata | dict[str, Any] | None = Field(
         None, description="Execution context metadata"
     )
 

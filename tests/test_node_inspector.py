@@ -539,7 +539,7 @@ class TestInspectionPerformance:
             (time_with_inspection - time_without_inspection) / time_without_inspection
         ) * 100
 
-        print(f"\n📊 Performance Test Results:")
+        print("\n📊 Performance Test Results:")
         print(f"  Without inspection: {time_without_inspection:.4f}s")
         print(f"  With inspection:    {time_with_inspection:.4f}s")
         print(f"  Overhead:           {overhead_pct:.2f}%")
@@ -579,7 +579,7 @@ class TestInspectionPerformance:
         ratio = max(time1, time2) / min(time1, time2)
         assert ratio < 2.0  # Less than 2x difference
 
-        print(f"\n📊 Consistency Test (Inspection Disabled):")
+        print("\n📊 Consistency Test (Inspection Disabled):")
         print(f"  Run 1: {time1:.4f}s")
         print(f"  Run 2: {time2:.4f}s")
         print(f"  Ratio: {ratio:.2f}x")

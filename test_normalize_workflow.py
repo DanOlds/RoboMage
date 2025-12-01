@@ -9,7 +9,6 @@ Run directly with: pixi run python test_normalize_workflow.py
 """
 
 import asyncio
-import json
 import logging
 import sys
 from pathlib import Path
@@ -25,15 +24,15 @@ logging.basicConfig(
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from robomage.orchestrator import WorkflowOrchestrator
-from robomage.workflow.nodes import data_nodes, analysis_nodes
+from robomage.workflow.nodes import analysis_nodes, data_nodes
 
 # Import workflow models
 sys.path.insert(0, str(Path(__file__).parent / "services"))
 from workflow_engine.models import (
-    WorkflowDefinition,
-    WorkflowNode,
-    WorkflowEdge,
     NodePosition,
+    WorkflowDefinition,
+    WorkflowEdge,
+    WorkflowNode,
 )
 
 

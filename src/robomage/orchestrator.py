@@ -628,7 +628,10 @@ class WorkflowOrchestrator:
             services_path = Path(__file__).parent.parent.parent / "services"
             if services_path.exists() and str(services_path) not in sys.path:
                 sys.path.insert(0, str(services_path))
-            from workflow_engine.models import ExecutionStatus, NodeExecutionResult  # type: ignore
+            from workflow_engine.models import (  # type: ignore
+                ExecutionStatus,
+                NodeExecutionResult,
+            )
 
         logger.info(f"Executing node: {node.id} ({node.type}) - {node.label}")
         started_at = datetime.now()
