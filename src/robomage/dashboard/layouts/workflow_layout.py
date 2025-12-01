@@ -504,6 +504,93 @@ def create_workflow_tab() -> html.Div:
                 id="edit-edge-modal",
                 is_open=False,
             ),
+            # Load Workflow Modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle(
+                            [
+                                html.I(className="fas fa-folder-open me-2"),
+                                "Load Workflow",
+                            ]
+                        )
+                    ),
+                    dbc.ModalBody(
+                        [
+                            html.P(
+                                "Select a workflow to load onto the canvas:",
+                                className="fw-bold mb-3",
+                            ),
+                            html.Div(id="load-workflow-list-container"),
+                            html.Div(id="load-workflow-modal-feedback"),
+                        ]
+                    ),
+                    dbc.ModalFooter(
+                        [
+                            dbc.Button(
+                                "Cancel",
+                                id="load-workflow-modal-cancel",
+                                color="secondary",
+                            ),
+                        ]
+                    ),
+                ],
+                id="load-workflow-modal",
+                is_open=False,
+                size="lg",
+            ),
+            # Save Workflow Modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle(
+                            [html.I(className="fas fa-save me-2"), "Save Workflow"]
+                        )
+                    ),
+                    dbc.ModalBody(
+                        [
+                            dbc.Label(
+                                "Workflow Name *", html_for="save-workflow-name-input"
+                            ),
+                            dbc.Input(
+                                id="save-workflow-name-input",
+                                placeholder="Enter workflow name...",
+                                type="text",
+                                required=True,
+                                className="mb-3",
+                            ),
+                            dbc.Label(
+                                "Description",
+                                html_for="save-workflow-description-input",
+                            ),
+                            dbc.Textarea(
+                                id="save-workflow-description-input",
+                                placeholder="Optional: Describe this workflow...",
+                                style={"height": "100px"},
+                                className="mb-3",
+                            ),
+                            html.Div(id="save-workflow-modal-feedback"),
+                        ]
+                    ),
+                    dbc.ModalFooter(
+                        [
+                            dbc.Button(
+                                "Cancel",
+                                id="save-workflow-modal-cancel",
+                                color="secondary",
+                                className="me-2",
+                            ),
+                            dbc.Button(
+                                "Save",
+                                id="save-workflow-modal-confirm",
+                                color="primary",
+                            ),
+                        ]
+                    ),
+                ],
+                id="save-workflow-modal",
+                is_open=False,
+            ),
         ]
     )
 

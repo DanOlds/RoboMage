@@ -207,64 +207,280 @@ def create_node_palette_ui(node_types: list[dict]) -> list:
 def register_workflow_management_callbacks(app):
     """Callbacks for saving, loading, and creating workflows."""
 
+    # Toggle Load Workflow Modal
     @app.callback(
-        Output("current-workflow-data", "data"),
-        Output("workflow-json-editor", "value"),
-        Output("workflow-name-input", "value"),
-        Output("workflow-description-input", "value"),
-        Input("save-workflow-btn", "n_clicks"),
-        Input("new-workflow-btn", "n_clicks"),
-        State("workflow-json-editor", "value"),
-        State("workflow-name-input", "value"),
-        State("workflow-description-input", "value"),
+        Output("load-workflow-modal", "is_open"),
+        [
+            Input("load-workflow-btn", "n_clicks"),
+            Input("load-workflow-modal-cancel", "n_clicks"),
+        ],
+        [State("load-workflow-modal", "is_open")],
         prevent_initial_call=True,
     )
-    def manage_workflow(
-        save_clicks, new_clicks, json_value, name_value, description_value
-    ):
-        """Handle workflow save and new operations."""
+    def toggle_load_workflow_modal(load_clicks, cancel_clicks, is_open):
+        """Toggle load workflow modal."""
+        return not is_open
+
+    # Populate Load Workflow Modal with saved workflows
+    @app.callback(
+        Output("load-workflow-list-container", "children"),
+        [Input("load-workflow-modal", "is_open")],
+        prevent_initial_call=False,
+    )
+    def populate_load_workflow_list(is_open):
+        """Fetch and display saved workflows in load modal."""
+        if not is_open:
+            raise PreventUpdate
+
+        try:
+            response = requests.get(f"{WORKFLOW_SERVICE_URL}/workflows", timeout=2)
+            if response.status_code == 200:
+                workflows = response.json()
+
+                if not workflows:
+                    return dbc.Alert(
+                        "No saved workflows found. Create and save a workflow first.",
+                        color="info",
+                    )
+
+                # Create clickable cards for each workflow
+                workflow_cards = []
+                for wf in workflows:
+                    card = dbc.Card(
+                        [
+                            dbc.CardBody(
+                                [
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                [
+                                                    html.H6(
+                                                        wf["name"], className="mb-1"
+                                                    ),
+                                                    html.Small(
+                                                        wf.get("description", ""),
+                                                        className="text-muted",
+                                                    ),
+                                                ],
+                                                width=9,
+                                            ),
+                                            dbc.Col(
+                                                [
+                                                    dbc.Badge(
+                                                        f"{len(wf['nodes'])} nodes",
+                                                        color="info",
+                                                    )
+                                                ],
+                                                width=3,
+                                                className="text-end",
+                                            ),
+                                        ]
+                                    ),
+                                    dbc.Button(
+                                        [
+                                            html.I(className="fas fa-upload me-2"),
+                                            "Load This Workflow",
+                                        ],
+                                        id={
+                                            "type": "load-workflow-from-modal",
+                                            "workflow_id": wf["id"],
+                                        },
+                                        color="primary",
+                                        size="sm",
+                                        className="mt-2 w-100",
+                                    ),
+                                ]
+                            )
+                        ],
+                        className="mb-2",
+                    )
+                    workflow_cards.append(card)
+
+                return workflow_cards
+
+        except requests.exceptions.RequestException:
+            return dbc.Alert(
+                "Could not connect to workflow service. Please ensure it is running.",
+                color="danger",
+            )
+
+    # Load workflow from modal into canvas
+    @app.callback(
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("workflow-name-input", "value", allow_duplicate=True),
+        Output("workflow-description-input", "value", allow_duplicate=True),
+        Output("load-workflow-modal", "is_open", allow_duplicate=True),
+        Output("load-workflow-modal-feedback", "children"),
+        Input({"type": "load-workflow-from-modal", "workflow_id": ALL}, "n_clicks"),
+        State({"type": "load-workflow-from-modal", "workflow_id": ALL}, "id"),
+        prevent_initial_call=True,
+    )
+    def load_workflow_from_modal(n_clicks_list, button_ids):
+        """Load selected workflow from modal into canvas."""
         ctx = callback_context
         if not ctx.triggered:
             raise PreventUpdate
 
-        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        # Find which button was clicked
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        if triggered_id == "":
+            raise PreventUpdate
 
-        if button_id == "save-workflow-btn":
-            # Save workflow to service
-            try:
-                workflow_data = json.loads(json_value)
-                workflow_data["name"] = name_value or "Untitled Workflow"
-                workflow_data["description"] = description_value or ""
+        import json as json_lib
 
-                response = requests.post(
-                    f"{WORKFLOW_SERVICE_URL}/workflows",
-                    json=workflow_data,
-                    timeout=5,
-                )
+        button_id = json_lib.loads(triggered_id)
+        workflow_id = button_id["workflow_id"]
 
-                if response.status_code == 200:
-                    saved_workflow = response.json()
-                    logger.info(f"Saved workflow: {saved_workflow['id']}")
-                    return (
-                        saved_workflow,
-                        json_value,
-                        name_value,
-                        description_value,
-                    )
-            except Exception as e:
-                logger.error(f"Failed to save workflow: {e}")
-                return no_update, no_update, no_update, no_update
-
-        elif button_id == "new-workflow-btn":
-            # Reset to default workflow
-            from robomage.dashboard.layouts.workflow_layout import (
-                get_default_workflow_json,
+        try:
+            response = requests.get(
+                f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}", timeout=2
             )
 
-            default_json = get_default_workflow_json()
-            return None, default_json, "New Workflow", ""
+            if response.status_code == 200:
+                workflow = response.json()
+                return (
+                    workflow,
+                    workflow.get("name", "Loaded Workflow"),
+                    workflow.get("description", ""),
+                    False,  # Close modal
+                    dbc.Alert(
+                        f"Loaded workflow: {workflow['name']}",
+                        color="success",
+                        duration=3000,
+                    ),
+                )
+            else:
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    dbc.Alert(
+                        f"Failed to load workflow: {response.status_code}",
+                        color="danger",
+                    ),
+                )
 
-        raise PreventUpdate
+        except Exception as e:
+            logger.error(f"Error loading workflow: {e}")
+            return (
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                dbc.Alert(f"Error: {str(e)}", color="danger"),
+            )
+
+    # Toggle Save Workflow Modal
+    @app.callback(
+        Output("save-workflow-modal", "is_open"),
+        [
+            Input("save-workflow-btn", "n_clicks"),
+            Input("save-workflow-modal-cancel", "n_clicks"),
+            Input("save-workflow-modal-confirm", "n_clicks"),
+        ],
+        [State("save-workflow-modal", "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_save_workflow_modal(save_clicks, cancel_clicks, confirm_clicks, is_open):
+        """Toggle save workflow modal."""
+        return not is_open
+
+    # Populate save modal with current workflow metadata
+    @app.callback(
+        Output("save-workflow-name-input", "value"),
+        Output("save-workflow-description-input", "value"),
+        Input("save-workflow-modal", "is_open"),
+        State("workflow-name-input", "value"),
+        State("workflow-description-input", "value"),
+        prevent_initial_call=False,
+    )
+    def populate_save_modal(is_open, current_name, current_description):
+        """Pre-fill save modal with current workflow metadata."""
+        if not is_open:
+            raise PreventUpdate
+        return current_name or "My Workflow", current_description or ""
+
+    # Save workflow from modal
+    @app.callback(
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("save-workflow-modal-feedback", "children"),
+        Input("save-workflow-modal-confirm", "n_clicks"),
+        State("save-workflow-name-input", "value"),
+        State("save-workflow-description-input", "value"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def save_workflow_from_modal(
+        n_clicks, name_value, description_value, workflow_data
+    ):
+        """Save workflow from modal to service."""
+        if not n_clicks:
+            raise PreventUpdate
+
+        if not name_value or name_value.strip() == "":
+            return no_update, dbc.Alert(
+                "Workflow name is required!", color="danger", duration=3000
+            )
+
+        if not workflow_data or not workflow_data.get("nodes"):
+            return no_update, dbc.Alert(
+                "Cannot save empty workflow!", color="danger", duration=3000
+            )
+
+        try:
+            # Update workflow metadata
+            workflow_to_save = workflow_data.copy()
+            workflow_to_save["name"] = name_value.strip()
+            workflow_to_save["description"] = description_value or ""
+
+            response = requests.post(
+                f"{WORKFLOW_SERVICE_URL}/workflows",
+                json=workflow_to_save,
+                timeout=5,
+            )
+
+            if response.status_code == 200:
+                saved_workflow = response.json()
+                logger.info(f"Saved workflow: {saved_workflow['id']}")
+                return saved_workflow, dbc.Alert(
+                    [
+                        html.I(className="fas fa-check-circle me-2"),
+                        f"Workflow '{name_value}' saved successfully!",
+                    ],
+                    color="success",
+                    duration=3000,
+                )
+            else:
+                return no_update, dbc.Alert(
+                    f"Failed to save workflow: {response.status_code}",
+                    color="danger",
+                    duration=3000,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to save workflow: {e}")
+            return no_update, dbc.Alert(
+                f"Error: {str(e)}", color="danger", duration=3000
+            )
+
+    # Handle New Workflow button
+    @app.callback(
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("workflow-name-input", "value", allow_duplicate=True),
+        Output("workflow-description-input", "value", allow_duplicate=True),
+        Input("new-workflow-btn", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def new_workflow(n_clicks):
+        """Reset to default workflow."""
+        if not n_clicks:
+            raise PreventUpdate
+
+        from robomage.dashboard.layouts.workflow_layout import get_default_workflow
+
+        default_workflow = get_default_workflow()
+        return default_workflow, "New Workflow", ""
 
 
 def register_execution_callbacks(app):
@@ -571,8 +787,6 @@ def register_saved_workflows_callback(app):
         triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if triggered_id == "":
             return no_update, no_update
-
-        import json
 
         button_id = json.loads(triggered_id)
         workflow_id = button_id["workflow_id"]
@@ -1096,7 +1310,33 @@ def register_visual_workflow_callbacks(app):
         return []
 
     @app.callback(
-        Output("workflow-canvas", "elements"),
+        Output("workflow-canvas", "elements", allow_duplicate=True),
+        Input("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def sync_canvas_with_workflow_data(workflow_data):
+        """Sync canvas elements when workflow data changes (e.g., after loading)."""
+        if not workflow_data:
+            raise PreventUpdate
+
+        from robomage.dashboard.components import WorkflowCanvasFactory
+
+        renderer = WorkflowCanvasFactory.create("cytoscape")
+
+        # Convert workflow dict to WorkflowElement objects
+        elements_objs = renderer.workflow_to_elements(workflow_data)
+
+        # Convert to plain dicts for JSON serialization
+        elements = renderer._to_cytoscape_elements(elements_objs)
+
+        logger.info(
+            f"Synced canvas with workflow: {len(workflow_data.get('nodes', []))} nodes, {len(workflow_data.get('edges', []))} edges"
+        )
+
+        return elements
+
+    @app.callback(
+        Output("workflow-canvas", "elements", allow_duplicate=True),
         Output("current-workflow-data", "data", allow_duplicate=True),
         Input({"type": "node-palette-item", "node_type": ALL}, "n_clicks"),
         State({"type": "node-palette-item", "node_type": ALL}, "id"),
