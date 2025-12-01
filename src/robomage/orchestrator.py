@@ -50,6 +50,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+from robomage.inspection.models import NodeIOSnapshot
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,6 +107,7 @@ class WorkflowOrchestrator:
     - Error handling with partial results
     - Progress tracking via callbacks
     - Cycle detection and validation
+    - Optional I/O inspection for debugging and analysis
 
     The orchestrator is responsible for:
     1. Validating workflow structure (no cycles, valid connections)
@@ -112,12 +115,25 @@ class WorkflowOrchestrator:
     3. Managing node execution with proper input/output handling
     4. Collecting results and error states
     5. Emitting progress updates for UI feedback
+    6. Optionally capturing I/O data for inspection
     """
 
-    def __init__(self) -> None:
-        """Initialize workflow orchestrator."""
+    def __init__(self, enable_inspection: bool = False) -> None:
+        """
+        Initialize workflow orchestrator.
+
+        Args:
+            enable_inspection: If True, capture input/output data for each node
+                             execution. Useful for debugging but adds overhead.
+                             Default is False for production use.
+        """
         self.node_handlers: dict[str, Callable] = {}
         self._execution_callbacks: list[Callable] = []
+        self.enable_inspection = enable_inspection
+        self.inspection_data: dict[str, NodeIOSnapshot] = {}
+
+        if enable_inspection:
+            logger.info("Inspection mode ENABLED - I/O data will be captured")
 
     def register_node_handler(self, node_type: str, handler: Callable) -> None:
         """
@@ -143,6 +159,116 @@ class WorkflowOrchestrator:
             callback: Async function with signature (execution_id: str, node_result: NodeExecutionResult)
         """
         self._execution_callbacks.append(callback)
+
+    def _serialize_for_inspection(self, data: Any) -> dict[str, Any]:
+        """
+        Serialize data for inspection storage with intelligent summarization.
+
+        Creates a JSON-compatible representation of data suitable for storage
+        and later inspection. For large or complex objects, stores summaries
+        and samples rather than complete data to avoid excessive memory usage.
+
+        This method is optimized for common workflow data types:
+        - DiffractionData objects: Store summary + sample
+        - Lists of objects: Store count + first item sample
+        - Dicts: Store structure and sizes
+        - Primitives: Store as-is
+
+        Args:
+            data: Data to serialize (any type)
+
+        Returns:
+            JSON-serializable dict with data summary
+
+        Example:
+            # For list of DiffractionData objects
+            serialized = self._serialize_for_inspection(diffraction_files)
+            # Returns: {
+            #   "type": "list[DiffractionData]",
+            #   "count": 3,
+            #   "sample": {...first item data...},
+            #   "items_summary": ["file1.chi", "file2.chi", "file3.chi"]
+            # }
+        """
+        if data is None:
+            return {"type": "None", "value": None}
+
+        # Handle primitives directly
+        if isinstance(data, (str, int, float, bool)):
+            return {"type": type(data).__name__, "value": data}
+
+        # Handle lists
+        if isinstance(data, list):
+            if not data:
+                return {"type": "list", "count": 0}
+
+            # Get type info from first item
+            first_item = data[0]
+            item_type = type(first_item).__name__
+
+            result = {
+                "type": f"list[{item_type}]",
+                "count": len(data),
+            }
+
+            # For Pydantic models, serialize first item
+            if hasattr(first_item, "model_dump"):
+                result["sample"] = first_item.model_dump()
+
+                # If it's DiffractionData, extract filenames
+                if hasattr(first_item, "filename"):
+                    result["items_summary"] = [
+                        getattr(item, "filename", f"item_{i}")
+                        for i, item in enumerate(data)
+                    ]
+
+            # For dicts, serialize first item
+            elif isinstance(first_item, dict):
+                result["sample"] = first_item
+
+            # For primitives, store all (if reasonable size)
+            elif isinstance(first_item, (str, int, float, bool)) and len(data) <= 100:
+                result["values"] = data
+
+            return result
+
+        # Handle dicts
+        if isinstance(data, dict):
+            result = {
+                "type": "dict",
+                "keys": list(data.keys()),
+                "count": len(data),
+            }
+
+            # Recursively serialize dict values (but limit depth)
+            serialized_values = {}
+            for key, value in data.items():
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    serialized_values[key] = value
+                elif isinstance(value, (list, dict)):
+                    # One level of recursion for nested structures
+                    serialized_values[key] = self._serialize_for_inspection(value)
+                else:
+                    serialized_values[key] = {
+                        "type": type(value).__name__,
+                        "repr": str(value)[:100],
+                    }
+
+            result["values"] = serialized_values
+            return result
+
+        # Handle Pydantic models
+        if hasattr(data, "model_dump"):
+            return {
+                "type": type(data).__name__,
+                "data": data.model_dump(),
+            }
+
+        # Fallback: store type and repr
+        return {
+            "type": type(data).__name__,
+            "repr": str(data)[:500],  # Limit size
+        }
 
     def _make_serializable(self, obj: Any, _seen: set | None = None) -> Any:
         """
@@ -445,6 +571,15 @@ class WorkflowOrchestrator:
         logger.info(f"Executing node: {node.id} ({node.type}) - {node.label}")
         started_at = datetime.now()
 
+        # Initialize inspection snapshot if enabled
+        if self.enable_inspection:
+            snapshot = NodeIOSnapshot(
+                node_id=node.id,
+                node_type=node.type,
+                timestamp_in=started_at,
+            )
+            self.inspection_data[node.id] = snapshot
+
         try:
             # Get handler for this node type
             handler = self.node_handlers.get(node.type)
@@ -457,12 +592,28 @@ class WorkflowOrchestrator:
             # Collect inputs from predecessor nodes
             inputs = self._collect_node_inputs(node, context, workflow)
 
+            # Capture input data if inspection enabled
+            if self.enable_inspection:
+                self.inspection_data[
+                    node.id
+                ].input_data = self._serialize_for_inspection(inputs)
+
             # Execute handler
             logger.debug(f"Calling handler for {node.id} with config: {node.config}")
             output = await handler(node.config, inputs, context)
 
             # Store output in context for downstream nodes
             context.set_node_output(node.id, output)
+
+            # Capture output data if inspection enabled
+            if self.enable_inspection:
+                self.inspection_data[
+                    node.id
+                ].output_data = self._serialize_for_inspection(output)
+                self.inspection_data[node.id].timestamp_out = datetime.now()
+                self.inspection_data[node.id].duration_ms = (
+                    datetime.now() - started_at
+                ).total_seconds() * 1000
 
             # Calculate duration
             completed_at = datetime.now()
