@@ -976,9 +976,21 @@ def test_workflow_validator_valid_workflow():
     """Test validation of a valid workflow."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
-            {"id": "n3", "type": "export_csv", "config": {"output_path": "results.csv"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
+            {
+                "id": "n3",
+                "type": "export_csv",
+                "config": {"output_path": "results.csv"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "n2"},
@@ -1007,8 +1019,16 @@ def test_workflow_validator_cycle_detection():
     """Test workflow cycle detection."""
     workflow_with_cycle = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
             {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},
         ],
         "edges": [
@@ -1028,7 +1048,11 @@ def test_workflow_validator_self_loop():
     """Test detection of self-loop edge."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "n1"},  # Self-loop
@@ -1045,9 +1069,21 @@ def test_workflow_validator_disconnected_nodes():
     """Test detection of disconnected nodes."""
     workflow_disconnected = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
-            {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},  # Not connected!
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
+            {
+                "id": "n3",
+                "type": "export_csv",
+                "config": {"output_path": "out.csv"},
+            },  # Not connected!
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "n2"},
@@ -1065,8 +1101,16 @@ def test_workflow_validator_invalid_edge_source():
     """Test detection of edge with invalid source."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "nonexistent", "target": "n2"},
@@ -1083,8 +1127,16 @@ def test_workflow_validator_invalid_edge_target():
     """Test detection of edge with invalid target."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "nonexistent"},
@@ -1131,7 +1183,11 @@ def test_workflow_validator_missing_required_config():
     """Test detection of missing required configuration."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {}},  # Missing directory and pattern
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {},
+            },  # Missing directory and pattern
         ],
         "edges": [],
     }
@@ -1147,8 +1203,16 @@ def test_workflow_validator_get_execution_order_valid():
     """Test getting execution order for valid workflow."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
             {"id": "n3", "type": "export_csv", "config": {"output_path": "out.csv"}},
         ],
         "edges": [
@@ -1170,8 +1234,16 @@ def test_workflow_validator_get_execution_order_with_cycle():
     """Test execution order returns None for workflow with cycle."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "n2"},
@@ -1188,9 +1260,21 @@ def test_workflow_validator_get_execution_order_parallel():
     """Test execution order for workflow with parallel branches."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
-            {"id": "n3", "type": "filter_q_range", "config": {"q_min": 0.5, "q_max": 5.0}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
+            {
+                "id": "n3",
+                "type": "filter_q_range",
+                "config": {"q_min": 0.5, "q_max": 5.0},
+            },
             {"id": "n4", "type": "export_csv", "config": {"output_path": "out.csv"}},
         ],
         "edges": [
@@ -1245,10 +1329,26 @@ def test_workflow_validator_complex_dag():
     """Test validation of complex DAG (diamond pattern)."""
     workflow = {
         "nodes": [
-            {"id": "n1", "type": "load_files", "config": {"directory": "/data", "pattern": "*.chi"}},
-            {"id": "n2", "type": "filter_q_range", "config": {"q_min": 0.5, "q_max": 5.0}},
-            {"id": "n3", "type": "filter_q_range", "config": {"q_min": 1.0, "q_max": 10.0}},
-            {"id": "n4", "type": "peak_analysis", "config": {"profile_type": "gaussian"}},
+            {
+                "id": "n1",
+                "type": "load_files",
+                "config": {"directory": "/data", "pattern": "*.chi"},
+            },
+            {
+                "id": "n2",
+                "type": "filter_q_range",
+                "config": {"q_min": 0.5, "q_max": 5.0},
+            },
+            {
+                "id": "n3",
+                "type": "filter_q_range",
+                "config": {"q_min": 1.0, "q_max": 10.0},
+            },
+            {
+                "id": "n4",
+                "type": "peak_analysis",
+                "config": {"profile_type": "gaussian"},
+            },
         ],
         "edges": [
             {"id": "e1", "source": "n1", "target": "n2"},

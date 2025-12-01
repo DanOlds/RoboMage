@@ -47,3 +47,19 @@ workflow-service = "python services/workflow_engine/main.py --port 8002"
 
 # Start all services for workflow system (cross-platform)
 start-all = "python start_services.py"
+
+# Kill all running services (dashboard and microservices)
+kill-all = """bash -c '
+echo "Stopping all RoboMage services..."
+# Kill processes on port 8050 (dashboard)
+lsof -ti:8050 | xargs -r kill -9 2>/dev/null || true
+# Kill processes on port 8001 (peak analysis)
+lsof -ti:8001 | xargs -r kill -9 2>/dev/null || true
+# Kill processes on port 8002 (workflow engine)
+lsof -ti:8002 | xargs -r kill -9 2>/dev/null || true
+# Kill any Python processes with robomage, main.py, or start_services.py in the command
+pkill -9 -f "python.*robomage.*--dashboard" 2>/dev/null || true
+pkill -9 -f "python.*services.*main.py" 2>/dev/null || true
+pkill -9 -f "python.*start_services.py" 2>/dev/null || true
+echo "All services stopped."
+'"""

@@ -145,6 +145,22 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
         return not is_open
 
     @app.callback(
+        Output("delete-all-sessions-modal", "is_open"),
+        [
+            Input("delete-all-sessions-button", "n_clicks"),
+            Input("delete-all-cancel", "n_clicks"),
+            Input("delete-all-confirm", "n_clicks"),
+        ],
+        [State("delete-all-sessions-modal", "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_delete_all_modal(
+        open_clicks: int, cancel_clicks: int, confirm_clicks: int, is_open: bool
+    ) -> bool:
+        """Toggle delete all sessions confirmation modal."""
+        return not is_open
+
+    @app.callback(
         [
             Output("save-session-feedback", "children"),
             Output("current-session-id", "data"),
@@ -816,6 +832,66 @@ def register_persistence_callbacks(app: dash.Dash) -> None:
                 color="danger",
                 dismissable=True,
             )
+
+    @app.callback(
+        [
+            Output("delete-all-feedback", "children"),
+            Output("manage-sessions-container", "children", allow_duplicate=True),
+            Output("manage-sessions-feedback", "children", allow_duplicate=True),
+        ],
+        [Input("delete-all-confirm", "n_clicks")],
+        prevent_initial_call=True,
+    )
+    def delete_all_sessions_callback(
+        n_clicks: int | None,
+    ) -> tuple[Any, Any, Any]:
+        """
+        Handle deletion of all sessions.
+
+        Args:
+            n_clicks: Number of confirm button clicks
+
+        Returns:
+            Tuple of (modal feedback, updated session list, manage modal feedback)
+        """
+        if n_clicks is None or n_clicks == 0:
+            return html.Div(), dash.no_update, html.Div()
+
+        try:
+            mgr = SessionManager()
+            sessions = mgr.list_sessions()
+            num_sessions = len(sessions)
+
+            # Delete all sessions
+            for session in sessions:
+                mgr.delete_session(session.id)
+
+            # Success message
+            success_msg = dbc.Alert(
+                [
+                    html.I(className="fas fa-check-circle me-2"),
+                    f"Successfully deleted {num_sessions} session{'s' if num_sessions != 1 else ''}!",
+                ],
+                color="success",
+                dismissable=True,
+                duration=4000,
+            )
+
+            # Empty session list
+            empty_list = dbc.Alert(
+                "No saved sessions found.",
+                color="info",
+            )
+
+            return success_msg, empty_list, success_msg
+
+        except Exception as e:
+            error_msg = dbc.Alert(
+                f"Error deleting sessions: {str(e)}",
+                color="danger",
+                dismissable=True,
+            )
+            return error_msg, dash.no_update, error_msg
 
     @app.callback(
         [

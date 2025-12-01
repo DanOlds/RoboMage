@@ -61,6 +61,7 @@ def create_main_layout() -> html.Div:
             create_load_session_modal(),
             create_manage_sessions_modal(),
             create_configure_storage_modal(),
+            create_delete_all_confirmation_modal(),
             # Data stores for inter-tab communication
             dcc.Store(id="file-data-store"),
             dcc.Store(id="wavelength-store"),
@@ -569,6 +570,17 @@ def create_manage_sessions_modal() -> dbc.Modal:
                                     ),
                                     dbc.Button(
                                         [
+                                            html.I(className="fas fa-trash-alt me-2"),
+                                            "Delete All",
+                                        ],
+                                        id="delete-all-sessions-button",
+                                        color="danger",
+                                        size="sm",
+                                        outline=True,
+                                        className="me-2",
+                                    ),
+                                    dbc.Button(
+                                        [
                                             html.I(className="fas fa-bug me-2"),
                                             "Debug Info",
                                         ],
@@ -729,6 +741,72 @@ def create_configure_storage_modal() -> dbc.Modal:
         id="configure-storage-modal",
         is_open=False,
         size="lg",
+    )
+
+
+def create_delete_all_confirmation_modal() -> dbc.Modal:
+    """Create confirmation modal for deleting all sessions."""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.I(className="fas fa-exclamation-triangle me-2"),
+                        "Delete All Sessions?",
+                    ]
+                ),
+                close_button=True,
+            ),
+            dbc.ModalBody(
+                [
+                    dbc.Alert(
+                        [
+                            html.I(
+                                className="fas fa-exclamation-triangle me-2",
+                                style={"fontSize": "1.5rem"},
+                            ),
+                            html.Div(
+                                [
+                                    html.Strong(
+                                        "This action cannot be undone!",
+                                        className="d-block mb-2",
+                                    ),
+                                    html.P(
+                                        (
+                                            "All saved sessions and their "
+                                            "associated files will be "
+                                            "permanently deleted."
+                                        ),
+                                        className="mb-0",
+                                    ),
+                                ]
+                            ),
+                        ],
+                        color="danger",
+                    ),
+                    html.Div(id="delete-all-feedback"),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        "Cancel",
+                        id="delete-all-cancel",
+                        color="secondary",
+                    ),
+                    dbc.Button(
+                        [
+                            html.I(className="fas fa-trash-alt me-2"),
+                            "Delete All Sessions",
+                        ],
+                        id="delete-all-confirm",
+                        color="danger",
+                    ),
+                ]
+            ),
+        ],
+        id="delete-all-sessions-modal",
+        is_open=False,
     )
 
 

@@ -144,7 +144,7 @@ async def normalize_handler(
     logger.info(f"Normalizing intensities using method: {method}")
 
     files = inputs.get("input", [])
-    
+
     if not files:
         raise ValueError("No input files provided to normalize")
 
