@@ -279,17 +279,21 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 3. `src/robomage/persistence/models.py` - Database schema (Session, File, AnalysisResult)
 4. `src/robomage/persistence/api.py` - SessionManager with analysis result methods
 5. `examples/load_data_example.py` - Comprehensive tutorial showing both APIs
-6. `services/peak_analysis/main.py` - FastAPI microservice implementation
-7. `services/workflow_engine/main.py` - Workflow execution service
-8. `peak_analyzer.py` - Multi-mode CLI demonstrating service patterns
-9. `src/robomage/clients/peak_analysis_client.py` - Service client with retry logic
-10. `src/robomage/persistence/api.py` - SessionManager with analysis result methods
-11. `src/robomage/persistence/models.py` - Database schema (Session, File, AnalysisResult)
+6. `examples/custom_nodes/` - Custom node development examples (template, background, peak width)
+7. `docs/node-development-guide.md` - Complete guide for creating custom workflow nodes
+8. `services/peak_analysis/main.py` - FastAPI microservice implementation
+9. `services/workflow_engine/main.py` - Workflow execution service
+10. `peak_analyzer.py` - Multi-mode CLI demonstrating service patterns
+11. `src/robomage/clients/peak_analysis_client.py` - Service client with retry logic
 12. `src/robomage/orchestrator.py` - DAG workflow executor
 13. `docs/SPRINT-7-COMPLETION.md` - Sprint 7 completion summary and usage guide
 
 ## Related Documentation
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
+- `docs/node-development-guide.md` - **NEW**: Comprehensive guide for creating custom workflow nodes (820 lines)
+- `docs/node-quick-reference.md` - **NEW**: Copy-paste templates for rapid node development (530 lines)
+- `docs/NODE-DEVELOPMENT-EXAMPLES-COMPLETE.md` - **NEW**: Node development implementation summary
+- `examples/custom_nodes/` - **NEW**: Working examples (template, background subtraction, peak width analysis)
 - `docs/NEXT-STEPS-WEEK-2.md` - **NEW**: Detailed Week 2 implementation plan (Node I/O Inspector)
 - `docs/WEEK-1-COMPLETION.md` - **NEW**: Week 1 quick wins completion summary
 - `docs/inspection-tools-design.md` - **NEW**: Complete architecture for 5 inspection tools (4-5 week plan)
