@@ -14,6 +14,7 @@ import dash_bootstrap_components as dbc
 from robomage.dashboard.callbacks import (
     analysis,
     file_upload,
+    inspector,
     persistence,
     plotting,
     workflow,
@@ -56,6 +57,7 @@ def create_app(debug: bool = False) -> dash.Dash:
     analysis.register_callbacks(app)
     persistence.register_persistence_callbacks(app)
     workflow.register_callbacks(app)
+    inspector.register_callbacks(app)
 
     return app
 

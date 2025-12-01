@@ -20,7 +20,7 @@ Models:
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_serializer
 
 
 class InspectionMetadata(BaseModel):
@@ -109,6 +109,64 @@ class NodeIOSnapshot(BaseModel):
     metadata: InspectionMetadata | None = Field(
         None, description="Execution context metadata"
     )
+
+    @field_serializer("input_data", "output_data", when_used="json")
+    def _serialize_data(self, value: Any) -> Any:
+        """
+        Custom serializer to ensure numpy arrays are converted to lists.
+        
+        This is called automatically by Pydantic when serializing to JSON.
+        It recursively converts any numpy arrays to lists to ensure
+        JSON compatibility.
+        """
+        return self._make_json_serializable(value)
+    
+    def _make_json_serializable(self, obj: Any) -> Any:
+        """
+        Recursively convert numpy arrays and other non-JSON types to JSON-serializable format.
+        
+        Args:
+            obj: Object to convert
+            
+        Returns:
+            JSON-serializable version of the object
+        """
+        # Import numpy conditionally
+        try:
+            import numpy as np  # type: ignore[import]
+        except ImportError:
+            np = None  # type: ignore[assignment]
+        
+        # Handle None
+        if obj is None:
+            return None
+        
+        # Handle primitives
+        if isinstance(obj, (str, int, float, bool)):
+            return obj
+        
+        # Handle numpy arrays - convert to list
+        if np and isinstance(obj, np.ndarray):
+            return obj.tolist()
+        
+        # Handle numpy scalar types
+        if np and isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        
+        # Handle dict recursively
+        if isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        
+        # Handle list recursively
+        if isinstance(obj, (list, tuple)):
+            return [self._make_json_serializable(item) for item in obj]
+        
+        # Handle datetime
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        
+        # For other objects, return as-is and let Pydantic handle it
+        return obj
 
     @computed_field  # type: ignore[misc]
     @property

@@ -320,10 +320,11 @@ def register_execution_callbacks(app):
                     ),
                 )
 
-            # Execute workflow
+            # Execute workflow with inspection enabled
             logger.info(f"Executing workflow: {workflow_id}")
             exec_response = requests.post(
                 f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}/execute",
+                params={"enable_inspection": True},  # Enable inspection for debugging
                 timeout=60,  # Allow longer timeout for execution
             )
 

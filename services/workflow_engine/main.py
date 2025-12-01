@@ -422,11 +422,49 @@ async def execute_workflow(
                     f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}"
                 )
 
-        # If inspection was enabled, include inspection data in response
-        if enable_inspection and hasattr(result, "inspections"):
+        # If inspection was enabled, save inspection data to database
+        if enable_inspection and hasattr(result, "inspections") and result.inspections:
             print(
                 f"🔍 SERVICE: Captured {len(result.inspections)} inspection snapshots"
             )
+            
+            # Save inspection data to database for later viewing in Inspector tab
+            try:
+                from datetime import datetime
+                from robomage.persistence.api import SessionManager
+                
+                mgr = SessionManager()
+                for inspection_dict in result.inspections:
+                    # Convert timestamp strings to datetime objects if needed
+                    timestamp_in = inspection_dict.get("timestamp_in")
+                    timestamp_out = inspection_dict.get("timestamp_out")
+                    
+                    if isinstance(timestamp_in, str):
+                        timestamp_in = datetime.fromisoformat(timestamp_in)
+                    if isinstance(timestamp_out, str):
+                        timestamp_out = datetime.fromisoformat(timestamp_out)
+                    
+                    # Extract data from the inspection snapshot
+                    mgr.save_inspection(
+                        workflow_id=result.workflow_id,
+                        node_id=inspection_dict.get("node_id", "unknown"),
+                        node_type=inspection_dict.get("node_type", "unknown"),
+                        input_data=inspection_dict.get("input_data"),
+                        output_data=inspection_dict.get("output_data"),
+                        input_shape=inspection_dict.get("input_shape"),
+                        output_shape=inspection_dict.get("output_shape"),
+                        timestamp_in=timestamp_in,
+                        timestamp_out=timestamp_out,
+                        duration_ms=inspection_dict.get("duration_ms"),
+                        execution_metadata=inspection_dict.get("metadata"),
+                        session_id=None,  # Not linked to a session (standalone execution)
+                    )
+                print(f"💾 Saved {len(result.inspections)} inspection records to database")
+            except Exception as e:
+                print(f"⚠️ Warning: Failed to save inspection data: {e}")
+                import traceback
+                traceback.print_exc()
+                # Don't fail the request, just log the warning
 
         return result
 

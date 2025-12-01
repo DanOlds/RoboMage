@@ -8,6 +8,7 @@ with Data Import, Visualization, Analysis, and Workflow tabs.
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from .inspector_layout import create_inspector_tab
 from .workflow_layout import create_workflow_tab
 
 
@@ -48,6 +49,11 @@ def create_main_layout() -> html.Div:
                         tab_id="workflow",
                         children=[create_workflow_tab()],
                     ),
+                    dbc.Tab(
+                        label="🔍 Inspector",
+                        tab_id="inspector",
+                        children=[create_inspector_tab()],
+                    ),
                 ],
                 id="main-tabs",
                 active_tab="import",
@@ -69,6 +75,9 @@ def create_main_layout() -> html.Div:
             # Session management stores
             dcc.Store(id="current-session-id"),
             dcc.Store(id="storage-location-store", data=None),  # Custom storage path
+            # Inspector state stores
+            dcc.Store(id="inspector-workflow-data"),  # Current workflow inspection data
+            dcc.Store(id="inspector-selected-node"),  # Currently selected node
             # Interval to trigger initial session creation (runs once on load)
             dcc.Interval(id="init-interval", interval=100, max_intervals=1),
         ],

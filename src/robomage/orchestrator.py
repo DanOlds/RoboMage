@@ -173,6 +173,7 @@ class WorkflowOrchestrator:
         - Lists of objects: Store count + first item sample
         - Dicts: Store structure and sizes
         - Primitives: Store as-is
+        - NumPy arrays: Convert to lists with shape info
 
         Args:
             data: Data to serialize (any type)
@@ -190,8 +191,24 @@ class WorkflowOrchestrator:
             #   "items_summary": ["file1.chi", "file2.chi", "file3.chi"]
             # }
         """
+        # Import numpy conditionally
+        try:
+            import numpy as np  # type: ignore[import]
+        except ImportError:
+            np = None  # type: ignore[assignment]
+        
         if data is None:
             return {"type": "None", "value": None}
+
+        # Handle NumPy arrays (MUST come before primitives check)
+        if np and isinstance(data, np.ndarray):
+            return {
+                "type": "ndarray",
+                "shape": list(data.shape),
+                "dtype": str(data.dtype),
+                "size": int(data.size),
+                "sample": data.flatten()[:10].tolist() if data.size > 0 else [],
+            }
 
         # Handle primitives directly
         if isinstance(data, (str, int, float, bool)):
@@ -234,6 +251,12 @@ class WorkflowOrchestrator:
 
         # Handle dicts
         if isinstance(data, dict):
+            # Import numpy for type checking
+            try:
+                import numpy as np  # type: ignore[import]
+            except ImportError:
+                np = None  # type: ignore[assignment]
+            
             result = {
                 "type": "dict",
                 "keys": list(data.keys()),
@@ -247,6 +270,9 @@ class WorkflowOrchestrator:
                     serialized_values[key] = value
                 elif isinstance(value, (list, dict)):
                     # One level of recursion for nested structures
+                    serialized_values[key] = self._serialize_for_inspection(value)
+                elif np and isinstance(value, np.ndarray):
+                    # Handle numpy arrays
                     serialized_values[key] = self._serialize_for_inspection(value)
                 else:
                     serialized_values[key] = {
@@ -349,6 +375,7 @@ class WorkflowOrchestrator:
         workflow: Any,
         initial_context: dict[str, Any] | None = None,
         store_full_outputs: bool = False,
+        enable_inspection: bool | None = None,
     ) -> Any:
         """
         Execute a complete workflow.
@@ -358,6 +385,8 @@ class WorkflowOrchestrator:
             initial_context: Optional initial data/configuration
             store_full_outputs: If True, store complete serialized outputs instead of summaries.
                                Warning: Can create large results for DiffractionData objects.
+            enable_inspection: If True, enable node I/O inspection for debugging.
+                             If None, uses the value from __init__ (default: False).
 
         Returns:
             WorkflowExecutionResult with status and outputs
@@ -365,143 +394,157 @@ class WorkflowOrchestrator:
         Raises:
             ValueError: If workflow contains cycles or invalid structure
         """
-        # Handle imports from services directory
-        # In production: services.workflow_engine is in PYTHONPATH
-        # In tests: Need to add services directory to path
+        # Allow per-execution override of inspection setting
+        if enable_inspection is not None:
+            original_inspection = self.enable_inspection
+            self.enable_inspection = enable_inspection
+        else:
+            original_inspection = None
+        
         try:
-            from services.workflow_engine.models import (
-                ExecutionStatus,
-                WorkflowExecutionResult,
-            )
-        except ModuleNotFoundError:
-            # Fallback for test environment
-            import sys
-            from pathlib import Path
+            # Handle imports from services directory
+            # In production: services.workflow_engine is in PYTHONPATH
+            # In tests: Need to add services directory to path
+            try:
+                from services.workflow_engine.models import (
+                    ExecutionStatus,
+                    WorkflowExecutionResult,
+                )
+            except ModuleNotFoundError:
+                # Fallback for test environment
+                import sys
+                from pathlib import Path
 
-            services_path = Path(__file__).parent.parent.parent / "services"
-            if services_path.exists() and str(services_path) not in sys.path:
-                sys.path.insert(0, str(services_path))
+                services_path = Path(__file__).parent.parent.parent / "services"
+                if services_path.exists() and str(services_path) not in sys.path:
+                    sys.path.insert(0, str(services_path))
 
-            from workflow_engine.models import (  # type: ignore
-                ExecutionStatus,
-                WorkflowExecutionResult,
-            )
-
-        execution_id = f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-        started_at = datetime.now()
-
-        # Handle both dict and object workflow representations
-        workflow_name = getattr(
-            workflow,
-            "name",
-            workflow.get("name", "unnamed")
-            if isinstance(workflow, dict)
-            else "unnamed",
-        )
-
-        logger.info(
-            f"Starting workflow execution: {execution_id} for workflow: {workflow_name}"
-        )
-
-        # Initialize context
-        context = ExecutionContext()
-        if initial_context:
-            context.metadata.update(initial_context)
-
-        # Store serialization mode in context for node execution
-        context.metadata["_store_full_outputs"] = store_full_outputs
-
-        try:
-            # Build execution graph and validate
-            execution_order = self._topological_sort(workflow)
-            logger.info(
-                f"Execution order determined: {[n.id for n in execution_order]}"
-            )
-
-            # Execute nodes in order
-            node_results = []
-            for node in execution_order:
-                node_result = await self._execute_node(node, context, workflow)
-                node_results.append(node_result)
-
-                if node_result.status == ExecutionStatus.FAILED:
-                    error_msg = (
-                        f"Node {node.id} ({node.label}) failed: {node_result.error}"
-                    )
-                    logger.error(error_msg)
-                    raise RuntimeError(error_msg)
-
-                # Emit progress update
-                for callback in self._execution_callbacks:
-                    try:
-                        await callback(execution_id, node_result)
-                    except Exception as e:
-                        logger.warning(f"Progress callback failed: {e}")
-
-            # Success - workflow completed
-            completed_at = datetime.now()
-            duration_ms = (completed_at - started_at).total_seconds() * 1000
-
-            logger.info(
-                f"Workflow {execution_id} completed successfully in {duration_ms:.1f}ms"
-            )
-
-            # Get final output but make it JSON-serializable
-            all_outputs = context.get_all_outputs()
-            final_output = self._make_serializable(all_outputs)
-
-            # Include inspection data if enabled
-            inspections_serialized = None
-            if self.enable_inspection and self.inspection_data:
-                inspections_serialized = []
-                for snapshot in self.inspection_data.values():
-                    inspections_serialized.append(snapshot.model_dump(mode="json"))
-                logger.info(
-                    f"Captured {len(inspections_serialized)} inspection snapshots"
+                from workflow_engine.models import (  # type: ignore
+                    ExecutionStatus,
+                    WorkflowExecutionResult,
                 )
 
-            return WorkflowExecutionResult(
-                execution_id=execution_id,
-                workflow_id=workflow.id or "unknown",
-                status=ExecutionStatus.COMPLETED,
-                started_at=started_at,
-                completed_at=completed_at,
-                node_results=node_results,
-                final_output=final_output,
-                error=None,
-                total_duration_ms=duration_ms,
-                inspections=inspections_serialized,
+            execution_id = f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+            started_at = datetime.now()
+
+            # Handle both dict and object workflow representations
+            workflow_name = getattr(
+                workflow,
+                "name",
+                workflow.get("name", "unnamed")
+                if isinstance(workflow, dict)
+                else "unnamed",
             )
 
-        except Exception as e:
-            # Workflow failed
-            completed_at = datetime.now()
-            duration_ms = (completed_at - started_at).total_seconds() * 1000
-
-            logger.error(
-                f"Workflow {execution_id} failed after {duration_ms:.1f}ms: {e}",
-                exc_info=True,
+            logger.info(
+                f"Starting workflow execution: {execution_id} for workflow: {workflow_name}"
             )
 
-            # Include inspection data even on failure (helps debug)
-            inspections_serialized = None
-            if self.enable_inspection and self.inspection_data:
-                inspections_serialized = []
-                for snapshot in self.inspection_data.values():
-                    inspections_serialized.append(snapshot.model_dump(mode="json"))
+            # Initialize context
+            context = ExecutionContext()
+            if initial_context:
+                context.metadata.update(initial_context)
 
-            return WorkflowExecutionResult(
-                execution_id=execution_id,
-                workflow_id=workflow.id or "unknown",
-                status=ExecutionStatus.FAILED,
-                started_at=started_at,
-                completed_at=completed_at,
-                node_results=node_results if "node_results" in locals() else [],
-                final_output=None,
-                error=str(e),
-                total_duration_ms=duration_ms,
-                inspections=inspections_serialized,
-            )
+            # Store serialization mode in context for node execution
+            # Store serialization mode in context for node execution
+            context.metadata["_store_full_outputs"] = store_full_outputs
+
+            try:
+                # Build execution graph and validate
+                execution_order = self._topological_sort(workflow)
+                logger.info(
+                    f"Execution order determined: {[n.id for n in execution_order]}"
+                )
+
+                # Execute nodes in order
+                node_results = []
+                for node in execution_order:
+                    node_result = await self._execute_node(node, context, workflow)
+                    node_results.append(node_result)
+
+                    if node_result.status == ExecutionStatus.FAILED:
+                        error_msg = (
+                            f"Node {node.id} ({node.label}) failed: {node_result.error}"
+                        )
+                        logger.error(error_msg)
+                        raise RuntimeError(error_msg)
+
+                    # Emit progress update
+                    for callback in self._execution_callbacks:
+                        try:
+                            await callback(execution_id, node_result)
+                        except Exception as e:
+                            logger.warning(f"Progress callback failed: {e}")
+
+                # Success - workflow completed
+                completed_at = datetime.now()
+                duration_ms = (completed_at - started_at).total_seconds() * 1000
+
+                logger.info(
+                    f"Workflow {execution_id} completed successfully in {duration_ms:.1f}ms"
+                )
+
+                # Get final output but make it JSON-serializable
+                all_outputs = context.get_all_outputs()
+                final_output = self._make_serializable(all_outputs)
+
+                # Include inspection data if enabled
+                inspections_serialized = None
+                if self.enable_inspection and self.inspection_data:
+                    inspections_serialized = []
+                    for snapshot in self.inspection_data.values():
+                        inspections_serialized.append(snapshot.model_dump(mode="json"))
+                    logger.info(
+                        f"Captured {len(inspections_serialized)} inspection snapshots"
+                    )
+
+                return WorkflowExecutionResult(
+                    execution_id=execution_id,
+                    workflow_id=workflow.id or "unknown",
+                    status=ExecutionStatus.COMPLETED,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    node_results=node_results,
+                    final_output=final_output,
+                    error=None,
+                    total_duration_ms=duration_ms,
+                    inspections=inspections_serialized,
+                )
+
+            except Exception as e:
+                # Workflow failed
+                completed_at = datetime.now()
+                duration_ms = (completed_at - started_at).total_seconds() * 1000
+
+                logger.error(
+                    f"Workflow {execution_id} failed after {duration_ms:.1f}ms: {e}",
+                    exc_info=True,
+                )
+
+                # Include inspection data even on failure (helps debug)
+                inspections_serialized = None
+                if self.enable_inspection and self.inspection_data:
+                    inspections_serialized = []
+                    for snapshot in self.inspection_data.values():
+                        inspections_serialized.append(snapshot.model_dump(mode="json"))
+
+                return WorkflowExecutionResult(
+                    execution_id=execution_id,
+                    workflow_id=workflow.id or "unknown",
+                    status=ExecutionStatus.FAILED,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    node_results=node_results if "node_results" in locals() else [],
+                    final_output=None,
+                    error=str(e),
+                    total_duration_ms=duration_ms,
+                    inspections=inspections_serialized,
+                )
+        
+        finally:
+            # Restore original inspection setting if it was overridden
+            if original_inspection is not None:
+                self.enable_inspection = original_inspection
 
     def _topological_sort(self, workflow: Any) -> list[Any]:
         """
@@ -597,6 +640,17 @@ class WorkflowOrchestrator:
                 node_type=node.type,
                 timestamp_in=started_at,
             )
+            # Store metadata as dict (will be saved to execution_metadata in DB)
+            # This contains execution context, not the data itself
+            snapshot.metadata = {  # type: ignore[assignment]
+                "workflow_id": workflow.id if hasattr(workflow, "id") else "unknown",
+                "workflow_name": workflow.name if hasattr(workflow, "name") else "Unnamed Workflow",
+                "node_label": node.label,
+                "node_config": node.config,
+                "execution_id": context.metadata.get("execution_id"),
+                "environment": context.metadata.get("environment", "development"),
+                "captured_at": started_at.isoformat(),
+            }
             self.inspection_data[node.id] = snapshot
 
         try:
