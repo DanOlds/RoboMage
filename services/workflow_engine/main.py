@@ -371,13 +371,16 @@ async def delete_workflow(workflow_id: str):
 
 
 @app.post("/workflows/{workflow_id}/execute", response_model=WorkflowExecutionResult)
-async def execute_workflow(workflow_id: str, context: dict | None = None):
+async def execute_workflow(
+    workflow_id: str, context: dict | None = None, enable_inspection: bool = False
+):
     """
     Execute a workflow.
 
     Args:
         workflow_id: ID of workflow to execute
         context: Optional initial context/configuration
+        enable_inspection: Enable node I/O inspection for debugging
 
     Returns:
         WorkflowExecutionResult with status and outputs
@@ -391,11 +394,16 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
     workflow = workflows[workflow_id]
 
     print(f"🚀 Executing workflow: {workflow.name} (ID: {workflow_id})")
+    if enable_inspection:
+        print("🔍 Inspection mode enabled - capturing node I/O snapshots")
 
     try:
         # Execute using orchestrator with full output storage for session persistence
         result = await orchestrator.execute_workflow(
-            workflow, context, store_full_outputs=True
+            workflow,
+            context,
+            store_full_outputs=True,
+            enable_inspection=enable_inspection,
         )
 
         # Store execution result
@@ -413,6 +421,12 @@ async def execute_workflow(workflow_id: str, context: dict | None = None):
                 print(
                     f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}"
                 )
+
+        # If inspection was enabled, include inspection data in response
+        if enable_inspection and hasattr(result, "inspections"):
+            print(
+                f"🔍 SERVICE: Captured {len(result.inspections)} inspection snapshots"
+            )
 
         return result
 

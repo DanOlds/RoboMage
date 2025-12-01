@@ -690,3 +690,276 @@ class SessionManager:
 
         finally:
             db.close()
+
+    # -------------------------------------------------------------------------
+    # Node Inspection Methods (Tool 1: Node I/O Inspector)
+    # -------------------------------------------------------------------------
+
+    def save_inspection(
+        self,
+        workflow_id: str,
+        node_id: str,
+        node_type: str,
+        input_data: dict | list | str | int | float | None = None,
+        output_data: dict | list | str | int | float | None = None,
+        input_shape: str | None = None,
+        output_shape: str | None = None,
+        timestamp_in: datetime | None = None,
+        timestamp_out: datetime | None = None,
+        duration_ms: float | None = None,
+        execution_metadata: dict | None = None,
+        session_id: int | None = None,
+    ) -> int:
+        """
+        Save node inspection data to database.
+
+        Stores a snapshot of input/output data for a workflow node execution,
+        enabling the Node I/O Inspector tool to visualize data flow and
+        debug issues.
+
+        Args:
+            workflow_id: Workflow identifier
+            node_id: Unique node identifier in workflow
+            node_type: Node type (e.g., 'load_files', 'peak_analysis')
+            input_data: Serialized input data (JSON-compatible)
+            output_data: Serialized output data (JSON-compatible)
+            input_shape: Compact shape description (e.g., 'list[3]')
+            output_shape: Compact shape description (e.g., 'dict[5]')
+            timestamp_in: Node execution start time
+            timestamp_out: Node execution end time
+            duration_ms: Execution duration in milliseconds
+            execution_metadata: Additional context (JSON)
+            session_id: Optional link to session for cleanup
+
+        Returns:
+            NodeInspection ID (integer primary key)
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> inspection_id = mgr.save_inspection(
+            ...     workflow_id="workflow_123",
+            ...     node_id="normalize_1",
+            ...     node_type="normalize",
+            ...     input_data={"files": [...]},
+            ...     output_data={"files": [...]},
+            ...     input_shape="dict[1]",
+            ...     output_shape="dict[1]",
+            ...     duration_ms=125.5,
+            ...     session_id=1
+            ... )
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            # Verify session exists if provided
+            if session_id is not None:
+                session = db.get(Session, session_id)
+                if not session:
+                    raise ValueError(f"Session {session_id} not found")
+
+            # Create inspection record
+            inspection = NodeInspection(
+                session_id=session_id,
+                workflow_id=workflow_id,
+                node_id=node_id,
+                node_type=node_type,
+                input_data=input_data,
+                output_data=output_data,
+                input_shape=input_shape,
+                output_shape=output_shape,
+                timestamp_in=timestamp_in,
+                timestamp_out=timestamp_out,
+                duration_ms=duration_ms,
+                execution_metadata=execution_metadata,
+            )
+
+            db.add(inspection)
+            db.commit()
+            db.refresh(inspection)
+
+            return inspection.id
+
+        finally:
+            db.close()
+
+    def get_inspections(
+        self,
+        workflow_id: str | None = None,
+        node_id: str | None = None,
+        node_type: str | None = None,
+        session_id: int | None = None,
+    ) -> list:
+        """
+        Get node inspection records with optional filtering.
+
+        Args:
+            workflow_id: Filter by workflow ID
+            node_id: Filter by node ID
+            node_type: Filter by node type
+            session_id: Filter by session ID
+
+        Returns:
+            List of NodeInspection objects, ordered by timestamp_in
+
+        Example:
+            >>> # Get all inspections for a workflow
+            >>> inspections = mgr.get_inspections(workflow_id="workflow_123")
+            >>>
+            >>> # Get all peak_analysis node inspections
+            >>> peak_inspections = mgr.get_inspections(node_type="peak_analysis")
+            >>>
+            >>> # Get inspections for specific session
+            >>> session_inspections = mgr.get_inspections(session_id=1)
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            query = db.query(NodeInspection)
+
+            # Apply filters
+            if workflow_id is not None:
+                query = query.filter(NodeInspection.workflow_id == workflow_id)
+
+            if node_id is not None:
+                query = query.filter(NodeInspection.node_id == node_id)
+
+            if node_type is not None:
+                query = query.filter(NodeInspection.node_type == node_type)
+
+            if session_id is not None:
+                query = query.filter(NodeInspection.session_id == session_id)
+
+            # Order by timestamp
+            query = query.order_by(NodeInspection.timestamp_in)
+
+            return list(query.all())
+
+        finally:
+            db.close()
+
+    def get_workflow_inspections(self, workflow_id: str) -> list:
+        """
+        Get all inspection records for a workflow, ordered by execution time.
+
+        Convenience method for retrieving complete workflow execution trace.
+
+        Args:
+            workflow_id: Workflow identifier
+
+        Returns:
+            List of NodeInspection objects ordered by timestamp_in
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> inspections = mgr.get_workflow_inspections("workflow_123")
+            >>> for inspection in inspections:
+            ...     print(f"{inspection.node_id}: {inspection.duration_ms}ms")
+        """
+        return self.get_inspections(workflow_id=workflow_id)
+
+    def delete_inspection(self, inspection_id: int) -> bool:
+        """
+        Delete a node inspection record by ID.
+
+        Args:
+            inspection_id: Database ID of the NodeInspection
+
+        Returns:
+            True if deleted, False if not found
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> deleted = mgr.delete_inspection(123)
+            >>> if deleted:
+            ...     print("Inspection record removed")
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            inspection = db.get(NodeInspection, inspection_id)
+            if not inspection:
+                return False
+
+            db.delete(inspection)
+            db.commit()
+            return True
+
+        finally:
+            db.close()
+
+    def clear_session_inspections(self, session_id: int) -> int:
+        """
+        Delete all inspection records for a session.
+
+        Useful for cleaning up inspection data when re-running workflows
+        or when inspection data is no longer needed.
+
+        Args:
+            session_id: Database ID of the session
+
+        Returns:
+            Number of inspection records deleted
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> count = mgr.clear_session_inspections(session_id=1)
+            >>> print(f"Removed {count} inspection records")
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            # Verify session exists
+            session = db.get(Session, session_id)
+            if not session:
+                raise ValueError(f"Session {session_id} not found")
+
+            # Delete all inspections for this session
+            count = (
+                db.query(NodeInspection)
+                .filter(NodeInspection.session_id == session_id)
+                .delete()
+            )
+
+            db.commit()
+            return count
+
+        finally:
+            db.close()
+
+    def clear_workflow_inspections(self, workflow_id: str) -> int:
+        """
+        Delete all inspection records for a workflow.
+
+        Useful for cleaning up inspection data from previous executions
+        before running a workflow again.
+
+        Args:
+            workflow_id: Workflow identifier
+
+        Returns:
+            Number of inspection records deleted
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> count = mgr.clear_workflow_inspections("workflow_123")
+            >>> print(f"Removed {count} inspection records")
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            count = (
+                db.query(NodeInspection)
+                .filter(NodeInspection.workflow_id == workflow_id)
+                .delete()
+            )
+
+            db.commit()
+            return count
+
+        finally:
+            db.close()

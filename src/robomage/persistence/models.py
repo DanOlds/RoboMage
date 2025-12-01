@@ -51,6 +51,11 @@ class Session(Base):
         "Workflow", back_populates="session", cascade="all, delete-orphan"
     )
 
+    # Relationship to node inspections (cascade delete)
+    inspections: Mapped[list["NodeInspection"]] = relationship(
+        "NodeInspection", back_populates="session", cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         """String representation of Session."""
         file_count = len(self.files) if self.files else 0
@@ -205,4 +210,91 @@ class AnalysisResult(Base):
         return (
             f"<AnalysisResult(id={self.id}, file_id={self.file_id}, "
             f"type='{self.analysis_type}')>"
+        )
+
+
+class NodeInspection(Base):
+    """
+    Workflow node inspection data for debugging and visualization.
+
+    Stores snapshots of input/output data for individual node executions
+    during workflow runs. This enables the Node I/O Inspector tool to
+    visualize data flow, diagnose issues, and understand transformations.
+
+    Key Features:
+    - Complete I/O snapshots with timing data
+    - Compact shape descriptions for quick overview
+    - Linked to sessions for easy cleanup
+    - Supports filtering by workflow/node/type
+    - Indexed for fast queries
+
+    Use Cases:
+    - Debugging failed workflows
+    - Understanding data transformations
+    - Performance profiling
+    - Educational demonstrations
+    - Quality assurance
+
+    Attributes:
+        id: Primary key
+        session_id: Optional link to session (for cleanup)
+        workflow_id: Workflow identifier
+        node_id: Unique node identifier in workflow
+        node_type: Node type (e.g., 'load_files', 'peak_analysis')
+        input_data: Serialized input data (JSON)
+        output_data: Serialized output data (JSON)
+        input_shape: Compact shape description (e.g., 'list[3]')
+        output_shape: Compact shape description (e.g., 'dict[5]')
+        timestamp_in: Node execution start time
+        timestamp_out: Node execution end time
+        duration_ms: Execution duration in milliseconds
+        execution_metadata: Additional context (JSON)
+        session: Relationship to parent Session
+    """
+
+    __tablename__ = "node_inspections"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Optional link to session (for cleanup when session deleted)
+    session_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("sessions.id"), nullable=True
+    )
+    session: Mapped["Session | None"] = relationship(
+        "Session", back_populates="inspections"
+    )
+
+    # Workflow context
+    workflow_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    node_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    node_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+
+    # I/O data (JSON serialized)
+    input_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    output_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Shape summaries (for quick display without parsing JSON)
+    input_shape: Mapped[str | None] = mapped_column(String, nullable=True)
+    output_shape: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Timing information
+    timestamp_in: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    timestamp_out: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Additional context (renamed from 'metadata' to avoid SQLAlchemy reserved name)
+    execution_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Indexes for common queries
+    __table_args__ = (
+        Index("idx_workflow_node", "workflow_id", "node_id"),
+        Index("idx_session_workflow", "session_id", "workflow_id"),
+        Index("idx_node_type", "node_type"),
+    )
+
+    def __repr__(self) -> str:
+        """String representation of NodeInspection."""
+        return (
+            f"<NodeInspection(id={self.id}, workflow_id='{self.workflow_id}', "
+            f"node_id='{self.node_id}', node_type='{self.node_type}')>"
         )

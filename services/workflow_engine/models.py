@@ -168,6 +168,7 @@ class WorkflowExecutionResult(BaseModel):
                 "final_output": {"total_peaks": 45, "files_processed": 5},
                 "error": None,
                 "total_duration_ms": 15234.7,
+                "inspections": [],
             }
         }
     )
@@ -186,6 +187,10 @@ class WorkflowExecutionResult(BaseModel):
     error: str | None = Field(None, description="Error message if workflow failed")
     total_duration_ms: float | None = Field(
         None, description="Total execution duration in milliseconds"
+    )
+    inspections: list[dict[str, Any]] | None = Field(
+        None,
+        description="Node I/O inspection snapshots (when inspection enabled)",
     )
 
 

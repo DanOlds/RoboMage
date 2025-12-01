@@ -450,6 +450,16 @@ class WorkflowOrchestrator:
             all_outputs = context.get_all_outputs()
             final_output = self._make_serializable(all_outputs)
 
+            # Include inspection data if enabled
+            inspections_serialized = None
+            if self.enable_inspection and self.inspection_data:
+                inspections_serialized = []
+                for snapshot in self.inspection_data.values():
+                    inspections_serialized.append(snapshot.model_dump(mode="json"))
+                logger.info(
+                    f"Captured {len(inspections_serialized)} inspection snapshots"
+                )
+
             return WorkflowExecutionResult(
                 execution_id=execution_id,
                 workflow_id=workflow.id or "unknown",
@@ -460,6 +470,7 @@ class WorkflowOrchestrator:
                 final_output=final_output,
                 error=None,
                 total_duration_ms=duration_ms,
+                inspections=inspections_serialized,
             )
 
         except Exception as e:
@@ -472,6 +483,13 @@ class WorkflowOrchestrator:
                 exc_info=True,
             )
 
+            # Include inspection data even on failure (helps debug)
+            inspections_serialized = None
+            if self.enable_inspection and self.inspection_data:
+                inspections_serialized = []
+                for snapshot in self.inspection_data.values():
+                    inspections_serialized.append(snapshot.model_dump(mode="json"))
+
             return WorkflowExecutionResult(
                 execution_id=execution_id,
                 workflow_id=workflow.id or "unknown",
@@ -482,6 +500,7 @@ class WorkflowOrchestrator:
                 final_output=None,
                 error=str(e),
                 total_duration_ms=duration_ms,
+                inspections=inspections_serialized,
             )
 
     def _topological_sort(self, workflow: Any) -> list[Any]:
