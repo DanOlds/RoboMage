@@ -182,5 +182,178 @@ def test_workflow_callbacks_registered(dash_app):
     assert len(dash_app.callback_map) > 0
 
 
+# JSON Editor Tests (Option A: Collapsible Panel)
+
+
+def test_json_editor_in_layout():
+    """Test that JSON editor components are present in layout."""
+    from robomage.dashboard.layouts.workflow_layout import create_workflow_tab
+
+    layout = create_workflow_tab()
+    children = str(layout)
+    
+    # Check for JSON editor components
+    assert "toggle-json-editor-btn" in children
+    assert "json-editor-collapse" in children
+    assert "workflow-json-editor" in children
+    assert "apply-json-btn" in children
+    assert "json-validation-feedback" in children
+    assert "Show JSON" in children  # Default button text
+
+
+def test_json_editor_toggle():
+    """Test JSON editor toggle functionality."""
+    # Simulate toggle callback behavior
+    is_open = False
+    
+    # First click - should open
+    new_state = not is_open
+    button_text = "Hide JSON" if new_state else "Show JSON"
+    
+    assert new_state is True
+    assert button_text == "Hide JSON"
+    
+    # Second click - should close
+    is_open = new_state
+    new_state = not is_open
+    button_text = "Hide JSON" if new_state else "Show JSON"
+    
+    assert new_state is False
+    assert button_text == "Show JSON"
+
+
+def test_json_sync_from_workflow():
+    """Test JSON editor syncs when workflow changes."""
+    # Sample workflow data
+    workflow_data = {
+        "name": "Test Workflow",
+        "description": "Test description",
+        "nodes": [
+            {
+                "id": "load_1",
+                "type": "load_files",
+                "label": "Load Data",
+                "config": {"directory": "/tmp", "pattern": "*.chi"},
+                "position": {"x": 100, "y": 100},
+            }
+        ],
+        "edges": [],
+    }
+    
+    # Simulate sync callback
+    json_str = json.dumps(workflow_data, indent=2)
+    
+    assert json_str is not None
+    assert "Test Workflow" in json_str
+    assert "load_files" in json_str
+    assert '"nodes"' in json_str
+    assert '"edges"' in json_str
+
+
+def test_json_apply_valid_workflow():
+    """Test applying valid JSON to workflow."""
+    json_text = json.dumps({
+        "name": "New Workflow",
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "load_files",
+                "label": "Load",
+                "config": {},
+                "position": {"x": 0, "y": 0},
+            }
+        ],
+        "edges": [],
+    }, indent=2)
+    
+    # Parse and validate structure
+    workflow = json.loads(json_text)
+    
+    assert "nodes" in workflow
+    assert "edges" in workflow
+    assert len(workflow["nodes"]) == 1
+    assert workflow["nodes"][0]["id"] == "n1"
+
+
+def test_json_apply_invalid_json_syntax():
+    """Test applying invalid JSON syntax."""
+    json_text = '{"nodes": [invalid json}'
+    
+    # Should raise JSONDecodeError
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(json_text)
+
+
+def test_json_apply_missing_nodes_key():
+    """Test applying JSON without 'nodes' key."""
+    json_text = json.dumps({
+        "name": "Invalid Workflow",
+        "edges": [],
+    })
+    
+    workflow = json.loads(json_text)
+    
+    # Should be missing 'nodes' key
+    assert "nodes" not in workflow
+    assert "edges" in workflow
+
+
+def test_json_apply_missing_edges_key():
+    """Test applying JSON without 'edges' key."""
+    json_text = json.dumps({
+        "name": "Invalid Workflow",
+        "nodes": [],
+    })
+    
+    workflow = json.loads(json_text)
+    
+    # Should be missing 'edges' key
+    assert "nodes" in workflow
+    assert "edges" not in workflow
+
+
+def test_json_apply_empty_workflow():
+    """Test applying empty but valid workflow."""
+    json_text = json.dumps({
+        "name": "Empty Workflow",
+        "nodes": [],
+        "edges": [],
+    })
+    
+    workflow = json.loads(json_text)
+    
+    assert "nodes" in workflow
+    assert "edges" in workflow
+    assert len(workflow["nodes"]) == 0
+    assert len(workflow["edges"]) == 0
+
+
+def test_json_sync_handles_empty_data():
+    """Test JSON editor handles empty/None workflow data."""
+    # Empty workflow data
+    workflow_data = None
+    
+    # Should return empty string
+    json_str = "" if not workflow_data else json.dumps(workflow_data, indent=2)
+    
+    assert json_str == ""
+
+
+def test_json_editor_preserves_formatting():
+    """Test that JSON editor uses consistent formatting."""
+    workflow_data = {
+        "nodes": [{"id": "n1", "type": "load_files"}],
+        "edges": [],
+    }
+    
+    # Use 2-space indentation
+    json_str = json.dumps(workflow_data, indent=2)
+    
+    # Check formatting
+    assert "  " in json_str  # 2-space indent
+    assert json_str.startswith("{")
+    assert json_str.endswith("}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

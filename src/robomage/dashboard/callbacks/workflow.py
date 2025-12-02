@@ -2218,3 +2218,153 @@ def register_visual_workflow_callbacks(app):
             workflow,
             dbc.Alert("Connection updated!", color="success", duration=2000),
         )
+
+    # JSON Editor Callbacks (Option A: Collapsible Panel)
+    @app.callback(
+        Output("json-editor-collapse", "is_open"),
+        Output("json-toggle-text", "children"),
+        Input("toggle-json-editor-btn", "n_clicks"),
+        State("json-editor-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_json_editor(n_clicks, is_open):
+        """Toggle JSON editor visibility and update button text."""
+        if not n_clicks:
+            raise PreventUpdate
+        
+        new_state = not is_open
+        button_text = "Hide JSON" if new_state else "Show JSON"
+        
+        logger.info(f"JSON editor toggled: {'open' if new_state else 'closed'}")
+        return new_state, button_text
+
+    @app.callback(
+        Output("workflow-json-editor", "value"),
+        Input("current-workflow-data", "data"),
+        prevent_initial_call=False,
+    )
+    def sync_json_from_workflow(workflow_data):
+        """Update JSON editor when workflow changes (via canvas or loads)."""
+        if not workflow_data:
+            return ""
+        
+        # Pretty-print JSON with 2-space indentation
+        try:
+            json_str = json.dumps(workflow_data, indent=2)
+            return json_str
+        except Exception as e:
+            logger.error(f"Error serializing workflow to JSON: {e}")
+            return f"Error: Could not serialize workflow\n{str(e)}"
+
+    @app.callback(
+        Output("current-workflow-data", "data", allow_duplicate=True),
+        Output("json-validation-feedback", "children"),
+        Input("apply-json-btn", "n_clicks"),
+        State("workflow-json-editor", "value"),
+        State("current-workflow-data", "data"),
+        prevent_initial_call=True,
+    )
+    def apply_json_to_workflow(n_clicks, json_text, current_workflow):
+        """Apply manually edited JSON to workflow (updates canvas)."""
+        if not n_clicks:
+            raise PreventUpdate
+        
+        if not json_text or not json_text.strip():
+            return no_update, dbc.Alert(
+                [
+                    html.I(className="fas fa-exclamation-triangle me-2"),
+                    "JSON is empty"
+                ],
+                color="warning",
+                dismissable=True,
+            )
+        
+        try:
+            # Parse JSON
+            workflow = json.loads(json_text)
+            
+            # Validate structure
+            if "nodes" not in workflow:
+                return no_update, dbc.Alert(
+                    [
+                        html.I(className="fas fa-times-circle me-2"),
+                        "Invalid workflow: missing 'nodes' key"
+                    ],
+                    color="danger",
+                    dismissable=True,
+                )
+            
+            if "edges" not in workflow:
+                return no_update, dbc.Alert(
+                    [
+                        html.I(className="fas fa-times-circle me-2"),
+                        "Invalid workflow: missing 'edges' key"
+                    ],
+                    color="danger",
+                    dismissable=True,
+                )
+            
+            # Validate using WorkflowValidator
+            from robomage.dashboard.components import WorkflowValidator
+            
+            validator = WorkflowValidator()
+            is_valid, errors = validator.validate(workflow)
+            
+            if not is_valid:
+                error_list = html.Ul(
+                    [html.Li(err) for err in errors],
+                    className="mb-0 mt-2"
+                )
+                return no_update, dbc.Alert(
+                    [
+                        html.Strong([
+                            html.I(className="fas fa-exclamation-triangle me-2"),
+                            (
+                                f"Validation failed "
+                                f"({len(errors)} error"
+                                f"{'s' if len(errors) > 1 else ''}):"
+                            )
+                        ]),
+                        error_list,
+                    ],
+                    color="danger",
+                    dismissable=True,
+                )
+            
+            # Success - update workflow (auto-sync to canvas via callback)
+            logger.info(
+                f"Applied JSON to workflow: {len(workflow.get('nodes', []))} nodes, "
+                f"{len(workflow.get('edges', []))} edges"
+            )
+            
+            return workflow, dbc.Alert(
+                [
+                    html.I(className="fas fa-check-circle me-2"),
+                    "JSON applied successfully! Canvas updated."
+                ],
+                color="success",
+                dismissable=True,
+                duration=3000,
+            )
+            
+        except json.JSONDecodeError as e:
+            return no_update, dbc.Alert(
+                [
+                    html.I(className="fas fa-times-circle me-2"),
+                    html.Strong("Invalid JSON syntax:"),
+                    html.Br(),
+                    html.Code(str(e), style={"fontSize": "11px"}),
+                ],
+                color="danger",
+                dismissable=True,
+            )
+        except Exception as e:
+            logger.error(f"Error applying JSON to workflow: {e}")
+            return no_update, dbc.Alert(
+                [
+                    html.I(className="fas fa-times-circle me-2"),
+                    f"Error: {str(e)}"
+                ],
+                color="danger",
+                dismissable=True,
+            )

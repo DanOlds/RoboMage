@@ -65,6 +65,22 @@ pixi run start-all
 
 ## Building Workflows
 
+### Dual Interface: Visual Canvas + JSON Editor
+
+RoboMage provides **two ways** to build workflows:
+
+1. **Visual Canvas** (Beginner-friendly): Drag-and-drop interface
+2. **JSON Editor** (Advanced): Direct JSON editing with validation
+
+Both interfaces are synchronized - changes in one automatically update the other!
+
+#### Toggling the JSON Editor
+
+- **Show**: Click the **"Show JSON"** button (gray, below canvas)
+- **Hide**: Click **"Hide JSON"** to collapse the editor
+- **Auto-sync**: JSON updates when you modify the canvas
+- **Apply**: Click **"Apply JSON"** to push manual edits to canvas
+
 ### Step 1: Add Nodes to Canvas
 
 **Method 1: Click Node Palette**
@@ -371,6 +387,168 @@ curl http://localhost:8002/node-types
 ```bash
 curl -X POST http://localhost:8002/workflows/{id}/execute
 ```
+
+---
+
+## Advanced: Direct JSON Editing
+
+For power users, RoboMage provides direct access to the workflow JSON representation.
+
+### When to Use JSON Editor
+
+- **Bulk Operations**: Faster than UI for many nodes
+- **Copy/Paste**: Import workflows from documentation or colleagues
+- **Precise Control**: Exact positioning, complex configurations
+- **Debugging**: Inspect workflow structure in detail
+- **Version Control**: Save workflows as `.json` files
+
+### Using the JSON Editor
+
+#### 1. Open the Editor
+```
+1. Click "Show JSON" button (below canvas)
+2. JSON panel expands with current workflow
+3. Formatted with 2-space indentation
+```
+
+#### 2. Auto-Sync from Canvas
+```
+• Add/remove nodes on canvas
+• JSON updates automatically
+• Real-time synchronization
+• Preserves formatting
+```
+
+#### 3. Manual Editing
+```
+1. Edit JSON directly in textarea
+2. Click "Apply JSON" button
+3. Workflow validates automatically
+4. Canvas updates if valid
+5. Error messages if invalid
+```
+
+### JSON Workflow Structure
+
+```json
+{
+  "name": "My Workflow",
+  "description": "Optional description",
+  "nodes": [
+    {
+      "id": "load_1",
+      "type": "load_files",
+      "label": "Load Data Files",
+      "config": {
+        "directory": "/path/to/data",
+        "pattern": "*.chi"
+      },
+      "position": {"x": 100, "y": 100}
+    },
+    {
+      "id": "analyze_1",
+      "type": "peak_analysis",
+      "label": "Detect Peaks",
+      "config": {
+        "profile_type": "gaussian",
+        "prominence": 0.1,
+        "distance": 5
+      },
+      "position": {"x": 400, "y": 100}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1",
+      "source": "load_1",
+      "target": "analyze_1"
+    }
+  ]
+}
+```
+
+### Validation Rules
+
+When you click "Apply JSON", the system validates:
+
+✅ **Syntax Check**: Valid JSON format  
+✅ **Structure Check**: Required keys (`nodes`, `edges`)  
+✅ **Node Types**: All node types are registered  
+✅ **No Cycles**: DAG requirement (directed acyclic graph)  
+✅ **Valid Edges**: Source/target nodes exist  
+✅ **Required Config**: Node-specific required fields  
+
+### Error Messages
+
+**Invalid JSON Syntax:**
+```
+❌ Invalid JSON syntax:
+   Unexpected token } in JSON at position 45
+```
+
+**Missing Keys:**
+```
+❌ Invalid workflow: missing 'nodes' key
+```
+
+**Validation Errors:**
+```
+⚠ 2 validation error(s):
+• Workflow contains cycles
+• Node 'analyze_1': missing required config 'profile_type'
+```
+
+### Tips & Tricks
+
+#### Copy Workflow Template
+```bash
+# Copy default workflow to clipboard
+cat docs/example-workflow.json | pbcopy  # macOS
+cat docs/example-workflow.json | xclip -selection clipboard  # Linux
+```
+
+#### Save Workflow to File
+```
+1. Show JSON editor
+2. Copy JSON content
+3. Save to file: my-workflow.json
+4. Version control with git
+```
+
+#### Load Workflow from File
+```
+1. Open my-workflow.json in text editor
+2. Copy entire content
+3. Paste into JSON editor
+4. Click "Apply JSON"
+```
+
+#### Batch Node Creation
+```json
+{
+  "nodes": [
+    {"id": "n1", "type": "load_files", "label": "Load 1", "config": {...}, "position": {"x": 0, "y": 0}},
+    {"id": "n2", "type": "load_files", "label": "Load 2", "config": {...}, "position": {"x": 0, "y": 100}},
+    {"id": "n3", "type": "load_files", "label": "Load 3", "config": {...}, "position": {"x": 0, "y": 200}}
+  ],
+  "edges": []
+}
+```
+Much faster than clicking palette 3 times!
+
+#### Precise Positioning
+```json
+{
+  "nodes": [
+    {"id": "n1", "position": {"x": 100, "y": 50}},
+    {"id": "n2", "position": {"x": 300, "y": 50}},
+    {"id": "n3", "position": {"x": 500, "y": 50}}
+  ]
+}
+```
+Perfect horizontal alignment!
+
+---
 
 ## Best Practices
 

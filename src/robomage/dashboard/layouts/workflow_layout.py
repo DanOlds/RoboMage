@@ -276,6 +276,21 @@ def create_workflow_tab() -> html.Div:
                                                                         size="sm",
                                                                         outline=True,
                                                                     ),
+                                                                    dbc.Button(
+                                                                        [
+                                                                            html.I(
+                                                                                className="fas fa-code me-1"
+                                                                            ),
+                                                                            html.Span(
+                                                                                id="json-toggle-text",
+                                                                                children="Show JSON",
+                                                                            ),
+                                                                        ],
+                                                                        id="toggle-json-editor-btn",
+                                                                        color="secondary",
+                                                                        size="sm",
+                                                                        outline=True,
+                                                                    ),
                                                                 ],
                                                                 className="mt-2",
                                                             ),
@@ -290,6 +305,79 @@ def create_workflow_tab() -> html.Div:
                                                         ]
                                                     ),
                                                 ]
+                                            ),
+                                            # JSON Editor (collapsible)
+                                            dbc.Collapse(
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader(
+                                                            [
+                                                                html.H6(
+                                                                    [
+                                                                        html.I(
+                                                                            className="fas fa-code me-2"
+                                                                        ),
+                                                                        "JSON Editor",
+                                                                        dbc.Badge(
+                                                                            "Advanced",
+                                                                            color="warning",
+                                                                            className="ms-2",
+                                                                        ),
+                                                                    ]
+                                                                )
+                                                            ]
+                                                        ),
+                                                        dbc.CardBody(
+                                                            [
+                                                                dcc.Textarea(
+                                                                    id="workflow-json-editor",
+                                                                    placeholder="Workflow JSON will appear here...",
+                                                                    style={
+                                                                        "width": "100%",
+                                                                        "height": "400px",
+                                                                        "fontFamily": "Consolas, Monaco, monospace",
+                                                                        "fontSize": "12px",
+                                                                        "border": "1px solid #ccc",
+                                                                        "borderRadius": "4px",
+                                                                        "padding": "10px",
+                                                                    },
+                                                                ),
+                                                                dbc.Row(
+                                                                    [
+                                                                        dbc.Col(
+                                                                            [
+                                                                                html.Div(
+                                                                                    id="json-validation-feedback"
+                                                                                )
+                                                                            ]
+                                                                        ),
+                                                                        dbc.Col(
+                                                                            [
+                                                                                dbc.Button(
+                                                                                    [
+                                                                                        html.I(
+                                                                                            className="fas fa-sync me-1"
+                                                                                        ),
+                                                                                        "Apply JSON",
+                                                                                    ],
+                                                                                    id="apply-json-btn",
+                                                                                    color="primary",
+                                                                                    size="sm",
+                                                                                    className="float-end",
+                                                                                )
+                                                                            ],
+                                                                            width="auto",
+                                                                        ),
+                                                                    ],
+                                                                    className="mt-2",
+                                                                ),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    className="mt-2",
+                                                ),
+                                                id="json-editor-collapse",
+                                                is_open=False,
                                             ),
                                         ]
                                     ),
