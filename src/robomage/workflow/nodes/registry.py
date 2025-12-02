@@ -177,6 +177,7 @@ class NodeRegistry:
         Searches:
         1. Built-in nodes: src/robomage/workflow/nodes/*.py
         2. Custom nodes: src/robomage/workflow/nodes/custom/*.py
+        3. Service nodes: From service registry workflow_integration
         
         Any module with decorated handlers will auto-register.
         """
@@ -200,6 +201,9 @@ class NodeRegistry:
         
         # Discover and import custom nodes
         cls._discover_custom_nodes()
+        
+        # Discover and register service-provided nodes
+        cls._discover_service_nodes()
         
         logger.info(f"Node discovery complete: {len(cls._handlers)} nodes registered")
         logger.info(f"Registered nodes: {', '.join(sorted(cls.get_node_types()))}")
@@ -241,6 +245,77 @@ class NodeRegistry:
                 logger.info(f"Loaded custom node module: {name}")
             except Exception as e:
                 logger.error(f"Failed to load custom node {name}: {e}")
+    
+    @classmethod
+    def _discover_service_nodes(cls) -> None:
+        """
+        Discover and register nodes from services in the service registry.
+        
+        Services with workflow_integration.enabled=true and node_types specified
+        will have placeholder nodes registered that delegate to the service.
+        """
+        try:
+            from robomage.service_registry import ServiceRegistry
+            from robomage.workflow.nodes.service_node import create_service_node_handler
+            
+            logger.info("Discovering service-provided nodes...")
+            
+            # Load service registry
+            registry = ServiceRegistry()
+            registry.load_registry()
+            
+            # Find services with workflow integration
+            for service in registry.get_all_services():
+                if not service.workflow_integration.enabled:
+                    continue
+                
+                if not service.workflow_integration.node_types:
+                    continue
+                
+                logger.info(
+                    f"Service '{service.name}' provides {len(service.workflow_integration.node_types)} node types"
+                )
+                
+                # Register each node type from the service
+                for node_type in service.workflow_integration.node_types:
+                    # Check if already registered (built-in takes precedence)
+                    if cls.is_registered(node_type):
+                        logger.debug(
+                            f"Node type '{node_type}' already registered, skipping service version"
+                        )
+                        continue
+                    
+                    # Create and register service node handler
+                    handler = create_service_node_handler(service, node_type)
+                    
+                    # Create metadata for service node
+                    metadata = NodeTypeMetadata(
+                        type=node_type,
+                        category=service.service_type,  # Use service type as category
+                        name=f"{node_type.replace('_', ' ').title()}",
+                        description=f"{service.display_name} - {node_type}",
+                        icon=service.dashboard_integration.icon,
+                        inputs=[{"name": "data", "type": "DiffractionData[]"}],
+                        outputs=[{"name": "results", "type": "AnalysisResults"}],
+                        config_schema={
+                            "type": "object",
+                            "properties": {
+                                "service_url": {
+                                    "type": "string",
+                                    "default": service.get_base_url(),
+                                    "description": "Service endpoint URL",
+                                }
+                            },
+                        },
+                    )
+                    
+                    cls.register(type=node_type, handler=handler, metadata=metadata)
+                    logger.info(f"Registered service node: {node_type} from {service.name}")
+            
+        except ImportError as e:
+            logger.debug(f"Service registry not available, skipping service nodes: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to discover service nodes: {e}")
 
 
 def register_node(

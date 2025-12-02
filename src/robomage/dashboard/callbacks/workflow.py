@@ -2,7 +2,7 @@
 Workflow Builder Callbacks
 
 Handles workflow creation, execution, and management in the dashboard.
-Integrates with the workflow service (port 8002).
+Integrates with the workflow service using the service registry.
 """
 
 import json
@@ -13,9 +13,29 @@ import requests
 from dash import ALL, Input, Output, State, callback_context, html, no_update
 from dash.exceptions import PreventUpdate
 
+from robomage.dashboard.components.service_monitor import check_service_health
+from robomage.service_registry import ServiceRegistry
+
 logger = logging.getLogger(__name__)
 
-WORKFLOW_SERVICE_URL = "http://localhost:8002"
+
+def get_workflow_service_url() -> str:
+    """Get workflow service URL from registry.
+    
+    Returns:
+        Workflow service base URL or default if registry fails
+    """
+    try:
+        registry = ServiceRegistry()
+        registry.load_registry()
+        service = registry.get_service("workflow_engine")
+        return service.get_base_url()
+    except Exception as e:
+        logger.warning(f"Failed to get workflow service from registry: {e}")
+        return "http://localhost:8002"  # Fallback
+
+
+WORKFLOW_SERVICE_URL = get_workflow_service_url()
 
 
 def register_callbacks(app):
@@ -31,23 +51,30 @@ def register_callbacks(app):
 
 
 def register_service_health_callback(app):
-    """Check workflow service health and update status indicator."""
+    """Check workflow service health using service registry."""
 
     @app.callback(
         Output("workflow-service-status", "children"),
         Input("workflow-service-check-interval", "n_intervals"),
     )
-    def check_service_health(n_intervals):
-        """Check if workflow service is running."""
+    def check_workflow_service_health(n_intervals):
+        """Check if workflow service is running using service registry."""
         try:
-            response = requests.get(f"{WORKFLOW_SERVICE_URL}/health", timeout=2)
-            if response.status_code == 200:
-                data = response.json()
+            # Load service metadata from registry
+            registry = ServiceRegistry()
+            registry.load_registry()
+            service = registry.get_service("workflow_engine")
+
+            # Check service health
+            health_result = check_service_health(service, timeout=2.0)
+
+            if health_result["is_connected"]:
+                data = health_result["status_data"]
                 return dbc.Alert(
                     [
                         html.I(className="fas fa-check-circle me-2"),
-                        f"Workflow service connected ({data['workflows_count']} workflows, "
-                        f"{data['node_types_registered']} node types)",
+                        f"Workflow service connected ({data.get('workflows_count', 0)} workflows, "
+                        f"{data.get('node_types_registered', 0)} node types)",
                     ],
                     color="success",
                     className="mb-0 py-2",
@@ -55,12 +82,21 @@ def register_service_health_callback(app):
         except Exception as e:
             logger.debug(f"Workflow service not available: {e}")
 
+        # Get startup command from registry
+        try:
+            registry = ServiceRegistry()
+            registry.load_registry()
+            service = registry.get_service("workflow_engine")
+            startup_cmd = service.format_startup_command()
+        except Exception:
+            startup_cmd = "pixi run python services/workflow_engine/main.py --port 8002"
+
         return dbc.Alert(
             [
                 html.I(className="fas fa-exclamation-triangle me-2"),
                 "Workflow service not available. Start with: ",
                 html.Code(
-                    "pixi run python services/workflow_engine/main.py --port 8002",
+                    startup_cmd,
                     className="ms-1",
                 ),
             ],

@@ -14,6 +14,11 @@ from robomage.clients.peak_analysis_client import (
     PeakAnalysisClient,
     PeakAnalysisServiceError,
 )
+from robomage.dashboard.components.service_monitor import (
+    check_service_health,
+    create_service_badge_outputs,
+)
+from robomage.service_registry import ServiceRegistry
 
 
 def register_callbacks(app):
@@ -25,7 +30,7 @@ def register_callbacks(app):
 
 
 def register_service_health_callback(app):
-    """Register callback to check service health status."""
+    """Register callback to check service health status using service registry."""
 
     @app.callback(
         [
@@ -37,9 +42,9 @@ def register_service_health_callback(app):
         [Input("main-tabs", "active_tab")],
         prevent_initial_call=False,
     )
-    def check_service_health(active_tab):
+    def check_peak_service_health(active_tab):
         """
-        Check if peak analysis service is available.
+        Check if peak analysis service is available using service registry.
 
         Args:
             active_tab: Currently active tab ID
@@ -48,10 +53,15 @@ def register_service_health_callback(app):
             Tuple of (badge content, badge color, status text, status class)
         """
         try:
-            client = PeakAnalysisClient(timeout=2.0)
-            health = client.health_check()
+            # Load service metadata from registry
+            registry = ServiceRegistry()
+            registry.load_registry()
+            service = registry.get_service("peak_analysis")
 
-            if health.get("status") == "healthy":
+            # Check service health
+            health_result = check_service_health(service, timeout=2.0)
+
+            if health_result["is_connected"]:
                 return (
                     [
                         html.I(className="fas fa-check-circle me-1"),

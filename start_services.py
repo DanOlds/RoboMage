@@ -2,8 +2,9 @@
 """
 Start all RoboMage services for the workflow system.
 
-This script starts all required services in the background and
-provides a single Ctrl+C handler to stop everything cleanly.
+This script uses the service registry to dynamically discover and start
+all auto-start services in the background, providing a single Ctrl+C
+handler to stop everything cleanly.
 """
 
 import os
@@ -16,6 +17,11 @@ from pathlib import Path
 # Change to project root
 project_root = Path(__file__).parent
 os.chdir(project_root)
+
+# Add project to path for imports
+sys.path.insert(0, str(project_root / "src"))
+
+from robomage.service_registry import ServiceRegistry
 
 # Track service processes
 processes = []
@@ -43,34 +49,64 @@ def main():
     print("🚀 Starting RoboMage Workflow System...")
     print()
 
+    # Load service registry
+    try:
+        registry = ServiceRegistry()
+        registry.load_registry()
+        auto_start_services = registry.get_auto_start_services()
+        print(f"📋 Found {len(auto_start_services)} auto-start services")
+        print()
+    except Exception as e:
+        print(f"❌ Failed to load service registry: {e}")
+        print("   Falling back to hardcoded services...")
+        auto_start_services = []
+
     # Use the current Python executable (should be from pixi when run via 'pixi run start-all')
     python_exe = sys.executable
 
-    # Start Peak Analysis Service
-    print("📊 Starting Peak Analysis Service (port 8001)...")
-    peak_proc = subprocess.Popen(
-        [python_exe, "services/peak_analysis/main.py", "--port", "8001"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    processes.append(peak_proc)
-    print(f"   ✓ Peak Analysis PID: {peak_proc.pid}")
-    time.sleep(2)
+    # Start all auto-start services
+    if auto_start_services:
+        for service in auto_start_services:
+            print(f"🔧 Starting {service.display_name} (port {service.port})...")
 
-    # Start Workflow Service
-    print()
-    print("⚙️  Starting Workflow Service (port 8002)...")
-    workflow_proc = subprocess.Popen(
-        [python_exe, "services/workflow_engine/main.py", "--port", "8002"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    processes.append(workflow_proc)
-    print(f"   ✓ Workflow Service PID: {workflow_proc.pid}")
-    time.sleep(2)
+            # Parse startup command and replace placeholders
+            cmd_parts = service.format_startup_command().split()
+
+            # Start service
+            proc = subprocess.Popen(
+                cmd_parts,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            processes.append(proc)
+            print(f"   ✓ {service.display_name} PID: {proc.pid}")
+            time.sleep(2)
+            print()
+    else:
+        # Fallback to hardcoded services if registry fails
+        print("📊 Starting Peak Analysis Service (port 8001)...")
+        peak_proc = subprocess.Popen(
+            [python_exe, "services/peak_analysis/main.py", "--port", "8001"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        processes.append(peak_proc)
+        print(f"   ✓ Peak Analysis PID: {peak_proc.pid}")
+        time.sleep(2)
+        print()
+
+        print("⚙️  Starting Workflow Service (port 8002)...")
+        workflow_proc = subprocess.Popen(
+            [python_exe, "services/workflow_engine/main.py", "--port", "8002"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        processes.append(workflow_proc)
+        print(f"   ✓ Workflow Service PID: {workflow_proc.pid}")
+        time.sleep(2)
+        print()
 
     # Start Dashboard in foreground
-    print()
     print("🌐 Starting Dashboard (port 8050)...")
     print("   Access at: http://localhost:8050")
     print("   Press Ctrl+C to stop all services")
