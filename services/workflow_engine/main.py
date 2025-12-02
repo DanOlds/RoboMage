@@ -85,8 +85,12 @@ async def register_node_handlers(orch: WorkflowOrchestrator) -> None:
     for node_type, handler in NodeRegistry.get_all_handlers().items():
         orch.register_node_handler(node_type, handler)
     
-    print(f"✅ Registered {len(orch.node_handlers)} node types via NodeRegistry")
-    print(f"   Node types: {', '.join(sorted(orch.node_handlers.keys()))}")
+    try:
+        print(f"✅ Registered {len(orch.node_handlers)} node types via NodeRegistry")
+        print(f"   Node types: {', '.join(sorted(orch.node_handlers.keys()))}")
+    except UnicodeEncodeError:
+        print(f"Registered {len(orch.node_handlers)} node types via NodeRegistry")
+        print(f"   Node types: {', '.join(sorted(orch.node_handlers.keys()))}")
 
 
 def get_registered_node_types() -> list[NodeTypeMetadata]:
@@ -215,7 +219,10 @@ async def create_workflow(workflow: WorkflowDefinition):
     # Store workflow
     workflows[workflow.id] = workflow
 
-    print(f"✅ Created workflow: {workflow.name} (ID: {workflow.id})")
+    try:
+        print(f"✅ Created workflow: {workflow.name} (ID: {workflow.id})")
+    except UnicodeEncodeError:
+        print(f"Created workflow: {workflow.name} (ID: {workflow.id})")
     return workflow
 
 
@@ -246,7 +253,10 @@ async def update_workflow(workflow_id: str, workflow: WorkflowDefinition):
 
     workflows[workflow_id] = workflow
 
-    print(f"✅ Updated workflow: {workflow.name} (ID: {workflow_id})")
+    try:
+        print(f"✅ Updated workflow: {workflow.name} (ID: {workflow_id})")
+    except UnicodeEncodeError:
+        print(f"Updated workflow: {workflow.name} (ID: {workflow_id})")
     return workflow
 
 
@@ -389,7 +399,10 @@ async def execute_workflow(
         return result
 
     except Exception as e:
-        print(f"❌ Workflow execution failed with exception: {e}")
+        try:
+            print(f"❌ Workflow execution failed with exception: {e}")
+        except UnicodeEncodeError:
+            print(f"Workflow execution failed with exception: {e}")
         import traceback
 
         traceback.print_exc()
