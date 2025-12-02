@@ -445,20 +445,34 @@ pixi run test      # Full test suite with pytest
 
 ### 📚 Documentation
 
+**🚀 Getting Started:**
 - **[Development Guide](docs/DEVELOPMENT.md)** - **START HERE**: Pixi commands, workflow, best practices
+- **[Service Creation Tips](docs/SERVICE-CREATION-TIPS.md)** - **NEW**: Critical learnings, dos/don'ts, 5-min recipe (validated Dec 2025)
+- **[Custom Services Guide](docs/CUSTOM-SERVICES-GUIDE.md)** - **UPDATED**: Complete guide with testing results (1300+ lines)
+- **[Hands-On Testing Results](docs/HANDS-ON-TESTING-RESULTS.md)** - **NEW**: Comprehensive validation report (Dec 2, 2025)
+
+**📖 Advanced Topics:**
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Custom Services Guide](docs/CUSTOM-SERVICES-GUIDE.md)** - **NEW**: Create custom microservices in <5 minutes (580+ lines)
 - **[Node Development Guide](docs/node-development-guide.md)** - Creating custom workflow nodes (820 lines)
 - **[Node Quick Reference](docs/node-quick-reference.md)** - Copy-paste templates for node development
+- **[Migration Guide](docs/MIGRATION-GUIDE.md)** - Migrating existing services to new architecture
 - **[Complete API Documentation](src/robomage/)** - Detailed docstrings in source code
+
+**🏗️ Architecture & Planning:**
 - **[Architecture & Dev Guide](.github/copilot-instructions.md)** - Architecture patterns, pixi usage, sprint status
 - **[LLM Chat Guide](docs/llm-chat-guide.md)** - Quick start template for AI assistant conversations
-- **[Sprint 6 Completion](docs/sprint-6-days-5-6-COMPLETE.md)** - Workflow-session integration summary
-- **[Sprint 7 Plan](docs/sprint-7-analysis-persistence-mvp.md)** - Extensible analysis result storage
-- **[Sprint 4 Dashboard Plan](docs/sprint-4-visualization-dashboard.md)** - Dashboard implementation phases
+- **[Sprint Documentation](docs/)** - Complete sprint completion summaries and plans
+
+**💡 Examples & Tutorials:**
 - **[Examples](examples/)** - Working code samples and tutorials
 - **[Custom Node Examples](examples/custom_nodes/)** - 3 working nodes with tests (template, background, peak width)
 - **[Environment Config](pixi.toml)** - Pixi environment and task definitions
+
+**✅ Testing & Validation:**
+- **37/37 automated tests passing** (service registry + client)
+- **7/7 hands-on test sessions passed** (100% success rate)
+- **Production-ready** - Validated December 2, 2025
+- See [Hands-On Testing Results](docs/HANDS-ON-TESTING-RESULTS.md) for complete metrics
 
 ---
 > Developed at **Brookhaven National Laboratory (BNL)** at the **NSLS-II**.

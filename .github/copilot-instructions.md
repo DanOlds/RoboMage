@@ -316,5 +316,9 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `docs/session-storage-expansion-guide.md` - Guide for extending persistence layer
 - `docs/WORKFLOW-CANVAS-BUTTONS-FIX.md` - **NEW**: Save/Load buttons fix (Dec 1, 2025)
 - `docs/CUSTOM-SERVICES-PLAN.md` - **NEW**: Custom services architecture plan (2-3 weeks)
+- `docs/CUSTOM-SERVICES-GUIDE.md` - **UPDATED**: Complete guide with validated testing results (Dec 2, 2025)
+- `docs/SERVICE-CREATION-TIPS.md` - **NEW**: Critical learnings, dos/don'ts, validated workflow (Dec 2, 2025)
+- `docs/HANDS-ON-TESTING-RESULTS.md` - **NEW**: Comprehensive testing report - 7/7 sessions passed (Dec 2, 2025)
+- `docs/HANDS-ON-TESTING-PLAN.md` - Testing plan for custom services (comprehensive validation)
 - `STORAGE-DEBUG-FEATURES.md` - Storage configuration and debug tools documentation
 - `README.md` - User-facing project overview and API documentation
