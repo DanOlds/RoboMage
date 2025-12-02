@@ -320,5 +320,6 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `docs/SERVICE-CREATION-TIPS.md` - **NEW**: Critical learnings, dos/don'ts, validated workflow (Dec 2, 2025)
 - `docs/HANDS-ON-TESTING-RESULTS.md` - **NEW**: Comprehensive testing report - 7/7 sessions passed (Dec 2, 2025)
 - `docs/HANDS-ON-TESTING-PLAN.md` - Testing plan for custom services (comprehensive validation)
+- `docs/KILL-COMMAND-SAFETY.md` - **NEW**: Safety analysis and best practices for kill-all commands (Dec 2, 2025)
 - `STORAGE-DEBUG-FEATURES.md` - Storage configuration and debug tools documentation
 - `README.md` - User-facing project overview and API documentation

@@ -59,26 +59,10 @@ check-services = "python -c 'from robomage.service_registry import get_registry;
 test-services = "pytest tests/test_service_registry.py tests/test_base_service_client.py -v"
 
 # Kill all running services (registry-aware)
-kill-all = """bash -c '
-echo "Stopping all RoboMage services..."
-# Kill dashboard on port 8050
-lsof -ti:8050 | xargs -r kill -9 2>/dev/null || true
-# Kill all registered services dynamically
-python -c "
-from robomage.service_registry import get_registry
-import subprocess
-registry = get_registry()
-for service in registry.services:
-    try:
-        subprocess.run([\"lsof\", \"-ti:{}\".format(service.port)], capture_output=True, check=False)
-        subprocess.run([\"bash\", \"-c\", \"lsof -ti:{} | xargs -r kill -9 2>/dev/null || true\".format(service.port)], check=False)
-        print(f\"  Stopped {service.display_name} on port {service.port}\")
-    except:
-        pass
-" 2>/dev/null || true
-# Kill any remaining Python processes
-pkill -9 -f "python.*robomage.*--dashboard" 2>/dev/null || true
-pkill -9 -f "python.*services.*main.py" 2>/dev/null || true
-pkill -9 -f "python.*start_services.py" 2>/dev/null || true
-echo "All services stopped."
-'"""
+# WARNING: This kills ANY process on ports 8001-8009 and 8050
+# For safer option that only kills RoboMage processes, use: pixi run kill-all-safe
+kill-all = """bash -c 'echo "Stopping RoboMage services..."; ROBOMAGE_ROOT="$(pwd)"; lsof -ti:8050 2>/dev/null | xargs -r kill -9 2>/dev/null || true; for p in 8001 8002 8003 8004 8005 8006 8007 8008 8009; do lsof -ti:$p 2>/dev/null | xargs -r kill -9 2>/dev/null || true; done; pkill -9 -f "^python.*$ROBOMAGE_ROOT/services/.*/main\\.py" 2>/dev/null || true; pkill -9 -f "^python.*$ROBOMAGE_ROOT/start_services\\.py" 2>/dev/null || true; pkill -9 -f "^python.*robomage.*--dashboard" 2>/dev/null || true; echo "All RoboMage services stopped."'"""
+
+# Safer alternative: Only kills processes with full path matching
+# Use this if you have other services on ports 8001-8009 or 8050
+kill-all-safe = """bash -c 'echo "Stopping RoboMage services (safe mode)..."; ROBOMAGE_ROOT="$(pwd)"; pkill -9 -f "^python.*$ROBOMAGE_ROOT/services/.*/main\\.py" 2>/dev/null || true; pkill -9 -f "^python.*$ROBOMAGE_ROOT/start_services\\.py" 2>/dev/null || true; pkill -9 -f "^python.*$ROBOMAGE_ROOT.*robomage.*--dashboard" 2>/dev/null || true; echo "RoboMage processes stopped (ports may still be in use by other processes)."'"""
