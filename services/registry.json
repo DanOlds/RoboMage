@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "services": [
+    {
+      "id": "peak_analysis",
+      "path": "services/peak_analysis",
+      "enabled": true,
+      "auto_start": true
+    },
+    {
+      "id": "workflow_engine",
+      "path": "services/workflow_engine",
+      "enabled": true,
+      "auto_start": true
+    }
+  ],
+  "discovery": {
+    "auto_discover": true,
+    "scan_directories": ["services/"]
+  }
+}

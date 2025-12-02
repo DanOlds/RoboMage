@@ -1,0 +1,45 @@
+{
+  "name": "workflow_engine",
+  "display_name": "Workflow Engine Service",
+  "description": "DAG-based workflow orchestration for executing multi-step analysis pipelines with visual workflow builder support",
+  "version": "1.0.0",
+  "service_type": "orchestration",
+  "port": 8002,
+  "host": "127.0.0.1",
+  "endpoints": {
+    "health": "/health",
+    "root": "/",
+    "docs": "/docs",
+    "workflows": "/workflows",
+    "node_types": "/node-types"
+  },
+  "health_check_interval": 5000,
+  "startup_timeout": 30,
+  "dependencies": {
+    "python": ">=3.10",
+    "packages": [
+      "fastapi",
+      "uvicorn",
+      "pydantic>=2.0",
+      "numpy"
+    ]
+  },
+  "workflow_integration": {
+    "enabled": true,
+    "node_types": [
+      "load_files",
+      "peak_analysis",
+      "export_csv",
+      "normalize",
+      "filter_peaks"
+    ]
+  },
+  "dashboard_integration": {
+    "enabled": true,
+    "tab_name": "Workflow Builder",
+    "status_indicator": true,
+    "icon": "fas fa-project-diagram"
+  },
+  "client_class": null,
+  "startup_command": "python services/workflow_engine/main.py --port {port} --host {host}"
+}

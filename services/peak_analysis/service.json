@@ -1,0 +1,42 @@
+{
+  "name": "peak_analysis",
+  "display_name": "Peak Analysis Service",
+  "description": "Automated peak detection and fitting for powder diffraction data with support for Gaussian, Lorentzian, and Voigt profiles",
+  "version": "1.0.0",
+  "service_type": "analysis",
+  "port": 8001,
+  "host": "127.0.0.1",
+  "endpoints": {
+    "health": "/health",
+    "root": "/",
+    "docs": "/docs",
+    "analyze": "/analyze"
+  },
+  "health_check_interval": 5000,
+  "startup_timeout": 30,
+  "dependencies": {
+    "python": ">=3.10",
+    "packages": [
+      "fastapi",
+      "uvicorn",
+      "pydantic>=2.0",
+      "scipy",
+      "numpy"
+    ]
+  },
+  "workflow_integration": {
+    "enabled": true,
+    "node_types": [
+      "peak_detection",
+      "peak_analysis"
+    ]
+  },
+  "dashboard_integration": {
+    "enabled": true,
+    "tab_name": "Analysis",
+    "status_indicator": true,
+    "icon": "fas fa-chart-line"
+  },
+  "client_class": "robomage.clients.peak_analysis_client.PeakAnalysisClient",
+  "startup_command": "python services/peak_analysis/main.py --port {port} --host {host}"
+}
