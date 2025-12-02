@@ -71,17 +71,34 @@ def main():
 
             # Parse startup command and replace placeholders
             # Use shlex.split for proper command parsing (handles paths with spaces on Windows)
-            cmd_parts = shlex.split(service.format_startup_command())
+            cmd_str = service.format_startup_command()
+            
+            # Replace 'python' with actual Python executable (critical for Windows)
+            if cmd_str.startswith("python "):
+                cmd_str = f"{python_exe} {cmd_str[7:]}"
+            
+            cmd_parts = shlex.split(cmd_str)
+            
+            # Create log file for service output
+            log_path = project_root / f"{service.service_id}.log"
+            log_file = open(log_path, "w")
 
             # Start service
             proc = subprocess.Popen(
                 cmd_parts,
-                stdout=subprocess.PIPE,
+                stdout=log_file,
                 stderr=subprocess.STDOUT,
+                cwd=project_root,
             )
             processes.append(proc)
             print(f"   ✓ {service.display_name} PID: {proc.pid}")
+            print(f"   📝 Logs: {log_path}")
+            
+            # Wait a moment and check if process is still running
             time.sleep(2)
+            if proc.poll() is not None:
+                print(f"   ⚠️  WARNING: Process exited with code {proc.returncode}")
+                print(f"   📄 Check logs: {log_path}")
             print()
     else:
         # Fallback to hardcoded services if registry fails
