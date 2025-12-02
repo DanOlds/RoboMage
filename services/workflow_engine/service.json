@@ -25,14 +25,7 @@
     ]
   },
   "workflow_integration": {
-    "enabled": true,
-    "node_types": [
-      "load_files",
-      "peak_analysis",
-      "export_csv",
-      "normalize",
-      "filter_peaks"
-    ]
+    "enabled": false
   },
   "dashboard_integration": {
     "enabled": true,

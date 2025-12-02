@@ -27,7 +27,6 @@
   "workflow_integration": {
     "enabled": true,
     "node_types": [
-      "peak_detection",
       "peak_analysis"
     ]
   },
