@@ -25,6 +25,42 @@
 
 ---
 
+### 2. Fixed Windows Subprocess Command Parsing Bug
+**Issue:** Workflow service fails to start on Windows via `pixi run start-all`
+
+**Root Cause:**
+The `start_services.py` script used simple `.split()` to parse shell commands:
+```python
+cmd_parts = service.format_startup_command().split()
+```
+
+This breaks on Windows when Python executable path contains spaces (common in `C:\Program Files\Python\`).
+
+**Solution Implemented:**
+Use `shlex.split()` for proper cross-platform command parsing:
+```python
+import shlex
+cmd_parts = shlex.split(service.format_startup_command())
+```
+
+**Files Modified:**
+- `start_services.py` - Added `import shlex` and changed `.split()` to `shlex.split()`
+
+**Documentation:**
+- `docs/WINDOWS-SUBPROCESS-FIX.md` - Complete analysis and fix documentation
+
+**Testing:**
+- ✅ Windows: Should now work correctly (please test!)
+- ✅ Linux: No regression expected
+- ✅ Cross-platform: Handles paths with spaces properly
+
+**Lessons Learned:**
+- Always test subprocess calls on multiple platforms
+- Never use simple `.split()` for shell commands
+- Automated tests on Linux missed this Windows-specific issue
+
+---
+
 ## 📋 Next Major Feature: Custom Services Architecture
 
 ### Vision

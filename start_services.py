@@ -8,6 +8,7 @@ handler to stop everything cleanly.
 """
 
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -69,7 +70,8 @@ def main():
             print(f"🔧 Starting {service.display_name} (port {service.port})...")
 
             # Parse startup command and replace placeholders
-            cmd_parts = service.format_startup_command().split()
+            # Use shlex.split for proper command parsing (handles paths with spaces on Windows)
+            cmd_parts = shlex.split(service.format_startup_command())
 
             # Start service
             proc = subprocess.Popen(
