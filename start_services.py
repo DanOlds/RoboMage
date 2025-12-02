@@ -75,21 +75,34 @@ def main():
             
             # Replace 'python' with actual Python executable (critical for Windows)
             if cmd_str.startswith("python "):
-                cmd_str = f"{python_exe} {cmd_str[7:]}"
+                cmd_str = f'"{python_exe}" {cmd_str[7:]}'
             
-            cmd_parts = shlex.split(cmd_str)
+            print(f"   🐍 Python: {python_exe}")
+            print(f"   📝 Command: {cmd_str}")
             
             # Create log file for service output
             log_path = project_root / f"{service.name}.log"
             log_file = open(log_path, "w")
 
-            # Start service
-            proc = subprocess.Popen(
-                cmd_parts,
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                cwd=project_root,
-            )
+            # On Windows, use shell=True to handle path resolution
+            # On Unix, use shlex.split for proper argument parsing
+            if sys.platform == "win32":
+                proc = subprocess.Popen(
+                    cmd_str,
+                    shell=True,
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    cwd=project_root,
+                )
+            else:
+                cmd_parts = shlex.split(cmd_str)
+                proc = subprocess.Popen(
+                    cmd_parts,
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    cwd=project_root,
+                )
+            
             processes.append(proc)
             print(f"   ✓ {service.display_name} PID: {proc.pid}")
             print(f"   📝 Logs: {log_path}")
