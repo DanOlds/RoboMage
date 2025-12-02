@@ -122,15 +122,26 @@ async def lifespan(app: FastAPI):
     global orchestrator
 
     # Startup
-    print("🚀 RoboMage Workflow Service starting...")
+    try:
+        print("🚀 RoboMage Workflow Service starting...")
+    except UnicodeEncodeError:
+        print("RoboMage Workflow Service starting...")
+    
     orchestrator = WorkflowOrchestrator()
     await register_node_handlers(orchestrator)
-    print("✅ Workflow Service ready on port 8002")
+    
+    try:
+        print("✅ Workflow Service ready on port 8002")
+    except UnicodeEncodeError:
+        print("Workflow Service ready on port 8002")
 
     yield
 
     # Shutdown
-    print("🛑 Workflow Service shutting down...")
+    try:
+        print("🛑 Workflow Service shutting down...")
+    except UnicodeEncodeError:
+        print("Workflow Service shutting down...")
 
 
 # Create FastAPI application
@@ -246,7 +257,10 @@ async def delete_workflow(workflow_id: str):
         raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
 
     deleted = workflows.pop(workflow_id)
-    print(f"🗑️  Deleted workflow: {deleted.name} (ID: {workflow_id})")
+    try:
+        print(f"🗑️  Deleted workflow: {deleted.name} (ID: {workflow_id})")
+    except UnicodeEncodeError:
+        print(f"Deleted workflow: {deleted.name} (ID: {workflow_id})")
     return {"status": "deleted", "workflow_id": workflow_id}
 
 
@@ -273,9 +287,14 @@ async def execute_workflow(
 
     workflow = workflows[workflow_id]
 
-    print(f"🚀 Executing workflow: {workflow.name} (ID: {workflow_id})")
-    if enable_inspection:
-        print("🔍 Inspection mode enabled - capturing node I/O snapshots")
+    try:
+        print(f"🚀 Executing workflow: {workflow.name} (ID: {workflow_id})")
+        if enable_inspection:
+            print("🔍 Inspection mode enabled - capturing node I/O snapshots")
+    except UnicodeEncodeError:
+        print(f"Executing workflow: {workflow.name} (ID: {workflow_id})")
+        if enable_inspection:
+            print("Inspection mode enabled - capturing node I/O snapshots")
 
     try:
         # Execute using orchestrator with full output storage for session persistence
@@ -289,16 +308,30 @@ async def execute_workflow(
         # Store execution result
         executions[result.execution_id] = result
 
-        status_emoji = "✅" if result.status == ExecutionStatus.COMPLETED else "❌"
-        print(
-            f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
-        )
+        try:
+            status_emoji = "✅" if result.status == ExecutionStatus.COMPLETED else "❌"
+            print(
+                f"{status_emoji} Workflow execution {result.execution_id}: {result.status}"
+            )
 
-        # Debug: Check if node_type is in the results
-        if result.node_results:
-            print(f"🔍 SERVICE: Returning {len(result.node_results)} node results")
-            for nr in result.node_results[:2]:  # Check first 2
-                print(
+            # Debug: Check if node_type is in the results
+            if result.node_results:
+                print(f"🔍 SERVICE: Returning {len(result.node_results)} node results")
+                for nr in result.node_results[:2]:  # Check first 2
+                    print(
+                        f"   Node {nr.node_id}: type={nr.node_type}, status={nr.status}"
+                    )
+        except UnicodeEncodeError:
+            status_text = "SUCCESS" if result.status == ExecutionStatus.COMPLETED else "FAILED"
+            print(
+                f"{status_text} Workflow execution {result.execution_id}: {result.status}"
+            )
+
+            # Debug: Check if node_type is in the results
+            if result.node_results:
+                print(f"SERVICE: Returning {len(result.node_results)} node results")
+                for nr in result.node_results[:2]:  # Check first 2
+                    print(
                     f"  Node {nr.node_id}: type={getattr(nr, 'node_type', 'MISSING')}"
                 )
 
@@ -340,9 +373,15 @@ async def execute_workflow(
                         execution_metadata=inspection_dict.get("metadata"),
                         session_id=None,  # Not linked to a session (standalone execution)
                     )
-                print(f"💾 Saved {len(result.inspections)} inspection records to database")
+                try:
+                    print(f"💾 Saved {len(result.inspections)} inspection records to database")
+                except UnicodeEncodeError:
+                    print(f"Saved {len(result.inspections)} inspection records to database")
             except Exception as e:
-                print(f"⚠️ Warning: Failed to save inspection data: {e}")
+                try:
+                    print(f"⚠️ Warning: Failed to save inspection data: {e}")
+                except UnicodeEncodeError:
+                    print(f"Warning: Failed to save inspection data: {e}")
                 import traceback
                 traceback.print_exc()
                 # Don't fail the request, just log the warning
@@ -392,17 +431,21 @@ def main():
         print(f"📚 API docs available at http://{args.host}:{args.port}/docs")
         print()
         print("⚠️  IMPORTANT: Some workflow nodes require additional services:")
+        print(
+            "   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001"
+        )
+        print("   • Dashboard: pixi run python -m robomage.dashboard")
     except UnicodeEncodeError:
         # Fallback for Windows consoles with limited encoding (cp1252)
         print(f"Starting Workflow Service on http://{args.host}:{args.port}")
         print(f"API docs available at http://{args.host}:{args.port}/docs")
         print()
         print("IMPORTANT: Some workflow nodes require additional services:")
+        print(
+            "   - Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001"
+        )
+        print("   - Dashboard: pixi run python -m robomage.dashboard")
     
-    print(
-        "   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001"
-    )
-    print("   • Dashboard: pixi run python -m robomage.dashboard")
     print()
 
     uvicorn.run(
