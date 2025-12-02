@@ -1,0 +1,41 @@
+{
+  "name": "{{SERVICE_NAME}}",
+  "display_name": "{{DISPLAY_NAME}}",
+  "description": "{{DESCRIPTION}}",
+  "version": "1.0.0",
+  "service_type": "analysis",
+  "port": {{PORT}},
+  "host": "127.0.0.1",
+  "endpoints": {
+    "health": "/health",
+    "root": "/",
+    "docs": "/docs",
+    "analyze": "/analyze"
+  },
+  "health_check_interval": 5000,
+  "startup_timeout": 30,
+  "dependencies": {
+    "python": ">=3.10",
+    "packages": [
+      "fastapi",
+      "uvicorn",
+      "pydantic>=2.0",
+      "numpy",
+      "scipy"
+    ]
+  },
+  "workflow_integration": {
+    "enabled": true,
+    "node_types": [
+      "{{NODE_TYPE}}"
+    ]
+  },
+  "dashboard_integration": {
+    "enabled": true,
+    "tab_name": null,
+    "status_indicator": true,
+    "icon": "fas fa-calculator"
+  },
+  "client_class": null,
+  "startup_command": "python services/{{SERVICE_NAME}}/main.py --port {port} --host {host}"
+}

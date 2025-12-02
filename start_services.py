@@ -21,7 +21,7 @@ os.chdir(project_root)
 # Add project to path for imports
 sys.path.insert(0, str(project_root / "src"))
 
-from robomage.service_registry import ServiceRegistry
+from robomage.service_registry import get_registry
 
 # Track service processes
 processes = []
@@ -51,8 +51,7 @@ def main():
 
     # Load service registry
     try:
-        registry = ServiceRegistry()
-        registry.load_registry()
+        registry = get_registry()
         auto_start_services = registry.get_auto_start_services()
         print(f"📋 Found {len(auto_start_services)} auto-start services")
         print()

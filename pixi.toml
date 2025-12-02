@@ -41,23 +41,42 @@ check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
 dashboard = "python -m robomage --dashboard"
 dashboard-debug = "python -m robomage --dashboard --debug"
 
-# Individual service tasks
+# Individual service tasks (legacy - prefer registry-driven tasks)
 peak-service = "python services/peak_analysis/main.py --port 8001"
 workflow-service = "python services/workflow_engine/main.py --port 8002"
 
-# Start all services for workflow system (cross-platform)
+# Registry-driven service management (NEW)
+# Start all services registered in services/registry.json
 start-all = "python start_services.py"
 
-# Kill all running services (dashboard and microservices)
+# List all registered services
+list-services = "python -c 'from robomage.service_registry import get_registry; r = get_registry(); print(\"\\nRegistered Services:\"); [print(f\"  - {s.display_name} ({s.name}) on port {s.port}\") for s in r.get_all_services()]; print()'"
+
+# Check health of all services
+check-services = "python -c 'from robomage.service_registry import get_registry; from robomage.clients.base_service_client import BaseServiceClient; r = get_registry(); print(\"\\nService Health:\"); [print(f\"  {'✅' if BaseServiceClient(s.get_base_url()).ping() else '❌'} {s.display_name} ({s.get_base_url()})\") for s in r.get_all_services()]; print()'"
+
+# Test all services with basic requests
+test-services = "pytest tests/test_service_registry.py tests/test_base_service_client.py -v"
+
+# Kill all running services (registry-aware)
 kill-all = """bash -c '
 echo "Stopping all RoboMage services..."
-# Kill processes on port 8050 (dashboard)
+# Kill dashboard on port 8050
 lsof -ti:8050 | xargs -r kill -9 2>/dev/null || true
-# Kill processes on port 8001 (peak analysis)
-lsof -ti:8001 | xargs -r kill -9 2>/dev/null || true
-# Kill processes on port 8002 (workflow engine)
-lsof -ti:8002 | xargs -r kill -9 2>/dev/null || true
-# Kill any Python processes with robomage, main.py, or start_services.py in the command
+# Kill all registered services dynamically
+python -c "
+from robomage.service_registry import get_registry
+import subprocess
+registry = get_registry()
+for service in registry.services:
+    try:
+        subprocess.run([\"lsof\", \"-ti:{}\".format(service.port)], capture_output=True, check=False)
+        subprocess.run([\"bash\", \"-c\", \"lsof -ti:{} | xargs -r kill -9 2>/dev/null || true\".format(service.port)], check=False)
+        print(f\"  Stopped {service.display_name} on port {service.port}\")
+    except:
+        pass
+" 2>/dev/null || true
+# Kill any remaining Python processes
 pkill -9 -f "python.*robomage.*--dashboard" 2>/dev/null || true
 pkill -9 -f "python.*services.*main.py" 2>/dev/null || true
 pkill -9 -f "python.*start_services.py" 2>/dev/null || true

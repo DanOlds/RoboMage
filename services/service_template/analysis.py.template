@@ -1,0 +1,162 @@
+"""
+Analysis logic for {{DISPLAY_NAME}}.
+
+This module contains the core analysis algorithms.
+Separate from main.py to keep API logic and analysis logic decoupled.
+"""
+
+import logging
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
+from models import AnalysisConfig, AnalysisResult, InputData
+
+logger = logging.getLogger(__name__)
+
+
+def perform_analysis(
+    data: InputData,
+    config: Optional[AnalysisConfig] = None,
+) -> List[AnalysisResult]:
+    """
+    Perform {{SERVICE_NAME}} analysis on input data.
+    
+    This is the main entry point for your analysis logic.
+    Replace this placeholder implementation with your actual analysis.
+    
+    Args:
+        data: Input data to analyze
+        config: Optional configuration parameters
+        
+    Returns:
+        List of analysis results
+        
+    Raises:
+        ValueError: If data is invalid or analysis fails
+    """
+    # Use default config if not provided
+    if config is None:
+        config = AnalysisConfig()
+    
+    logger.info(f"Starting analysis with {len(data.data_points)} data points")
+    logger.info(f"Config: {config.model_dump()}")
+    
+    # Validate input data
+    validate_input_data(data)
+    
+    # Extract arrays from data points
+    x_values = np.array([point.x for point in data.data_points])
+    y_values = np.array([point.y for point in data.data_points])
+    
+    # TODO: Replace this placeholder with your actual analysis logic
+    # This is just an example that computes some simple statistics
+    results = []
+    
+    # Example: Compute basic statistics
+    results.append(
+        AnalysisResult(
+            metric_name="mean_x",
+            metric_value=float(np.mean(x_values)),
+            confidence=1.0,
+        )
+    )
+    
+    results.append(
+        AnalysisResult(
+            metric_name="mean_y",
+            metric_value=float(np.mean(y_values)),
+            confidence=1.0,
+        )
+    )
+    
+    results.append(
+        AnalysisResult(
+            metric_name="max_y",
+            metric_value=float(np.max(y_values)),
+            confidence=1.0,
+        )
+    )
+    
+    # Example: Use configuration parameters
+    if config.parameter3:  # If verbose mode enabled
+        results.append(
+            AnalysisResult(
+                metric_name="std_y",
+                metric_value=float(np.std(y_values)),
+                confidence=0.95,
+            )
+        )
+    
+    logger.info(f"Analysis complete: found {len(results)} results")
+    
+    return results
+
+
+def validate_input_data(data: InputData) -> None:
+    """
+    Validate input data before analysis.
+    
+    Args:
+        data: Input data to validate
+        
+    Raises:
+        ValueError: If data is invalid
+    """
+    if not data.data_points:
+        raise ValueError("No data points provided")
+    
+    if len(data.data_points) < 2:
+        raise ValueError("At least 2 data points required for analysis")
+    
+    # Check for NaN or infinite values
+    for i, point in enumerate(data.data_points):
+        if not np.isfinite(point.x):
+            raise ValueError(f"Invalid x value at index {i}: {point.x}")
+        if not np.isfinite(point.y):
+            raise ValueError(f"Invalid y value at index {i}: {point.y}")
+        if point.error is not None and not np.isfinite(point.error):
+            raise ValueError(f"Invalid error value at index {i}: {point.error}")
+    
+    logger.debug(f"Input data validated: {len(data.data_points)} points")
+
+
+# Add additional helper functions as needed
+# Examples:
+
+def preprocess_data(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Preprocess data before analysis (e.g., smoothing, normalization).
+    
+    Args:
+        x: X coordinates
+        y: Y coordinates
+        
+    Returns:
+        Preprocessed x and y arrays
+    """
+    # TODO: Implement preprocessing if needed
+    return x, y
+
+
+def compute_quality_metrics(
+    x: np.ndarray,
+    y: np.ndarray,
+    results: List[AnalysisResult],
+) -> Dict[str, float]:
+    """
+    Compute quality metrics for analysis results.
+    
+    Args:
+        x: X coordinates
+        y: Y coordinates  
+        results: Analysis results
+        
+    Returns:
+        Dictionary of quality metrics
+    """
+    # TODO: Implement quality metrics if needed
+    return {
+        "data_points": len(x),
+        "results_count": len(results),
+    }

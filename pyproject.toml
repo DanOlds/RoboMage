@@ -107,3 +107,8 @@ filterwarnings = [
     # Ignore specific deprecation warnings from external libraries
     "ignore::DeprecationWarning:dash._callback",
 ]
+# Custom markers
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]

@@ -1,0 +1,167 @@
+"""
+Pydantic models for {{DISPLAY_NAME}} service.
+
+This module defines the request and response models for the service API.
+Customize these models based on your specific analysis requirements.
+"""
+
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class AnalysisConfig(BaseModel):
+    """
+    Configuration parameters for {{SERVICE_NAME}} analysis.
+    
+    Customize this model with your specific analysis parameters.
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "parameter1": "value1",
+                "parameter2": 42,
+                "parameter3": True,
+            }
+        }
+    )
+    
+    # Add your configuration parameters here
+    # Example:
+    # threshold: float = Field(default=0.5, ge=0, le=1, description="Analysis threshold")
+    # method: str = Field(default="auto", description="Analysis method to use")
+    # verbose: bool = Field(default=False, description="Enable verbose output")
+    
+    # Placeholder parameters - replace with your own
+    parameter1: str = Field(default="default_value", description="Example string parameter")
+    parameter2: int = Field(default=100, ge=0, description="Example integer parameter")
+    parameter3: bool = Field(default=True, description="Example boolean parameter")
+
+
+class DataPoint(BaseModel):
+    """
+    Single data point for analysis.
+    
+    Customize this based on your data structure.
+    """
+    
+    x: float = Field(description="X coordinate (e.g., Q, 2θ, d-spacing)")
+    y: float = Field(description="Y coordinate (e.g., intensity)")
+    error: Optional[float] = Field(default=None, description="Optional error/uncertainty")
+
+
+class InputData(BaseModel):
+    """
+    Input data for analysis.
+    
+    Customize this to match your expected input format.
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "data_points": [
+                    {"x": 1.0, "y": 100.0},
+                    {"x": 2.0, "y": 150.0},
+                    {"x": 3.0, "y": 120.0},
+                ],
+                "metadata": {
+                    "wavelength": 0.1665,
+                    "temperature": 298.15,
+                },
+            }
+        }
+    )
+    
+    data_points: List[DataPoint] = Field(description="List of data points to analyze")
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional metadata about the data",
+    )
+
+
+class AnalysisRequest(BaseModel):
+    """
+    Request model for analysis endpoint.
+    
+    This is the top-level request sent to POST /analyze
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "data": {
+                    "data_points": [
+                        {"x": 1.0, "y": 100.0},
+                        {"x": 2.0, "y": 150.0},
+                    ],
+                },
+                "config": {
+                    "parameter1": "custom_value",
+                    "parameter2": 42,
+                },
+            }
+        }
+    )
+    
+    data: InputData = Field(description="Input data for analysis")
+    config: Optional[AnalysisConfig] = Field(
+        default=None,
+        description="Analysis configuration parameters",
+    )
+
+
+class AnalysisResult(BaseModel):
+    """
+    Single analysis result.
+    
+    Customize this based on what your analysis produces.
+    """
+    
+    # Add your result fields here
+    # Examples:
+    # position: float = Field(description="Peak position")
+    # intensity: float = Field(description="Peak intensity")
+    # quality: float = Field(description="Fit quality metric")
+    
+    # Placeholder fields - replace with your own
+    metric_name: str = Field(description="Name of the computed metric")
+    metric_value: float = Field(description="Value of the metric")
+    confidence: Optional[float] = Field(default=None, ge=0, le=1, description="Confidence score")
+
+
+class AnalysisResponse(BaseModel):
+    """
+    Response model for analysis endpoint.
+    
+    This is returned from POST /analyze
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "results": [
+                    {
+                        "metric_name": "example_metric",
+                        "metric_value": 42.5,
+                        "confidence": 0.95,
+                    }
+                ],
+                "status": "success",
+                "message": "Analysis completed successfully",
+                "metadata": {
+                    "processing_time_ms": 123.45,
+                    "data_points_analyzed": 1000,
+                },
+            }
+        }
+    )
+    
+    results: List[AnalysisResult] = Field(description="Analysis results")
+    status: str = Field(description="Analysis status (success/error)")
+    message: str = Field(description="Human-readable status message")
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional metadata about the analysis",
+    )

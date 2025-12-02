@@ -1,0 +1,171 @@
+"""
+{{DISPLAY_NAME}}
+
+{{DESCRIPTION}}
+
+This service provides a REST API for {{SERVICE_NAME}} analysis.
+
+Usage:
+    python main.py --port {{PORT}} --host 0.0.0.0
+
+API Endpoints:
+    POST /analyze  - Perform {{SERVICE_NAME}} analysis
+    GET  /health   - Service health check
+    GET  /         - Service information
+    GET  /docs     - Interactive API documentation
+"""
+
+import argparse
+import logging
+from contextlib import asynccontextmanager
+from typing import Any, Dict
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+from models import AnalysisRequest, AnalysisResponse
+from analysis import perform_analysis
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage service lifecycle - startup and shutdown."""
+    logger.info("🚀 {{DISPLAY_NAME}} starting...")
+    # Add any startup initialization here
+    yield
+    # Add any shutdown cleanup here
+    logger.info("🛑 {{DISPLAY_NAME}} shutting down...")
+
+
+# Create FastAPI application
+app = FastAPI(
+    title="{{DISPLAY_NAME}}",
+    description="{{DESCRIPTION}}",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# Enable CORS for dashboard integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8050",
+        "http://127.0.0.1:8050",
+        "http://localhost:8051",
+        "http://127.0.0.1:8051",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def root() -> Dict[str, Any]:
+    """Service information and available endpoints."""
+    return {
+        "service": "{{DISPLAY_NAME}}",
+        "version": "1.0.0",
+        "description": "{{DESCRIPTION}}",
+        "endpoints": {
+            "analyze": "POST /analyze - Perform {{SERVICE_NAME}} analysis",
+            "health": "GET /health - Service health check",
+            "docs": "GET /docs - Interactive API documentation",
+        },
+        "status": "healthy",
+    }
+
+
+@app.get("/health")
+async def health_check() -> Dict[str, str]:
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "{{SERVICE_NAME}}",
+        "version": "1.0.0",
+    }
+
+
+@app.post("/analyze", response_model=AnalysisResponse)
+async def analyze(request: AnalysisRequest) -> AnalysisResponse:
+    """
+    Perform {{SERVICE_NAME}} analysis.
+
+    Args:
+        request: Analysis request with data and configuration
+
+    Returns:
+        Analysis results
+
+    Raises:
+        HTTPException: If analysis fails
+    """
+    try:
+        logger.info(f"Received analysis request")
+        
+        # Perform analysis using the analysis module
+        results = perform_analysis(
+            data=request.data,
+            config=request.config,
+        )
+        
+        logger.info("Analysis completed successfully")
+        
+        return AnalysisResponse(
+            results=results,
+            status="success",
+            message="Analysis completed successfully",
+        )
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+def main():
+    """Start the service."""
+    parser = argparse.ArgumentParser(description="{{DISPLAY_NAME}}")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default={{PORT}},
+        help="Port to run the service on (default: {{PORT}})",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to run the service on (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
+    )
+    
+    args = parser.parse_args()
+    
+    logger.info(f"Starting {{DISPLAY_NAME}} on {args.host}:{args.port}")
+    
+    uvicorn.run(
+        "main:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level="info",
+    )
+
+
+if __name__ == "__main__":
+    main()

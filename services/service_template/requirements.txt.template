@@ -1,0 +1,20 @@
+# {{DISPLAY_NAME}} Service Dependencies
+# Python {{PORT}}
+
+# FastAPI framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Scientific computing
+numpy>=1.24.0
+
+# Add your specific dependencies below
+# Examples:
+# scipy>=1.11.0          # For scientific algorithms
+# scikit-learn>=1.3.0    # For machine learning
+# pandas>=2.1.0          # For data manipulation
+# matplotlib>=3.8.0      # For plotting
+# h5py>=3.10.0           # For HDF5 file I/O

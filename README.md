@@ -447,8 +447,9 @@ pixi run test      # Full test suite with pytest
 
 - **[Development Guide](docs/DEVELOPMENT.md)** - **START HERE**: Pixi commands, workflow, best practices
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Node Development Guide](docs/node-development-guide.md)** - **NEW**: Creating custom workflow nodes (820 lines)
-- **[Node Quick Reference](docs/node-quick-reference.md)** - **NEW**: Copy-paste templates for node development
+- **[Custom Services Guide](docs/CUSTOM-SERVICES-GUIDE.md)** - **NEW**: Create custom microservices in <5 minutes (580+ lines)
+- **[Node Development Guide](docs/node-development-guide.md)** - Creating custom workflow nodes (820 lines)
+- **[Node Quick Reference](docs/node-quick-reference.md)** - Copy-paste templates for node development
 - **[Complete API Documentation](src/robomage/)** - Detailed docstrings in source code
 - **[Architecture & Dev Guide](.github/copilot-instructions.md)** - Architecture patterns, pixi usage, sprint status
 - **[LLM Chat Guide](docs/llm-chat-guide.md)** - Quick start template for AI assistant conversations
@@ -456,7 +457,7 @@ pixi run test      # Full test suite with pytest
 - **[Sprint 7 Plan](docs/sprint-7-analysis-persistence-mvp.md)** - Extensible analysis result storage
 - **[Sprint 4 Dashboard Plan](docs/sprint-4-visualization-dashboard.md)** - Dashboard implementation phases
 - **[Examples](examples/)** - Working code samples and tutorials
-- **[Custom Node Examples](examples/custom_nodes/)** - **NEW**: 3 working nodes with tests (template, background, peak width)
+- **[Custom Node Examples](examples/custom_nodes/)** - 3 working nodes with tests (template, background, peak width)
 - **[Environment Config](pixi.toml)** - Pixi environment and task definitions
 
 ---
