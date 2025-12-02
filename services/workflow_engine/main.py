@@ -386,10 +386,19 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🌐 Starting Workflow Service on http://{args.host}:{args.port}")
-    print(f"📚 API docs available at http://{args.host}:{args.port}/docs")
-    print()
-    print("⚠️  IMPORTANT: Some workflow nodes require additional services:")
+    # Use safe characters for Windows console (avoid emojis that fail on cp1252)
+    try:
+        print(f"🌐 Starting Workflow Service on http://{args.host}:{args.port}")
+        print(f"📚 API docs available at http://{args.host}:{args.port}/docs")
+        print()
+        print("⚠️  IMPORTANT: Some workflow nodes require additional services:")
+    except UnicodeEncodeError:
+        # Fallback for Windows consoles with limited encoding (cp1252)
+        print(f"Starting Workflow Service on http://{args.host}:{args.port}")
+        print(f"API docs available at http://{args.host}:{args.port}/docs")
+        print()
+        print("IMPORTANT: Some workflow nodes require additional services:")
+    
     print(
         "   • Peak Analysis: pixi run python services/peak_analysis/main.py --port 8001"
     )
