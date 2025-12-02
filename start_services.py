@@ -80,7 +80,7 @@ def main():
             cmd_parts = shlex.split(cmd_str)
             
             # Create log file for service output
-            log_path = project_root / f"{service.service_id}.log"
+            log_path = project_root / f"{service.name}.log"
             log_file = open(log_path, "w")
 
             # Start service
