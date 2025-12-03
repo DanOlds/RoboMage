@@ -12,6 +12,12 @@
       "path": "services/workflow_engine",
       "enabled": true,
       "auto_start": true
+    },
+    {
+      "id": "gsasii_refinement",
+      "path": "services/gsasii_refinement",
+      "enabled": true,
+      "auto_start": false
     }
   ],
   "discovery": {

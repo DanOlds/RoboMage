@@ -4,14 +4,20 @@ REST API for Rietveld refinement using GSAS-II.
 """
 
 import logging
+import sys
+import time
 from contextlib import asynccontextmanager
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import time
 
-from .models import (
+# Add parent directory to path for imports
+service_dir = Path(__file__).parent
+sys.path.insert(0, str(service_dir))
+
+from models import (
     HealthResponse,
     RefinementRequest,
     RefinementResult,
@@ -167,7 +173,7 @@ def refine(request: RefinementRequest) -> RefinementResult:
 
     try:
         # Import wrapper function
-        from .gsasii_wrapper import run_gsasii_refinement
+        from gsasii_wrapper import run_gsasii_refinement
 
         # Prepare input data
         chi_data = (
