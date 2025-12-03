@@ -263,24 +263,37 @@ class TestWorkflowOrchestrator:
         """Test workflow handles node execution failure gracefully."""
         orchestrator = WorkflowOrchestrator()
 
+        # Mock input handler (no-op)
+        async def input_handler(config, inputs, context):
+            return {}
+
         # Handler that raises an error
         async def failing_handler(config, inputs, context):
             raise ValueError("Intentional failure for testing")
 
+        orchestrator.register_node_handler("input_node", input_handler)
         orchestrator.register_node_handler("failing_node", failing_handler)
 
-        # Create workflow
+        # Create workflow with connected nodes
         workflow = WorkflowDefinition(
             name="Failing Workflow",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="input_node",
+                    label="Input",
+                    position=NodePosition(x=0, y=0),
+                ),
+                WorkflowNode(
                     id="node1",
                     type="failing_node",
                     label="Failing Node",
-                    position=NodePosition(x=0, y=0),
+                    position=NodePosition(x=100, y=0),
                 )
             ],
-            edges=[],
+            edges=[
+                WorkflowEdge(id="edge1", source="input", target="node1")
+            ],
         )
 
         # Execute
@@ -290,26 +303,42 @@ class TestWorkflowOrchestrator:
         assert result.status == ExecutionStatus.FAILED
         assert result.error is not None
         assert "Intentional failure" in result.error
-        assert len(result.node_results) == 1
-        assert result.node_results[0].status == ExecutionStatus.FAILED
+        assert len(result.node_results) == 2  # input + node1
+        # Find the failing node result
+        failing_result = [r for r in result.node_results if r.node_id == "node1"][0]
+        assert failing_result.status == ExecutionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_workflow_with_missing_handler(self):
         """Test workflow fails gracefully when node handler is missing."""
         orchestrator = WorkflowOrchestrator()
 
-        # Create workflow with unregistered node type
+        # Mock input handler (no-op)
+        async def input_handler(config, inputs, context):
+            return {}
+
+        orchestrator.register_node_handler("input_node", input_handler)
+
+        # Create workflow with unregistered node type (connected to input)
         workflow = WorkflowDefinition(
             name="Missing Handler Workflow",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="input_node",
+                    label="Input",
+                    position=NodePosition(x=0, y=0),
+                ),
+                WorkflowNode(
                     id="node1",
                     type="unregistered_type",
                     label="Unknown Node",
-                    position=NodePosition(x=0, y=0),
+                    position=NodePosition(x=100, y=0),
                 )
             ],
-            edges=[],
+            edges=[
+                WorkflowEdge(id="edge1", source="input", target="node1")
+            ],
         )
 
         # Execute
@@ -384,23 +413,36 @@ class TestWorkflowOrchestrator:
         """Test that initial context is available to node handlers."""
         orchestrator = WorkflowOrchestrator()
 
+        # Mock input handler (no-op)
+        async def input_handler(config, inputs, context):
+            return {}
+
         # Handler that reads from context
         async def context_reader(config, inputs, context):
             return {"from_context": context.metadata.get("test_key")}
 
+        orchestrator.register_node_handler("input_node", input_handler)
         orchestrator.register_node_handler("reader", context_reader)
 
         workflow = WorkflowDefinition(
             name="Context Test",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="input_node",
+                    label="Input",
+                    position=NodePosition(x=0, y=0),
+                ),
+                WorkflowNode(
                     id="node1",
                     type="reader",
                     label="Reader",
-                    position=NodePosition(x=0, y=0),
+                    position=NodePosition(x=100, y=0),
                 )
             ],
-            edges=[],
+            edges=[
+                WorkflowEdge(id="edge1", source="input", target="node1")
+            ],
         )
 
         # Execute with initial context
@@ -416,22 +458,35 @@ class TestWorkflowOrchestrator:
         """Test that execution timing is recorded in results."""
         orchestrator = WorkflowOrchestrator()
 
+        # Mock input handler (no-op)
+        async def input_handler(config, inputs, context):
+            return {}
+
         async def simple_handler(config, inputs, context):
             return {"done": True}
 
+        orchestrator.register_node_handler("input_node", input_handler)
         orchestrator.register_node_handler("simple", simple_handler)
 
         workflow = WorkflowDefinition(
             name="Timing Test",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="input_node",
+                    label="Input",
+                    position=NodePosition(x=0, y=0),
+                ),
+                WorkflowNode(
                     id="node1",
                     type="simple",
                     label="Simple",
-                    position=NodePosition(x=0, y=0),
+                    position=NodePosition(x=100, y=0),
                 )
             ],
-            edges=[],
+            edges=[
+                WorkflowEdge(id="edge1", source="input", target="node1")
+            ],
         )
 
         result = await orchestrator.execute_workflow(workflow)
@@ -443,9 +498,9 @@ class TestWorkflowOrchestrator:
         assert result.total_duration_ms > 0
         assert result.completed_at > result.started_at
 
-        # Verify node timing
-        assert len(result.node_results) == 1
-        node_result = result.node_results[0]
+        # Verify node timing (check node1, not input)
+        assert len(result.node_results) == 2  # input + node1
+        node_result = [r for r in result.node_results if r.node_id == "node1"][0]
         assert node_result.started_at is not None
         assert node_result.completed_at is not None
         assert node_result.duration_ms is not None
