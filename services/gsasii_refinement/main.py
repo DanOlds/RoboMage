@@ -90,6 +90,25 @@ app.add_middleware(
 # ============================================================================
 
 
+@app.get("/")
+def root() -> dict[str, Any]:
+    """
+    Root endpoint - service information
+    """
+    return {
+        "service": "GSAS-II Refinement Service",
+        "version": "1.0.0",
+        "description": "Rietveld refinement for powder diffraction data",
+        "endpoints": {
+            "health": "GET /health - Service health and GSAS-II availability",
+            "refine": "POST /refine - Perform Rietveld refinement",
+            "recipes": "GET /recipes - List available recipe templates",
+            "validate_recipe": "POST /validate_recipe - Validate recipe schema",
+            "docs": "GET /docs - Interactive API documentation",
+        },
+    }
+
+
 @app.get("/health", response_model=HealthResponse)
 def health_check() -> HealthResponse:
     """
