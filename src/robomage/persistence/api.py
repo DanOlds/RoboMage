@@ -963,3 +963,30 @@ class SessionManager:
 
         finally:
             db.close()
+
+    def clear_all_inspections(self) -> int:
+        """
+        Delete all inspection records from the database.
+
+        This is a destructive operation that removes all node inspection
+        history. Use with caution - typically for development/testing or
+        when you want to start fresh.
+
+        Returns:
+            Number of inspection records deleted
+
+        Example:
+            >>> mgr = SessionManager()
+            >>> count = mgr.clear_all_inspections()
+            >>> print(f"Removed {count} inspection records")
+        """
+        from robomage.persistence.models import NodeInspection
+
+        db = self.db_manager.get_session()
+        try:
+            count = db.query(NodeInspection).delete()
+            db.commit()
+            return count
+
+        finally:
+            db.close()

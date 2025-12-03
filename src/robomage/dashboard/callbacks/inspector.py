@@ -532,7 +532,9 @@ def register_callbacks(app: dash.Dash) -> None:
         [State("inspector-workflow-data", "data")],
         prevent_initial_call=True,
     )
-    def export_inspection_data(n_clicks: int | None, workflow_data: list[dict] | None) -> int:
+    def export_inspection_data(
+        n_clicks: int | None, workflow_data: list[dict] | None
+    ) -> int:
         """
         Export inspection data (placeholder for future implementation).
 
@@ -551,3 +553,97 @@ def register_callbacks(app: dash.Dash) -> None:
         print(f"Export requested for {len(workflow_data)} inspection records")
 
         return 0
+
+    @app.callback(
+        Output("inspector-clear-history-modal", "is_open"),
+        [
+            Input("inspector-clear-history-btn", "n_clicks"),
+            Input("inspector-clear-cancel-btn", "n_clicks"),
+            Input("inspector-clear-confirm-btn", "n_clicks"),
+        ],
+        [State("inspector-clear-history-modal", "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_clear_modal(
+        clear_click: int | None,
+        cancel_click: int | None,
+        confirm_click: int | None,
+        is_open: bool,
+    ) -> bool:
+        """
+        Toggle the clear history confirmation modal.
+
+        Args:
+            clear_click: Clear History button clicks
+            cancel_click: Cancel button clicks
+            confirm_click: Confirm button clicks
+            is_open: Current modal state
+
+        Returns:
+            New modal state (open/closed)
+        """
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return is_open
+
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # Open modal when Clear History is clicked
+        if triggered_id == "inspector-clear-history-btn":
+            return True
+        # Close modal when Cancel or Confirm is clicked
+        elif triggered_id in [
+            "inspector-clear-cancel-btn",
+            "inspector-clear-confirm-btn",
+        ]:
+            return False
+
+        return is_open
+
+    @app.callback(
+        [
+            Output("inspector-workflow-selector", "options", allow_duplicate=True),
+            Output("inspector-workflow-selector", "value", allow_duplicate=True),
+        ],
+        [Input("inspector-clear-confirm-btn", "n_clicks")],
+        prevent_initial_call=True,
+    )
+    def clear_inspection_history(confirm_click: int | None) -> tuple:
+        """
+        Clear all inspection records from the database.
+
+        Args:
+            confirm_click: Confirm button clicks
+
+        Returns:
+            Tuple of (empty options, None value) for workflow dropdown
+        """
+        if not confirm_click:
+            raise PreventUpdate
+
+        try:
+            mgr = SessionManager()
+            count = mgr.clear_all_inspections()
+            print(f"Cleared {count} inspection records from database")
+
+            # Return empty dropdown options
+            options = [
+                {
+                    "label": "No workflow executions found (history cleared)",
+                    "value": "none",
+                    "disabled": True,
+                }
+            ]
+            return options, None
+
+        except Exception as e:
+            print(f"Error clearing inspection history: {e}")
+            # Return error message in dropdown
+            options = [
+                {
+                    "label": f"Error clearing history: {str(e)}",
+                    "value": "error",
+                    "disabled": True,
+                }
+            ]
+            return options, None

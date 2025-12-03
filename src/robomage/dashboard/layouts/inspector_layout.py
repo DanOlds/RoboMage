@@ -64,6 +64,16 @@ def create_inspector_tab() -> html.Div:
                                     ),
                                     dbc.Button(
                                         [
+                                            html.I(className="fas fa-trash me-2"),
+                                            "Clear History",
+                                        ],
+                                        id="inspector-clear-history-btn",
+                                        color="danger",
+                                        size="sm",
+                                        outline=True,
+                                    ),
+                                    dbc.Button(
+                                        [
                                             html.I(className="fas fa-download me-2"),
                                             "Export",
                                         ],
@@ -327,6 +337,8 @@ def create_inspector_tab() -> html.Div:
                     ),
                 ],
             ),
+            # Confirmation modal for clearing history
+            create_clear_history_modal(),
         ],
         className="p-3",
     )
@@ -446,4 +458,69 @@ def create_node_card(
         id={"type": "inspector-node-card", "node_id": node_id},
         className="cursor-pointer",
         style={"cursor": "pointer"},
+    )
+
+
+def create_clear_history_modal() -> dbc.Modal:
+    """
+    Create a confirmation modal for clearing inspection history.
+
+    Returns:
+        Modal component for confirming clear history action
+    """
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.I(className="fas fa-exclamation-triangle me-2"),
+                        "Clear Inspection History",
+                    ]
+                )
+            ),
+            dbc.ModalBody(
+                [
+                    html.P(
+                        "Are you sure you want to delete all inspection records?",
+                        className="fw-bold",
+                    ),
+                    html.P(
+                        [
+                            "This will permanently remove all node execution data from the database. ",
+                            "This action cannot be undone.",
+                        ],
+                        className="text-muted",
+                    ),
+                    dbc.Alert(
+                        [
+                            html.I(className="fas fa-info-circle me-2"),
+                            "Tip: Individual workflows can be cleared by selecting them and using workflow-specific actions.",
+                        ],
+                        color="info",
+                        className="mb-0",
+                    ),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        "Cancel",
+                        id="inspector-clear-cancel-btn",
+                        color="secondary",
+                        outline=True,
+                    ),
+                    dbc.Button(
+                        [
+                            html.I(className="fas fa-trash me-2"),
+                            "Delete All",
+                        ],
+                        id="inspector-clear-confirm-btn",
+                        color="danger",
+                    ),
+                ]
+            ),
+        ],
+        id="inspector-clear-history-modal",
+        is_open=False,
+        centered=True,
     )
