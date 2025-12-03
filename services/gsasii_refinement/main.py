@@ -262,7 +262,14 @@ def validate_recipe(recipe: Dict[str, Any]) -> RecipeValidationResponse:
 # ============================================================================
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
 
-    logger.info("Starting GSAS-II Refinement Service on http://0.0.0.0:8002")
-    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")
+    parser = argparse.ArgumentParser(description="GSAS-II Refinement Service")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8003, help="Port to bind to")
+    parser.add_argument("--log-level", type=str, default="info", help="Log level")
+    args = parser.parse_args()
+
+    logger.info(f"Starting GSAS-II Refinement Service on http://{args.host}:{args.port}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)

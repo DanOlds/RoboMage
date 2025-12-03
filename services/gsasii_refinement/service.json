@@ -1,0 +1,48 @@
+{
+  "name": "gsasii_refinement",
+  "display_name": "GSAS-II Refinement Service",
+  "description": "Rietveld refinement for powder diffraction data using GSAS-II crystallographic software with recipe-based configuration",
+  "version": "1.0.0",
+  "service_type": "analysis",
+  "port": 8003,
+  "host": "127.0.0.1",
+  "endpoints": {
+    "health": "/health",
+    "root": "/",
+    "docs": "/docs",
+    "refine": "/refine",
+    "recipes": "/recipes",
+    "validate_recipe": "/validate_recipe"
+  },
+  "health_check_interval": 5000,
+  "startup_timeout": 60,
+  "dependencies": {
+    "python": ">=3.10",
+    "packages": [
+      "fastapi",
+      "uvicorn",
+      "pydantic>=2.0",
+      "numpy",
+      "matplotlib",
+      "pyyaml"
+    ],
+    "external": [
+      "GSAS-II (separate environment required)"
+    ]
+  },
+  "workflow_integration": {
+    "enabled": true,
+    "node_types": [
+      "gsasii_refinement"
+    ]
+  },
+  "dashboard_integration": {
+    "enabled": true,
+    "tab_name": "Analysis",
+    "status_indicator": true,
+    "icon": "fas fa-atom"
+  },
+  "client_class": "robomage.clients.gsasii_client.GSASIIClient",
+  "startup_command": "python services/gsasii_refinement/main.py --port {port} --host {host}",
+  "notes": "Service runs in RoboMage environment but GSAS-II refinement requires separate GSAS-II environment. Service will show 'degraded' status until cross-environment solution is implemented (Phase 3)."
+}

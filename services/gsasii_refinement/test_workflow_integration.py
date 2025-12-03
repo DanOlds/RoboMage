@@ -30,7 +30,7 @@ import requests
 
 # Test configuration
 WORKFLOW_ENGINE_URL = "http://localhost:8000"
-GSASII_SERVICE_URL = "http://localhost:8002"
+GSASII_SERVICE_URL = "http://localhost:8003"
 AUTOXRD_DATA_PATH = Path("/nsls2/users/dolds/dev/autoxrd/on-the-fly/test/user_data_DRX_test")
 
 def check_services():

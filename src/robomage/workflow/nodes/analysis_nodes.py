@@ -290,7 +290,7 @@ async def statistics_handler(
             },
             "service_url": {
                 "type": "string",
-                "default": "http://localhost:8002",
+                "default": "http://localhost:8003",
                 "description": "GSAS-II service URL",
             },
         },

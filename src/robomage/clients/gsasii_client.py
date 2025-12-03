@@ -110,7 +110,7 @@ class GSASIIClient:
 
     def __init__(
         self,
-        base_url: str = "http://127.0.0.1:8002",
+        base_url: str = "http://127.0.0.1:8003",
         timeout: float = 300.0,  # Refinements can take several minutes
         max_retries: int = 3,
         retry_delay: float = 2.0,
