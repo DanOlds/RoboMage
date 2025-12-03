@@ -26,6 +26,16 @@ from src.robomage.orchestrator import WorkflowOrchestrator
 from src.robomage.workflow.nodes import data_nodes
 
 
+# Import Edge model
+from services.workflow_engine.models import WorkflowDefinition
+
+
+# Register a mock input handler for workflow connection
+async def mock_input_handler(config, inputs, context):
+    """Mock input node that does nothing (just enables workflow graph connectivity)."""
+    return {}
+
+
 class TestWorkflowSessionFullSerialization:
     """Test that workflow execution results contain full DiffractionData for session saves."""
 
@@ -38,6 +48,13 @@ class TestWorkflowSessionFullSerialization:
             description="Test full output storage",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="mock_input",
+                    label="Input",
+                    config={},
+                    position=NodePosition(x=50, y=100),
+                ),
+                WorkflowNode(
                     id="load_1",
                     type="load_files",
                     label="Load Files",
@@ -48,10 +65,17 @@ class TestWorkflowSessionFullSerialization:
                     position=NodePosition(x=100, y=100),
                 )
             ],
-            edges=[],
+            edges=[
+                {
+                    "id": "edge1",
+                    "source": "input",
+                    "target": "load_1"
+                }
+            ],
         )
 
         orchestrator = WorkflowOrchestrator()
+        orchestrator.register_node_handler("mock_input", mock_input_handler)
         orchestrator.register_node_handler("load_files", data_nodes.load_files_handler)
 
         # Execute with full serialization
@@ -59,10 +83,10 @@ class TestWorkflowSessionFullSerialization:
 
         # Verify execution succeeded
         assert result.status.value == "completed"
-        assert len(result.node_results) == 1
+        assert len(result.node_results) == 2  # input + load_1
 
-        # Verify output contains full data
-        node_result = result.node_results[0]
+        # Verify output contains full data (check load_1, not input)
+        node_result = result.node_results[1]  # Changed from [0] to [1]
         assert node_result.node_id == "load_1"
         assert node_result.output is not None
         assert isinstance(node_result.output, list)
@@ -87,6 +111,13 @@ class TestWorkflowSessionFullSerialization:
             description="Test default summary storage",
             nodes=[
                 WorkflowNode(
+                    id="input",
+                    type="mock_input",
+                    label="Input",
+                    config={},
+                    position=NodePosition(x=50, y=100),
+                ),
+                WorkflowNode(
                     id="load_1",
                     type="load_files",
                     label="Load Files",
@@ -97,10 +128,17 @@ class TestWorkflowSessionFullSerialization:
                     position=NodePosition(x=100, y=100),
                 )
             ],
-            edges=[],
+            edges=[
+                {
+                    "id": "edge2",
+                    "source": "input",
+                    "target": "load_1"
+                }
+            ],
         )
 
         orchestrator = WorkflowOrchestrator()
+        orchestrator.register_node_handler("mock_input", mock_input_handler)
         orchestrator.register_node_handler("load_files", data_nodes.load_files_handler)
 
         # Execute with default (summary) mode
@@ -108,9 +146,10 @@ class TestWorkflowSessionFullSerialization:
 
         # Verify execution succeeded
         assert result.status.value == "completed"
+        assert len(result.node_results) == 2  # input + load_1
 
-        # Verify output is a summary dict
-        node_result = result.node_results[0]
+        # Verify output is a summary dict (check load_1, not input)
+        node_result = result.node_results[1]  # Changed from [0] to [1]
         assert node_result.output is not None
         assert isinstance(node_result.output, dict)
         assert "summary" in node_result.output

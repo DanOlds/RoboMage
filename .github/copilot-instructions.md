@@ -171,6 +171,15 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 
 **Key Achievement**: Production-ready codebase with 100% passing tests and complete documentation!
 
+**December 3, 2025 - Critical Bug Fixes** ✅ **COMPLETE**:
+- ✅ **Service Inspector Tab** - Fixed callback circular dependency and state preservation
+- ✅ **save_to_session Workflow Node** - Fixed and unified with button behavior (searches ALL context)
+- ✅ **Disconnected Nodes Bug** - Fixed workflow orchestrator executing unconnected nodes
+- ⚠️ **Test Suite Status**: 16 tests failing (367 passing) - Need updates for new behavior
+- 📋 **Cleanup Plan Ready**: Comprehensive plan for GSAS-II integration preparation
+
+**Key Achievement**: Major architectural improvements with clear path to test fixes!
+
 **✅ Sprint 7 - Analysis Result Persistence: COMPLETE (November 27, 2025)**
 
 **READY TO MERGE** - Production-ready extensible analysis result storage
@@ -269,13 +278,31 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - See `docs/DEC-3-2025-TEST-FAILURES.md` for details and fix strategy
   - **Action required**: Update tests before merging to main
 
-**🚀 NEXT MAJOR FEATURE: Custom Services Architecture (2-3 weeks)**:
-- 🎯 **Service Registry System** - Replace hardcoded services with discoverable registry
-- 🎯 **Service Template** - Cookiecutter template for creating custom analysis services
-- 🎯 **Generic Service Integration** - Dashboard auto-discovers and monitors custom services
-- 🎯 **Workflow Service Nodes** - Custom services automatically available as workflow nodes
-- 🎯 **Comprehensive Documentation** - Guide with 3+ worked examples
-- 📋 **Detailed Plan**: `docs/CUSTOM-SERVICES-PLAN.md` (complete implementation roadmap)
+**� CLEANUP PLAN FOR GSAS-II INTEGRATION PREP (December 3-6, 2025)**:
+- 📋 **Comprehensive Cleanup Plan Created** - 4-day execution plan (26-30 hours)
+  - 16 failing tests to fix (copy-paste ready solutions)
+  - Documentation consolidation (67 docs to archive, 12 active)
+  - Workspace organization (move logs, test files, data to test_output/)
+  - Resource warnings cleanup (unclosed database connections)
+  - GSAS-II integration roadmap creation
+  - **Documents**: `docs/CLEANUP-SUMMARY.md`, `docs/TEST-FIXES-QUICK-START.md`, `docs/GSAS-II-PREP-CLEANUP-PLAN.md`
+  - **Tool**: `cleanup_prep.sh` - Automated cleanup script (executable)
+  - **Goal**: Clean foundation for GSAS-II integration development
+
+**🚀 NEXT MAJOR MILESTONES**:
+- �️ **Pre-GSAS-II Cleanup** (Dec 3-6, 2025) - Fix tests, organize workspace, consolidate docs
+  - Target: 378-383/383 tests passing (98.7-100%)
+  - See `docs/CLEANUP-SUMMARY.md` for execution plan
+  - See `docs/TEST-FIXES-QUICK-START.md` for copy-paste fixes
+- 🔬 **GSAS-II Integration** (Dec 9+, 2025) - Automated Rietveld refinement service
+  - Service wrapper for GSAS-II Python API
+  - Dashboard integration and workflow nodes
+  - See `docs/GSAS-II-INTEGRATION-ROADMAP.md` (to be created)
+- 🎯 **Custom Services Architecture** - Generic service registry and template system
+  - Replace hardcoded services with discoverable registry
+  - Cookiecutter template for creating custom analysis services
+  - Dashboard auto-discovers and monitors custom services
+  - See `docs/CUSTOM-SERVICES-PLAN.md` for detailed roadmap
 
 **Future Enhancements**:
 - 🔄 **Advanced Inspection Tools** - Node I/O Inspector, Analysis Result Viewer, Workflow Debugger
@@ -343,5 +370,13 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `docs/HANDS-ON-TESTING-RESULTS.md` - **NEW**: Comprehensive testing report - 7/7 sessions passed (Dec 2, 2025)
 - `docs/HANDS-ON-TESTING-PLAN.md` - Testing plan for custom services (comprehensive validation)
 - `docs/KILL-COMMAND-SAFETY.md` - **NEW**: Safety analysis and best practices for kill-all commands (Dec 2, 2025)
+- `docs/CLEANUP-SUMMARY.md` - **NEW**: Comprehensive cleanup plan summary (Dec 3, 2025)
+- `docs/TEST-FIXES-QUICK-START.md` - **NEW**: Copy-paste ready test fixes (Dec 3, 2025)
+- `docs/GSAS-II-PREP-CLEANUP-PLAN.md` - **NEW**: 4-day cleanup execution plan (Dec 3, 2025)
+- `docs/CLEANUP-QUICK-REF.md` - **NEW**: Quick reference card for cleanup tasks (Dec 3, 2025)
+- `docs/DEC-3-2025-TEST-FAILURES.md` - Test failure analysis and fix strategy
+- `docs/DISCONNECTED-NODES-FIX.md` - Orchestrator disconnected nodes fix
+- `docs/SAVE-TO-SESSION-FIX.md` - save_to_session context-based searching
+- `docs/SERVICE-INSPECTOR-DEBUG-SESSION.md` - Service inspector callback fixes
 - `STORAGE-DEBUG-FEATURES.md` - Storage configuration and debug tools documentation
 - `README.md` - User-facing project overview and API documentation
