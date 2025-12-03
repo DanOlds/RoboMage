@@ -17,7 +17,7 @@
       "id": "gsasii_refinement",
       "path": "services/gsasii_refinement",
       "enabled": true,
-      "auto_start": false
+      "auto_start": true
     }
   ],
   "discovery": {

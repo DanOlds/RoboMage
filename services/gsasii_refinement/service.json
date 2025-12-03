@@ -44,5 +44,5 @@
   },
   "client_class": "robomage.clients.gsasii_client.GSASIIClient",
   "startup_command": "python services/gsasii_refinement/main.py --port {port} --host {host}",
-  "notes": "Service runs in RoboMage environment but GSAS-II refinement requires separate GSAS-II environment. Service will show 'degraded' status until cross-environment solution is implemented (Phase 3)."
+  "notes": "Service runs in RoboMage environment and spawns worker processes in separate GSAS-II environment for refinement. Subprocess worker pattern enables cross-environment operation."
 }

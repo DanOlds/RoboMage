@@ -315,14 +315,19 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - ✅ Workspace organized (manual tests, logs, cache cleaned)
   - ✅ Documentation consolidated (19 docs archived, 65 active)
   - ⏳ 30 resource warnings remain (non-blocking)
-- 🔬 **GSAS-II Integration** (Dec 2025 - Jan 2026) - Automated Rietveld refinement service
+- ✅ **GSAS-II Integration - Phase 3 COMPLETE** (Dec 3, 2025) - Subprocess worker implementation! 🎉
+  - ✅ **Phase 1**: GSAS-II microservice (FastAPI service on port 8003)
+  - ✅ **Phase 2**: Workflow node integration (`gsasii_refinement` node registered)
+  - ✅ **Phase 3**: Subprocess worker pattern (cross-environment operation)
+    - Service runs in RoboMage environment (no GSAS-II imports)
+    - Worker spawns in GSAS-II environment (subprocess with JSON IPC)
+    - Validated: LaB6 refinement Rwp=7.7%, cell=4.157Å, 4.56s execution time
+    - Auto-start enabled in registry, dashboard integration working
+    - Documentation: `docs/GSASII-PHASE-3-SUBPROCESS-COMPLETE.md`
   - **Reference Codebase**: autoxrd repository (`/nsls2/users/dolds/dev/autoxrd`)
     - Production GSAS-II wrapper code in `fit_service/`
     - DRX Demo as reference example
     - Recipe-based YAML configuration system
-  - **Phase 1**: GSAS-II microservice (FastAPI, weeks 1-2)
-  - **Phase 2**: Workflow node integration (week 3)
-  - **Implementation Plan**: `docs/GSAS-II-SERVICE-IMPLEMENTATION-PLAN.md`
   - **Access autoxrd**: Use terminal commands (outside workspace)
     - `cat /nsls2/users/dolds/dev/autoxrd/README.md`
     - `cat /nsls2/users/dolds/dev/autoxrd/fit_service/xrd_pipeline.py`
@@ -334,14 +339,23 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - See `docs/CUSTOM-SERVICES-PLAN.md` for detailed roadmap
 
 **Future Enhancements**:
+- 🔄 **GSAS-II Dashboard Tab** - Dedicated testing/development UI for refinement
+  - File selection (CHI, CIF, instrument parameters)
+  - Refinement configuration (cycles, flags, recipe editor)
+  - Results display (cell parameters, fit quality, interactive plots)
+  - Estimated effort: 2-3 hours, ~300-400 lines
+- 🔄 **GSAS-II Phase 4+** - Advanced features
+  - Batch processing (Option 1b): Multi-file refinement with result aggregation
+  - AI optimization (Option 2): Machine learning parameter tuning
+  - Custom analysis nodes (Option 3): Strain analysis, peak identification
 - 🔄 **Advanced Inspection Tools** - Node I/O Inspector, Analysis Result Viewer, Workflow Debugger
 - 🔄 **Workflow Templates** - Pre-built common analysis patterns
 - 🔄 **ReactFlow Migration** - Modern drag-and-drop UX
 - 🔄 **ML Integration** - AI-enhanced parameter optimization
 - 🔄 **Multi-User Support** - PostgreSQL backend, collaboration
 
-**Waiting on External Development**:
-- ⏸️ **GSAS-II Integration** - Automated Rietveld refinement (in development by another team)
+**Completed Milestones**:
+- ✅ **GSAS-II Integration Phases 1-3** - Production-ready Rietveld refinement service (Dec 3, 2025)
 
 ## Integration Points
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`
