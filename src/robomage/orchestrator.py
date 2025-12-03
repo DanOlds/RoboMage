@@ -552,6 +552,9 @@ class WorkflowOrchestrator:
 
         Topological sorting ensures that nodes are executed only after all
         their dependencies have completed. This is essential for DAG execution.
+        
+        Only nodes that are part of the connected graph (have edges) are included.
+        Disconnected nodes are excluded from execution.
 
         Args:
             workflow: WorkflowDefinition with nodes and edges
@@ -569,6 +572,9 @@ class WorkflowOrchestrator:
         # Create node lookup
         nodes_by_id = {node.id: node for node in workflow.nodes}
 
+        # Track which nodes are part of the graph (have edges)
+        nodes_in_graph = set()
+
         # Initialize in_degree for all nodes
         for node in workflow.nodes:
             in_degree[node.id] = 0
@@ -577,9 +583,26 @@ class WorkflowOrchestrator:
         for edge in workflow.edges:
             graph[edge.source].append(edge.target)
             in_degree[edge.target] += 1
+            # Mark both source and target as part of graph
+            nodes_in_graph.add(edge.source)
+            nodes_in_graph.add(edge.target)
+
+        # Filter: only process nodes that are part of the graph
+        # Disconnected nodes (no edges) are excluded
+        connected_nodes = {
+            node_id: degree
+            for node_id, degree in in_degree.items()
+            if node_id in nodes_in_graph
+        }
 
         # Kahn's algorithm for topological sort
-        queue = deque([node_id for node_id in in_degree if in_degree[node_id] == 0])
+        queue = deque(
+            [
+                node_id
+                for node_id, degree in connected_nodes.items()
+                if degree == 0
+            ]
+        )
         sorted_nodes = []
 
         while queue:
@@ -593,10 +616,18 @@ class WorkflowOrchestrator:
                     queue.append(neighbor_id)
 
         # Check for cycles
-        if len(sorted_nodes) != len(workflow.nodes):
+        if len(sorted_nodes) != len(connected_nodes):
             raise ValueError(
                 "Workflow contains cycles - cannot execute. "
                 "Ensure all edges form a directed acyclic graph (DAG)."
+            )
+        
+        # Log excluded disconnected nodes
+        disconnected_nodes = set(nodes_by_id.keys()) - nodes_in_graph
+        if disconnected_nodes:
+            logger.info(
+                f"Excluding {len(disconnected_nodes)} disconnected node(s) "
+                f"from execution: {', '.join(disconnected_nodes)}"
             )
 
         return sorted_nodes
