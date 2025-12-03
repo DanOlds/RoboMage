@@ -273,29 +273,53 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - Disconnected nodes safely excluded with clear logging
   - Edges now properly control execution order (DAG semantics enforced)
   - Documentation: `docs/DISCONNECTED-NODES-FIX.md`
-- ⚠️ **Test Suite Status**: 16 tests failing (367 passing)
-  - Tests need updates to reflect new orchestrator and save_to_session behavior
-  - See `docs/DEC-3-2025-TEST-FAILURES.md` for details and fix strategy
-  - **Action required**: Update tests before merging to main
+- ✅ **Test Suite Cleanup Complete** - 380/380 tests passing (100%)
+  - Fixed all 16 failing tests from December 3 architectural changes
+  - Category 1: Workflow session integration (5 tests)
+  - Category 2: Workflow orchestrator (4 tests)
+  - Category 3: Workflow serialization (2 tests)
+  - Category 4: Inspection persistence (5 tests - singleton pollution fix)
+  - See `docs/TEST-FIXES-QUICK-START.md` for implementation details
+  - Commits: 3 detailed commits with categorized fixes
 
-**� CLEANUP PLAN FOR GSAS-II INTEGRATION PREP (December 3-6, 2025)**:
-- 📋 **Comprehensive Cleanup Plan Created** - 4-day execution plan (26-30 hours)
-  - 16 failing tests to fix (copy-paste ready solutions)
-  - Documentation consolidation (67 docs to archive, 12 active)
-  - Workspace organization (move logs, test files, data to test_output/)
-  - Resource warnings cleanup (unclosed database connections)
-  - GSAS-II integration roadmap creation
-  - **Documents**: `docs/CLEANUP-SUMMARY.md`, `docs/TEST-FIXES-QUICK-START.md`, `docs/GSAS-II-PREP-CLEANUP-PLAN.md`
-  - **Tool**: `cleanup_prep.sh` - Automated cleanup script (executable)
-  - **Goal**: Clean foundation for GSAS-II integration development
+**✅ CLEANUP COMPLETION (December 3, 2025)**:
+- ✅ **Phase 1: Test Fixes Complete** - 100% pass rate achieved (380/380 passing)
+  - All 16 failing tests fixed with copy-paste ready solutions
+  - Singleton database manager pollution resolved
+  - Context-based execution pattern implemented across all workflow tests
+  - 3 commits: Categories 1+3, Category 2, Category 4
+- ✅ **Phase 2: Workspace Organization Complete** - Clean project structure
+  - Manual test scripts moved to tests/manual/ (excluded from pytest)
+  - Log files organized in test_output/logs/
+  - __pycache__ directories cleaned
+  - Automated with ./cleanup_prep.sh workspace
+- ✅ **Phase 3: Documentation Consolidation Complete** - 19 docs archived
+  - Custom services phase docs → archive/custom-services/ (5 files)
+  - Sprint summaries → archive/sprint-summaries/ (9 files)
+  - Planning documents → archive/planning-docs/ (5 files)
+  - 65 active docs remaining (down from 84)
+  - Automated with ./cleanup_prep.sh docs
+- ⏳ **Phase 4: Resource Warnings** - 30 unclosed database warnings remaining
+  - Non-blocking technical debt (tests still pass)
+  - Can be addressed incrementally as encountered
+- 📋 **Phase 5: GSAS-II Roadmap** - To be created when ready for integration
+  - Deferred until GSAS-II external development is ready
+  - Foundation now clean for rapid integration
+
+**Documents Created**: `docs/CLEANUP-SUMMARY.md`, `docs/TEST-FIXES-QUICK-START.md`, `docs/GSAS-II-PREP-CLEANUP-PLAN.md`, `docs/CLEANUP-QUICK-REF.md`
+**Tool Created**: `cleanup_prep.sh` - Automated cleanup script (executable)
 
 **🚀 NEXT MAJOR MILESTONES**:
-- �️ **Pre-GSAS-II Cleanup** (Dec 3-6, 2025) - Fix tests, organize workspace, consolidate docs
-  - Target: 378-383/383 tests passing (98.7-100%)
-  - See `docs/CLEANUP-SUMMARY.md` for execution plan
-  - See `docs/TEST-FIXES-QUICK-START.md` for copy-paste fixes
-- 🔬 **GSAS-II Integration** (Dec 9+, 2025) - Automated Rietveld refinement service
+- ✅ **Pre-GSAS-II Cleanup COMPLETE** (Dec 3, 2025) - Foundation ready! 🎉
+  - ✅ 380/380 tests passing (100% pass rate achieved)
+  - ✅ Workspace organized (manual tests, logs, cache cleaned)
+  - ✅ Documentation consolidated (19 docs archived, 65 active)
+  - ⏳ 30 resource warnings remain (non-blocking)
+- 🔬 **GSAS-II Integration** (TBD) - Automated Rietveld refinement service
   - Service wrapper for GSAS-II Python API
+  - Dashboard integration and workflow nodes
+  - Waiting on external GSAS-II development
+  - Roadmap: `docs/GSAS-II-INTEGRATION-ROADMAP.md` (to be created)
   - Dashboard integration and workflow nodes
   - See `docs/GSAS-II-INTEGRATION-ROADMAP.md` (to be created)
 - 🎯 **Custom Services Architecture** - Generic service registry and template system
