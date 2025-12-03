@@ -31,7 +31,7 @@ import requests
 # Test configuration
 WORKFLOW_ENGINE_URL = "http://localhost:8000"
 GSASII_SERVICE_URL = "http://localhost:8003"
-AUTOXRD_DATA_PATH = Path("/nsls2/users/dolds/dev/autoxrd/on-the-fly/test/user_data_DRX_test")
+AUTOXRD_DATA_PATH = Path("/nsls2/users/dolds/dev/autoxrd/on-the-fly/test/user_data_DRX_test/DRX_data_to_be_dropped_in/xrd_LaB6_660c_std_brac2/integration")
 
 def check_services():
     """Check if required services are running."""

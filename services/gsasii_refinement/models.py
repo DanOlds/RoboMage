@@ -15,19 +15,29 @@ from typing import Optional, Dict, Any, List
 class DiffractionDataModel(BaseModel):
     """Diffraction pattern data for refinement"""
 
-    q: List[float] = Field(..., description="Q values (Å⁻¹)", min_length=10)
+    q: Optional[List[float]] = Field(None, description="Q values (Å⁻¹)", min_length=10)
+    two_theta: Optional[List[float]] = Field(None, description="2θ values (degrees)", min_length=10)
     intensity: List[float] = Field(..., description="Intensity values", min_length=10)
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Optional metadata"
     )
 
-    @field_validator("q", "intensity")
+    @field_validator("intensity")
     @classmethod
     def validate_arrays(cls, v: List[float]) -> List[float]:
         """Validate that arrays are not empty and have reasonable values"""
         if len(v) < 10:
             raise ValueError("Arrays must contain at least 10 points")
         return v
+    
+    def model_post_init(self, __context: Any) -> None:
+        """Validate that either q or two_theta is provided"""
+        if self.q is None and self.two_theta is None:
+            raise ValueError("Must provide either 'q' or 'two_theta' values")
+        if self.q is not None and len(self.q) < 10:
+            raise ValueError("q array must contain at least 10 points")
+        if self.two_theta is not None and len(self.two_theta) < 10:
+            raise ValueError("two_theta array must contain at least 10 points")
 
     @field_validator("intensity")
     @classmethod

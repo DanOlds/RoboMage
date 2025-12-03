@@ -45,15 +45,16 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
     logger.info("GSAS-II Refinement Service starting up...")
 
-    # Check GSAS-II availability at startup
-    try:
-        from GSASII import GSASIIscriptable as G2  # noqa: F401
-
-        logger.info("✓ GSAS-II successfully imported")
-    except ImportError as e:
-        logger.warning(f"✗ GSAS-II import failed: {e}")
+    # Check GSAS-II environment availability at startup
+    from pathlib import Path
+    gsasii_env = Path("/nsls2/users/dolds/dev/GSAS-II/pixi")
+    
+    if gsasii_env.exists():
+        logger.info(f"✓ GSAS-II environment found: {gsasii_env}")
+    else:
+        logger.warning(f"✗ GSAS-II environment not found: {gsasii_env}")
         logger.warning(
-            "Service will run in degraded mode (health checks will report unavailable)"
+            "Service will run in degraded mode (refinements will fail)"
         )
 
     yield  # Application runs here
@@ -114,17 +115,19 @@ def health_check() -> HealthResponse:
     """
     Health check endpoint
 
-    Checks if the service is running and if GSAS-II is available.
+    Checks if the service is running and if GSAS-II environment is available.
     Returns status, GSAS-II availability, and service version.
+    
+    Note: GSAS-II runs in separate environment via subprocess worker.
     """
-    gsasii_available = False
-
-    try:
-        from GSASII import GSASIIscriptable as G2  # noqa: F401
-
-        gsasii_available = True
+    from pathlib import Path
+    
+    gsasii_env_path = Path("/nsls2/users/dolds/dev/GSAS-II/pixi")
+    gsasii_available = gsasii_env_path.exists()
+    
+    if gsasii_available:
         status = "healthy"
-    except ImportError:
+    else:
         status = "degraded"
 
     return HealthResponse(
@@ -182,27 +185,31 @@ def refine(request: RefinementRequest) -> RefinementResult:
     start_time = time.time()
 
     try:
-        # Import here to provide better error message if GSAS-II unavailable
-        from GSASII import GSASIIscriptable as G2  # noqa: F401
-    except ImportError as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"GSAS-II not available: {str(e)}. Ensure GSAS-II is installed.",
-        )
-
-    try:
-        # Import wrapper function
+        # Import wrapper function (uses subprocess, no GSAS-II import needed)
         from gsasii_wrapper import run_gsasii_refinement
 
-        # Prepare input data
-        chi_data = (
-            request.diffraction_data.q,
-            request.diffraction_data.intensity,
-        )
+        # Prepare input data (use two_theta if available, otherwise Q)
+        if request.diffraction_data.two_theta is not None:
+            # GSAS-II expects 2θ data, so we'll write it directly
+            chi_data = (
+                request.diffraction_data.two_theta,
+                request.diffraction_data.intensity,
+            )
+        elif request.diffraction_data.q is not None:
+            # Convert Q to 2θ if needed (for now, just pass Q - worker will handle)
+            chi_data = (
+                request.diffraction_data.q,
+                request.diffraction_data.intensity,
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Must provide either 'q' or 'two_theta' values in diffraction_data"
+            )
 
         recipe_dict = request.recipe.model_dump()
 
-        # Run refinement
+        # Run refinement (via subprocess worker)
         logger.info(
             f"Starting refinement: sample={request.sample_name}, "
             f"cycles={request.cycles}"
@@ -221,7 +228,6 @@ def refine(request: RefinementRequest) -> RefinementResult:
         # Add execution metadata
         execution_time = time.time() - start_time
         result["execution_time_s"] = execution_time
-        result["success"] = True
 
         logger.info(
             f"Refinement completed: Rwp={result['fit_quality']['Rwp']:.3f}%, "
@@ -230,6 +236,8 @@ def refine(request: RefinementRequest) -> RefinementResult:
 
         return RefinementResult(**result)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Refinement failed: {str(e)}", exc_info=True)
         raise HTTPException(

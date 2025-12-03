@@ -1,19 +1,28 @@
 """GSAS-II Wrapper Module
 
-Core refinement functionality adapted from autoxrd's xrd_pipeline.py.
-Provides Python API for GSAS-II Rietveld refinement with structured I/O.
+Core refinement functionality using subprocess worker pattern.
+Spawns gsasii_worker.py in GSAS-II environment for cross-env operation.
+
+Architecture:
+- Service runs in RoboMage environment (has FastAPI, etc.)
+- Worker runs in GSAS-II environment (has GSAS-II installed)
+- Communication via temp JSON files
+- Process management with timeouts and cleanup
 
 Key differences from autoxrd:
 - Array input (not file paths)
 - Dict output (not CSV/TXT files)
-- Temporary file management
-- Base64 support for assets
+- Subprocess-based execution
+- Cross-environment support
 """
 
 import base64
 import io
+import json
 import logging
+import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
@@ -24,6 +33,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 logger = logging.getLogger("gsasii_wrapper")
+
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# GSAS-II environment location
+GSASII_ENV_PATH = Path("/nsls2/users/dolds/dev/GSAS-II/pixi")
+GSASII_PYTHON = "pixi run python"  # Command to run Python in GSAS-II env
+
+# Worker script location (same directory as this file)
+WORKER_SCRIPT = Path(__file__).parent / "gsasii_worker.py"
+
+# Subprocess timeout (seconds)
+REFINEMENT_TIMEOUT = 300  # 5 minutes
 
 
 # ============================================================================
@@ -195,13 +219,11 @@ def run_gsasii_refinement(
     generate_plot: bool = True
 ) -> Dict[str, Any]:
     """
-    Execute GSAS-II Rietveld refinement.
+    Execute GSAS-II Rietveld refinement via subprocess worker.
     
-    Adapted from autoxrd's run_gsas_refinement() with modifications:
-    - Array input instead of file path
-    - Structured dict output instead of CSV/TXT files
-    - Temporary file management
-    - Base64 support for instrument/CIF files
+    This function prepares input, spawns gsasii_worker.py in the GSAS-II
+    environment, and collects results. Enables cross-environment operation
+    without requiring GSAS-II in the current environment.
     
     Args:
         chi_data: Tuple of (q, intensity) arrays
@@ -218,18 +240,163 @@ def run_gsasii_refinement(
         
     Returns:
         Dict with keys:
-            - parameters: dict (all refined parameters)
             - cell: dict (unit cell with ESDs)
             - fit_quality: dict (Rwp, chi2, etc.)
             - fit_profile: dict (obs, calc, diff arrays)
             - plot_image: str (base64 PNG, if generate_plot=True)
-            - gpx_path: str (if save_gpx=True)
-            - warnings: list[str]
+            - gpx_file: str (if save_gpx=True)
+            - convergence: str ("converged", "failed", etc.)
+            - success: bool
             
     Raises:
-        ImportError: If GSAS-II not available
-        ValueError: Invalid recipe or data
-        RuntimeError: Refinement execution failed
+        FileNotFoundError: If worker script or GSAS-II env not found
+        subprocess.TimeoutExpired: If refinement exceeds timeout
+        RuntimeError: If worker process fails
+    """
+    # Create temp directory if needed
+    temp_dir_created = temp_dir is None
+    if temp_dir is None:
+        temp_dir = Path(tempfile.mkdtemp(prefix="gsasii_"))
+        logger.info(f"Created temp directory: {temp_dir}")
+    else:
+        temp_dir = Path(temp_dir)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        # ====================================================================
+        # 1. Prepare Input Files
+        # ====================================================================
+        
+        logger.info(f"Starting refinement: sample={sample_name}, cycles={cycles}")
+        
+        # Write diffraction data to .chi file
+        q_array, intensity_array = chi_data
+        chi_file = temp_dir / f"{sample_name}.chi"
+        write_chi_file(chi_file, q_array, intensity_array)
+        logger.info(f"Wrote chi file: {chi_file} ({len(q_array)} points)")
+        
+        # Prepare worker input JSON
+        worker_input = {
+            "chi_file": str(chi_file),
+            "recipe": recipe,
+            "sample_name": sample_name,
+            "cycles": cycles,
+            "save_gpx": save_gpx,
+            "generate_plot": generate_plot,
+        }
+        
+        input_json = temp_dir / "worker_input.json"
+        output_json = temp_dir / "worker_output.json"
+        
+        with open(input_json, 'w') as f:
+            json.dump(worker_input, f, indent=2)
+        logger.info(f"Wrote worker input: {input_json}")
+        
+        # ====================================================================
+        # 2. Spawn Worker Process
+        # ====================================================================
+        
+        # Verify worker script exists
+        if not WORKER_SCRIPT.exists():
+            raise FileNotFoundError(f"Worker script not found: {WORKER_SCRIPT}")
+        
+        # Verify GSAS-II environment exists
+        if not GSASII_ENV_PATH.exists():
+            raise FileNotFoundError(
+                f"GSAS-II environment not found: {GSASII_ENV_PATH}\n"
+                f"Ensure GSAS-II is installed at this location."
+            )
+        
+        # Build command to run worker in GSAS-II environment
+        cmd = [
+            "bash", "-c",
+            f"cd {GSASII_ENV_PATH} && "
+            f"{GSASII_PYTHON} {WORKER_SCRIPT} {input_json} {output_json}"
+        ]
+        
+        logger.info(f"Running worker: {' '.join(cmd)}")
+        
+        # Execute worker process
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=REFINEMENT_TIMEOUT,
+                check=False,  # Don't raise on non-zero exit
+            )
+            
+            logger.info(f"Worker exit code: {result.returncode}")
+            
+            if result.stdout:
+                logger.info(f"Worker stdout:\n{result.stdout}")
+            if result.stderr:
+                logger.warning(f"Worker stderr:\n{result.stderr}")
+            
+        except subprocess.TimeoutExpired as e:
+            logger.error(f"Worker timeout after {REFINEMENT_TIMEOUT}s")
+            raise RuntimeError(
+                f"Refinement timeout after {REFINEMENT_TIMEOUT}s. "
+                f"Try reducing data range or refinement cycles."
+            ) from e
+        
+        # ====================================================================
+        # 3. Read Worker Output
+        # ====================================================================
+        
+        if not output_json.exists():
+            raise RuntimeError(
+                f"Worker did not create output file: {output_json}\n"
+                f"Exit code: {result.returncode}\n"
+                f"Stderr: {result.stderr}"
+            )
+        
+        with open(output_json) as f:
+            worker_output = json.load(f)
+        
+        logger.info(f"Read worker output: {list(worker_output.keys())}")
+        
+        # Check if worker succeeded
+        if not worker_output.get("success", False):
+            error_msg = worker_output.get("error", "Unknown error")
+            traceback = worker_output.get("traceback", "")
+            raise RuntimeError(
+                f"Worker refinement failed: {error_msg}\n"
+                f"Traceback:\n{traceback}"
+            )
+        
+        logger.info(f"✓ Refinement successful: "
+                   f"Rwp={worker_output['fit_quality']['Rwp']:.3f}%")
+        
+        return worker_output
+        
+    finally:
+        # Cleanup temp directory unless saving GPX
+        if temp_dir_created and not save_gpx:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            logger.info(f"Cleaned up temp directory")
+
+
+# ============================================================================
+# Legacy function (now deprecated)
+# ============================================================================
+
+def run_gsasii_refinement_direct(
+    chi_data: Tuple[List[float], List[float]],
+    recipe: Dict[str, Any],
+    sample_name: str,
+    cycles: int = 5,
+    temp_dir: Optional[Path] = None,
+    save_gpx: bool = False,
+    generate_plot: bool = True
+) -> Dict[str, Any]:
+    """
+    DEPRECATED: Direct GSAS-II refinement (requires GSAS-II in current env).
+    
+    Use run_gsasii_refinement() instead, which uses subprocess worker pattern.
+    
+    This function is kept for reference but will fail unless GSAS-II is
+    installed in the current Python environment.
     """
     # Import GSAS-II (fail fast if not available)
     try:
@@ -237,8 +404,11 @@ def run_gsasii_refinement(
     except ImportError as e:
         raise ImportError(
             "GSASIIscriptable not found. "
-            "Ensure GSAS-II is installed and on PYTHONPATH."
+            "Use run_gsasii_refinement() which uses subprocess worker, "
+            "or ensure GSAS-II is installed in current environment."
         ) from e
+    
+    # ... rest of original implementation ...
     
     # Create temp directory if needed
     temp_dir_created = temp_dir is None
