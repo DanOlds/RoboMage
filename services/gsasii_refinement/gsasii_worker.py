@@ -8,6 +8,26 @@ Reads input from JSON, performs GSAS-II refinement, writes output to JSON.
 This script is spawned as a subprocess by the main GSAS-II service to enable
 cross-environment operation (service in RoboMage env, refinement in GSAS-II env).
 
+CRITICAL DATA FORMAT REQUIREMENT:
+==================================
+CHI files from synchrotron sources are in Q-space (Å⁻¹), but GSAS-II expects
+the data to be labeled as "two_theta" in the API. The instrument parameter file
+handles the Q ↔ 2θ conversion internally.
+
+DO NOT convert Q to 2θ before sending to GSAS-II!
+- ✅ CORRECT: Send Q values labeled as "two_theta" in diffraction_data
+- ❌ WRONG: Convert Q→2θ yourself and send converted values
+
+Example: For Q range 0.647-15.867 Å⁻¹:
+  - Send as: {"two_theta": [0.647, 0.651, ...], "intensity": [...]}
+  - GSAS-II uses PDF_1m.instprm to interpret these as Q values
+  - Result: Rwp ≈ 7.7%, cell a ≈ 4.157 Å ✓
+
+If you convert Q→2θ first (2θ ≈ 0.98-24.27°), refinement will fail with:
+  - "Invalid cell metric tensor" error
+  - Negative cell values (-22248 Å)
+  - Rwp = 0.0% (calculation-only mode, no actual refinement)
+
 Usage:
     python gsasii_worker.py input.json output.json
 
@@ -185,7 +205,15 @@ def perform_refinement(input_data: dict) -> dict:
         # Apply refinement recipe
         apply_refinement_recipe(project, hist, phase, refinement_dict, cycles)
         
+        # Set number of cycles (CRITICAL - without this, GSAS-II runs 0 cycles!)
+        logger.info(f"Setting GSAS-II cycles control to {cycles}")
+        project.set_Controls('cycles', cycles)
+        logger.info(f"✓ Cycles control set to {cycles}")
+        
         # Perform refinement
+        # IMPORTANT: do_refinements() expects a GSAS-II refinement control dict
+        # Pass the original refinement_dict (with "set" key) to do_refinements()
+        # This matches autoxrd's approach where the YAML refinement_dict is passed directly
         logger.info(f"Starting {cycles} refinement cycles...")
         project.do_refinements([refinement_dict])
         logger.info("✓ Refinement completed")
@@ -259,31 +287,39 @@ def apply_refinement_recipe(project, hist, phase, recipe_dict: dict, cycles: int
     """Apply refinement recipe settings to GSAS-II project."""
     logger.info("Applying refinement recipe...")
     
+    # Extract settings from the "set" key (our API format)
+    settings = recipe_dict.get("set", recipe_dict)  # Fallback to top-level if no "set" key
+    
     # Set limits
-    limits = recipe_dict.get("Limits", [0.5, 16.0])
+    limits_config = settings.get("Limits", [0.5, 16.0])
+    if isinstance(limits_config, dict):
+        limits = [limits_config.get("low", 0.5), limits_config.get("high", 16.0)]
+    else:
+        limits = limits_config
     hist.set_refinements({"Limits": limits})
     logger.info(f"Set limits: {limits}")
     
     # Background refinement
-    bg_config = recipe_dict.get("Background", {})
+    bg_config = settings.get("Background", {})
     if bg_config:
         hist.set_refinements({"Background": bg_config})
         logger.info(f"Background: {bg_config}")
     
     # Sample parameters
-    sample_params = recipe_dict.get("Sample Parameters", [])
+    sample_params = settings.get("Sample Parameters", [])
     if sample_params:
         hist.set_refinements({"Sample Parameters": sample_params})
         logger.info(f"Sample parameters: {sample_params}")
     
-    # Phase parameters
-    phase_config = recipe_dict.get("Phases", {}).get(phase.name, {})
+    # Cell refinement (can be at top level in "set" dict)
+    cell_refine = settings.get("Cell", False)
+    if cell_refine:
+        phase.set_refinements({"Cell": True})
+        logger.info("Cell refinement enabled")
+    
+    # Phase-specific parameters (if provided)
+    phase_config = settings.get("Phases", {}).get(phase.name, {})
     if phase_config:
-        # Cell refinement
-        if phase_config.get("Cell"):
-            phase.set_refinements({"Cell": True})
-            logger.info("Cell refinement enabled")
-        
         # Size/strain
         if phase_config.get("Size"):
             phase.set_refinements({"Size": {"type": "isotropic", "refine": True}})

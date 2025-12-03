@@ -14,6 +14,7 @@ import dash_bootstrap_components as dbc
 from robomage.dashboard.callbacks import (
     analysis,
     file_upload,
+    gsasii_callbacks,
     inspector,
     persistence,
     plotting,
@@ -60,6 +61,7 @@ def create_app(debug: bool = False) -> dash.Dash:
     workflow.register_callbacks(app)
     inspector.register_callbacks(app)
     service_inspector.register_callbacks(app)
+    gsasii_callbacks.register_callbacks(app)
 
     return app
 

@@ -8,6 +8,7 @@ with Data Import, Visualization, Analysis, and Workflow tabs.
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from .gsasii_tab import create_gsasii_tab
 from .inspector_layout import create_inspector_tab
 from .service_inspector_layout import create_service_inspector_tab
 from .workflow_layout import create_workflow_tab
@@ -59,6 +60,11 @@ def create_main_layout() -> html.Div:
                         label="🌐 Service Inspector",
                         tab_id="service-inspector",
                         children=[create_service_inspector_tab()],
+                    ),
+                    dbc.Tab(
+                        label="⚛️ GSAS-II Refinement",
+                        tab_id="gsasii",
+                        children=[create_gsasii_tab()],
                     ),
                 ],
                 id="main-tabs",

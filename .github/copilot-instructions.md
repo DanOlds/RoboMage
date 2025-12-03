@@ -324,6 +324,16 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
     - Validated: LaB6 refinement Rwp=7.7%, cell=4.157Å, 4.56s execution time
     - Auto-start enabled in registry, dashboard integration working
     - Documentation: `docs/GSASII-PHASE-3-SUBPROCESS-COMPLETE.md`
+  - **CRITICAL: GSAS-II Data Format Requirements** ⚠️
+    - Synchrotron CHI files are in Q-space (Å⁻¹), NOT 2θ space
+    - GSAS-II expects Q values labeled as "two_theta" in the API
+    - The instrument parameter file (PDF_1m.instprm) handles Q ↔ 2θ conversion internally
+    - **DO NOT manually convert Q to 2θ before sending to GSAS-II!**
+    - ✅ CORRECT: `{"two_theta": q_values.tolist(), "intensity": [...]}`
+    - ❌ WRONG: `two_theta = 2*arcsin(q*λ/(4π)); {"two_theta": two_theta, ...}` (causes refinement failure!)
+    - Failure symptoms: "Invalid cell metric tensor", Rwp=0.0%, negative cell values
+    - Reference test: `tests/test_gsasii_refinement_integration.py`
+    - See `services/gsasii_refinement/gsasii_worker.py` header for full explanation
   - **Reference Codebase**: autoxrd repository (`/nsls2/users/dolds/dev/autoxrd`)
     - Production GSAS-II wrapper code in `fit_service/`
     - DRX Demo as reference example
