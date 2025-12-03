@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 from .inspector_layout import create_inspector_tab
+from .service_inspector_layout import create_service_inspector_tab
 from .workflow_layout import create_workflow_tab
 
 
@@ -53,6 +54,11 @@ def create_main_layout() -> html.Div:
                         label="🔍 Inspector",
                         tab_id="inspector",
                         children=[create_inspector_tab()],
+                    ),
+                    dbc.Tab(
+                        label="🌐 Service Inspector",
+                        tab_id="service-inspector",
+                        children=[create_service_inspector_tab()],
                     ),
                 ],
                 id="main-tabs",

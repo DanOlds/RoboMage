@@ -110,7 +110,7 @@ def create_inspector_tab() -> html.Div:
                                             dcc.Dropdown(
                                                 id="inspector-workflow-selector",
                                                 placeholder="Choose a workflow execution to inspect...",
-                                                clearable=False,
+                                                clearable=True,
                                             ),
                                             html.Div(
                                                 id="inspector-workflow-info",

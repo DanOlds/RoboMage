@@ -90,6 +90,19 @@ def register_callbacks(app: dash.Dash) -> None:
                     }
                 workflow_ids[wf_id]["count"] += 1
             
+            # Get workflow names from Workflow table
+            workflow_names = {}
+            try:
+                from robomage.persistence.models import Workflow
+                session = mgr.Session()
+                workflows = session.query(Workflow).filter(
+                    Workflow.id.in_(workflow_ids.keys())
+                ).all()
+                workflow_names = {wf.id: wf.name for wf in workflows}
+                session.close()
+            except Exception as e:
+                print(f"Warning: Could not fetch workflow names: {e}")
+            
             # Create options sorted by most recent first
             options = []
             for wf_id, info in sorted(
@@ -109,7 +122,15 @@ def register_callbacks(app: dash.Dash) -> None:
                     except Exception:
                         timestamp_str = str(info["first_timestamp"])[:19]
                 
-                label = f"{wf_id} ({info['count']} nodes)"
+                # Build label with workflow name (if available) and metadata
+                workflow_name = workflow_names.get(wf_id)
+                if workflow_name:
+                    label = f"{workflow_name}"
+                else:
+                    # Fallback to truncated UUID if no name found
+                    label = f"{wf_id[:8]}..."
+                
+                label += f" ({info['count']} nodes)"
                 if timestamp_str:
                     label += f" - {timestamp_str}"
                 

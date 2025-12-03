@@ -17,6 +17,7 @@ from robomage.dashboard.callbacks import (
     inspector,
     persistence,
     plotting,
+    service_inspector,
     workflow,
 )
 from robomage.dashboard.layouts.main_layout import create_main_layout
@@ -58,6 +59,7 @@ def create_app(debug: bool = False) -> dash.Dash:
     persistence.register_persistence_callbacks(app)
     workflow.register_callbacks(app)
     inspector.register_callbacks(app)
+    service_inspector.register_callbacks(app)
 
     return app
 
