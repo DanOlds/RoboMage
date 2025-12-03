@@ -52,17 +52,19 @@ def main():
                        "user_data_DRX_test/DRX_data_to_be_dropped_in/"
                        "xrd_LaB6_660c_std_brac2/integration")
     
-    chi_files = list(autoxrd_data.glob("*.chi"))
+    # Use 2theta data (not Q data) - GSAS-II expects 2theta
+    # Use 2theta file (GSAS-II expects 2theta, not Q)
+    chi_files = list(autoxrd_data.glob("*_tth.chi"))
     if not chi_files:
-        print(f"✗ No .chi files found in {autoxrd_data}")
+        print(f"✗ No _tth.chi files found in {autoxrd_data}")
         return 1
     
     chi_file = chi_files[0]
     print(f"  Using: {chi_file.name}")
     
-    q, intensity = read_chi_file(chi_file)
-    print(f"  Data points: {len(q)}")
-    print(f"  Q range: {q.min():.3f} - {q.max():.3f} Å⁻¹")
+    two_theta, intensity = read_chi_file(chi_file)
+    print(f"  Data points: {len(two_theta)}")
+    print(f"  2θ range: {two_theta.min():.3f} - {two_theta.max():.3f}°")
     
     # Load recipe
     print("\n2. Loading IPF fit recipe...")
@@ -78,7 +80,7 @@ def main():
     
     try:
         result = run_gsasii_refinement(
-            chi_data=(q.tolist(), intensity.tolist()),
+            chi_data=(two_theta.tolist(), intensity.tolist()),
             recipe=recipe,
             sample_name="LaB6_test",
             cycles=5,
