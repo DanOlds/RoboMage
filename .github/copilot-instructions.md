@@ -315,13 +315,18 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - ✅ Workspace organized (manual tests, logs, cache cleaned)
   - ✅ Documentation consolidated (19 docs archived, 65 active)
   - ⏳ 30 resource warnings remain (non-blocking)
-- 🔬 **GSAS-II Integration** (TBD) - Automated Rietveld refinement service
-  - Service wrapper for GSAS-II Python API
-  - Dashboard integration and workflow nodes
-  - Waiting on external GSAS-II development
-  - Roadmap: `docs/GSAS-II-INTEGRATION-ROADMAP.md` (to be created)
-  - Dashboard integration and workflow nodes
-  - See `docs/GSAS-II-INTEGRATION-ROADMAP.md` (to be created)
+- 🔬 **GSAS-II Integration** (Dec 2025 - Jan 2026) - Automated Rietveld refinement service
+  - **Reference Codebase**: autoxrd repository (`/nsls2/users/dolds/dev/autoxrd`)
+    - Production GSAS-II wrapper code in `fit_service/`
+    - DRX Demo as reference example
+    - Recipe-based YAML configuration system
+  - **Phase 1**: GSAS-II microservice (FastAPI, weeks 1-2)
+  - **Phase 2**: Workflow node integration (week 3)
+  - **Implementation Plan**: `docs/GSAS-II-SERVICE-IMPLEMENTATION-PLAN.md`
+  - **Access autoxrd**: Use terminal commands (outside workspace)
+    - `cat /nsls2/users/dolds/dev/autoxrd/README.md`
+    - `cat /nsls2/users/dolds/dev/autoxrd/fit_service/xrd_pipeline.py`
+    - DRX Demo: `/nsls2/users/dolds/dev/autoxrd/on-the-fly/test/user_data_DRX_test/`
 - 🎯 **Custom Services Architecture** - Generic service registry and template system
   - Replace hardcoded services with discoverable registry
   - Cookiecutter template for creating custom analysis services
@@ -367,6 +372,11 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 13. `docs/SPRINT-7-COMPLETION.md` - Sprint 7 completion summary and usage guide
 
 ## Related Documentation
+- `docs/GSAS-II-SERVICE-IMPLEMENTATION-PLAN.md` - **NEW**: Complete GSAS-II integration roadmap (Dec 3, 2025)
+  - Phase 1: FastAPI microservice (weeks 1-2)
+  - Phase 2: Workflow node integration (week 3)
+  - References autoxrd repository for GSAS-II wrapper code
+  - DRX Demo as reference example
 - `docs/llm-chat-guide.md` - Templates for starting new AI conversations
 - `docs/node-development-guide.md` - Comprehensive guide for creating custom workflow nodes (820 lines)
 - `docs/node-quick-reference.md` - Copy-paste templates for rapid node development (530 lines)
