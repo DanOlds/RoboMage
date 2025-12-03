@@ -318,8 +318,8 @@ class TestDocumentation:
         assert len(content.split("\n")) > 500
 
     def test_phase_completion_docs_exist(self):
-        """Test that phase completion docs exist."""
-        docs_dir = Path(__file__).parent.parent / "docs"
+        """Test that phase completion docs exist (in archive after cleanup)."""
+        archive_dir = Path(__file__).parent.parent / "archive" / "custom-services"
 
         phase_docs = [
             "PHASE-1-SERVICE-REGISTRY-COMPLETE.md",
@@ -329,7 +329,7 @@ class TestDocumentation:
         ]
 
         for doc in phase_docs:
-            doc_path = docs_dir / doc
+            doc_path = archive_dir / doc
             assert doc_path.exists(), f"Missing phase doc: {doc}"
 
     def test_readme_mentions_custom_services(self):

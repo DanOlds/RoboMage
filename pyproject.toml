@@ -97,8 +97,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-# Exclude archived test scripts from discovery
-norecursedirs = ["archive", ".git", ".pixi", "__pycache__", "*.egg-info"]
+# Exclude archived test scripts and manual tests from discovery
+norecursedirs = ["archive", "manual", ".git", ".pixi", "__pycache__", "*.egg-info"]
 # Async test support
 asyncio_mode = "auto"
 # Show warnings
