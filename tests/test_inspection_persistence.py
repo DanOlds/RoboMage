@@ -26,10 +26,22 @@ from robomage.persistence.api import SessionManager
 def session_manager(tmp_path):
     """Create SessionManager with unique temporary database for each test."""
     import uuid
+    # CRITICAL: Reset global database manager singleton before each test
+    # This ensures each test gets a fresh database instance
+    import robomage.persistence.database as db_module
+    db_module._db_manager = None
 
     # Use random UUID to ensure unique database file
     db_path = tmp_path / f"test_{uuid.uuid4().hex}.db"
-    return SessionManager(db_path=str(db_path))
+    manager = SessionManager(db_path=str(db_path))
+    yield manager
+    # Cleanup: close database connection after test
+    if hasattr(manager, '_session'):
+        manager._session.close()
+    if hasattr(manager, '_engine'):
+        manager._engine.dispose()
+    # Reset singleton again for next test
+    db_module._db_manager = None
 
 
 @pytest.fixture(scope="function")
@@ -253,7 +265,8 @@ class TestSessionManagerInspectionCRUD:
         )
 
         # Create inspection for another session
-        session2_id = session_manager.create_session("Session 2")
+        import uuid
+        session2_id = session_manager.create_session(f"Session 2 {uuid.uuid4()}")
         session_manager.save_inspection(
             "wf_3", "node_4", "export_csv", session_id=session2_id
         )
