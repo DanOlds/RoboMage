@@ -247,6 +247,28 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - ✅ **Test Suite Cleanup** - Archived old tests, resolved deprecation warnings
 - ✅ **Comprehensive Troubleshooting Guide** - Problem-solving documentation
 
+**December 3, 2025 - Critical Bug Fixes** ✅:
+- ✅ **Service Inspector Tab** - Fixed callback circular dependency and state preservation
+  - Removed circular State dependency causing display panel failures
+  - Implemented Store pattern for tab, accordion, and response preservation across health refreshes
+  - Added OpenAPI schema-based endpoint discovery for test console
+  - Documentation: `docs/SERVICE-INSPECTOR-DEBUG-SESSION.md`
+- ✅ **save_to_session Workflow Node** - Fixed and unified with button behavior
+  - Fixed missing session context (active_session_id not passed to workflow service)
+  - Fixed dict serialization (DiffractionData objects serialized to JSON)
+  - **Major redesign**: Node now searches ALL execution context (matches "Save results" button)
+  - Supports any workflow pattern: automatically finds all DiffractionData regardless of connections
+  - Documentation: `docs/SAVE-TO-SESSION-FIX.md`
+- ✅ **Disconnected Nodes Bug** - Fixed workflow orchestrator executing unconnected nodes
+  - Topological sort now filters to only connected graph nodes
+  - Disconnected nodes safely excluded with clear logging
+  - Edges now properly control execution order (DAG semantics enforced)
+  - Documentation: `docs/DISCONNECTED-NODES-FIX.md`
+- ⚠️ **Test Suite Status**: 16 tests failing (367 passing)
+  - Tests need updates to reflect new orchestrator and save_to_session behavior
+  - See `docs/DEC-3-2025-TEST-FAILURES.md` for details and fix strategy
+  - **Action required**: Update tests before merging to main
+
 **🚀 NEXT MAJOR FEATURE: Custom Services Architecture (2-3 weeks)**:
 - 🎯 **Service Registry System** - Replace hardcoded services with discoverable registry
 - 🎯 **Service Template** - Cookiecutter template for creating custom analysis services
