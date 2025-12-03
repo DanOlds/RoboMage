@@ -106,8 +106,8 @@ async def load_files_handler(
     config_schema={
         "type": "object",
         "properties": {
-            "q_min": {"type": "number", "default": 0},
-            "q_max": {"type": "number", "default": 20},
+            "q_min": {"type": "number", "default": 0, "minimum": 0},
+            "q_max": {"type": "number", "default": 20, "minimum": 0},
         },
     },
 )

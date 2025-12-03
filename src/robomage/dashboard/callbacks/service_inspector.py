@@ -32,6 +32,10 @@ from robomage.service_registry.models import ServiceMetadata
 
 logger = logging.getLogger(__name__)
 
+# Track last selection time to prevent rapid re-triggers
+_last_selection_time = 0
+_SELECTION_DEBOUNCE_MS = 200  # 200ms debounce
+
 
 # ==============================================================================
 # Helper Functions (not callbacks)
@@ -252,18 +256,33 @@ def register_callbacks(app: dash.Dash) -> None:
     @app.callback(
         Output("selected-service-id", "data"),
         Input({"type": "service-card-btn", "service_id": ALL}, "n_clicks"),
+        State("selected-service-id", "data"),
         prevent_initial_call=True,
     )
-    def select_service(n_clicks_list):
+    def select_service(n_clicks_list, current_selection):
         """Handle service card selection."""
-        if not ctx.triggered_id:
+        # Check if callback was triggered
+        if not ctx.triggered:
             raise PreventUpdate
         
+        # Check if the trigger has an actual value (not None/0 from recreation)
+        triggered = ctx.triggered[0]
+        if triggered["value"] is None or triggered["value"] == 0:
+            raise PreventUpdate
+            
         # Get the service_id from the triggered button
+        if not ctx.triggered_id:
+            raise PreventUpdate
+            
         service_id = ctx.triggered_id.get("service_id")
         if not service_id:
             raise PreventUpdate
         
+        # Only update if it's actually a different service
+        if service_id == current_selection:
+            raise PreventUpdate
+        
+        logger.info(f"Service selected: {service_id}")
         return service_id
     
     @app.callback(
@@ -276,9 +295,20 @@ def register_callbacks(app: dash.Dash) -> None:
             Input("service-inspector-data", "data"),
         ],
     )
-    def display_service_details(selected_id, service_data):
+    def display_service_details(
+        selected_id,
+        service_data,
+    ):
         """Display detailed information for selected service."""
+        logger.info("=" * 80)
+        logger.info("🔍 display_service_details callback FIRED")
+        logger.info(f"   selected_id: {selected_id}")
+        logger.info(f"   service_data keys: {list(service_data.keys()) if service_data else None}")
+        logger.info(f"   ctx.triggered: {ctx.triggered if hasattr(ctx, 'triggered') else 'N/A'}")
+        logger.info("=" * 80)
+        
         if not selected_id or not service_data or selected_id not in service_data:
+            logger.warning("⚠️  Early return: Missing data or service not in data")
             return (
                 dbc.Alert(
                     [
@@ -290,24 +320,37 @@ def register_callbacks(app: dash.Dash) -> None:
                 "Service Details",
             )
         
+        logger.info(f"✅ Processing service: {selected_id}")
         data = service_data[selected_id]
         metadata = data["metadata"]
         health = data["health"]
         
+        logger.info(f"   Health status: {health.get('status')}")
+        
         # Fetch OpenAPI schema if service is healthy
         openapi_schema = None
         if health["status"] == "healthy":
+            logger.info("   Fetching OpenAPI schema...")
             openapi_schema = fetch_openapi_schema(metadata)
+            logger.info(f"   OpenAPI schema fetched: {openapi_schema is not None}")
         
-        # Create detail panel
+        # Always start with overview tab (removed State dependency on non-existent component)
+        active_tab = "overview-tab"
+        logger.info(f"   Active tab: {active_tab}")
+        
+        # Create detail panel with preserved active tab
+        logger.info("   Creating detail panel...")
         detail_panel = create_service_detail_panel(
             service_data=metadata,
             health_data=health,
             openapi_schema=openapi_schema,
+            active_tab=active_tab,
         )
         
         # Update title
         title = f"Service Details: {metadata.get('display_name', selected_id)}"
+        logger.info(f"   Title: {title}")
+        logger.info("✅ display_service_details completed successfully")
         
         return detail_panel, title
     

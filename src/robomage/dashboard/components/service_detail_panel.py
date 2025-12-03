@@ -15,6 +15,7 @@ def create_service_detail_panel(
     service_data: dict[str, Any],
     health_data: dict[str, Any],
     openapi_schema: dict[str, Any] | None = None,
+    active_tab: str = "overview-tab",
 ) -> html.Div:
     """
     Create a detailed view panel for a selected service.
@@ -23,6 +24,7 @@ def create_service_detail_panel(
         service_data: Service metadata dictionary
         health_data: Health check response data
         openapi_schema: OpenAPI/Swagger schema (optional)
+        active_tab: Currently active tab ID (default: "overview-tab")
 
     Returns:
         Tabbed detail panel component
@@ -45,7 +47,7 @@ def create_service_detail_panel(
     return dbc.Tabs(
         tabs,
         id="service-detail-tabs",
-        active_tab="overview-tab",
+        active_tab=active_tab,
     )
 
 
@@ -503,7 +505,8 @@ def create_openapi_paths_display(paths: dict[str, Any]) -> dbc.Accordion:
 
 
 def create_testing_console_tab(
-    service_data: dict[str, Any], base_url: str
+    service_data: dict[str, Any],
+    base_url: str,
 ) -> dbc.Tab:
     """Create Testing Console tab for interactive API testing."""
     endpoints = service_data.get("endpoints", {})

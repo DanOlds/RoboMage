@@ -135,8 +135,7 @@ def create_service_card(
         className="p-2",
     )
 
-    # Wrap in clickable div with pattern-matching ID
-    # Use a transparent button overlay for reliable click detection
+    # Wrap card in clickable div
     return html.Div(
         [
             dbc.Card(
@@ -145,29 +144,12 @@ def create_service_card(
                 style={
                     "borderColor": card_color,
                     "borderWidth": border_width,
-                    "cursor": "pointer",
-                    "position": "relative",
                 },
-            ),
-            # Invisible button that covers the entire card for click detection
-            dbc.Button(
-                "",
-                id={"type": "service-card-btn", "service_id": service_id},
-                style={
-                    "position": "absolute",
-                    "top": 0,
-                    "left": 0,
-                    "width": "100%",
-                    "height": "100%",
-                    "opacity": 0,
-                    "cursor": "pointer",
-                    "border": "none",
-                    "background": "transparent",
-                },
-                className="p-0",
             ),
         ],
-        style={"position": "relative", "cursor": "pointer"},
+        id={"type": "service-card-btn", "service_id": service_id},
+        n_clicks=0,
+        style={"cursor": "pointer"},
     )
 
 
