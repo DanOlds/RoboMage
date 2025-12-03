@@ -1,0 +1,1 @@
+{"recipe_description": "DRX_fit_sample3_lattice_refinement", "instrument_file": "PDF_1m.instprm", "cif_file": "3_LMTAlNbO-10_start.cif", "phase_name": "LMTAlNbO", "refinement_dict": {"set": {"Limits": {"low": 1, "high": 15}, "Background": {"type": "chebyschev-1", "no. coeffs": 30, "refine": true}, "Cell": True, "Sample Parameters": ["Scale"]}}}
