@@ -294,17 +294,30 @@ def register_callbacks(app: dash.Dash) -> None:
             Input("selected-service-id", "data"),
             Input("service-inspector-data", "data"),
         ],
+        [
+            State("service-detail-active-tab", "data"),
+            State("api-docs-active-items", "data"),
+            State("test-console-response", "data"),
+        ],
     )
     def display_service_details(
         selected_id,
         service_data,
+        active_tab_from_store,
+        active_accordion_items,
+        test_console_response,
     ):
         """Display detailed information for selected service."""
         logger.info("=" * 80)
         logger.info("🔍 display_service_details callback FIRED")
         logger.info(f"   selected_id: {selected_id}")
-        logger.info(f"   service_data keys: {list(service_data.keys()) if service_data else None}")
-        logger.info(f"   ctx.triggered: {ctx.triggered if hasattr(ctx, 'triggered') else 'N/A'}")
+        service_keys = list(service_data.keys()) if service_data else None
+        logger.info(f"   service_data keys: {service_keys}")
+        logger.info(f"   active_tab_from_store: {active_tab_from_store}")
+        logger.info(f"   active_accordion_items: {active_accordion_items}")
+        logger.info(f"   test_console_response: {test_console_response is not None}")
+        ctx_info = ctx.triggered if hasattr(ctx, "triggered") else "N/A"
+        logger.info(f"   ctx.triggered: {ctx_info}")
         logger.info("=" * 80)
         
         if not selected_id or not service_data or selected_id not in service_data:
@@ -334,17 +347,19 @@ def register_callbacks(app: dash.Dash) -> None:
             openapi_schema = fetch_openapi_schema(metadata)
             logger.info(f"   OpenAPI schema fetched: {openapi_schema is not None}")
         
-        # Always start with overview tab (removed State dependency on non-existent component)
-        active_tab = "overview-tab"
+        # Use the stored active tab (preserves user selection across health refreshes)
+        active_tab = active_tab_from_store if active_tab_from_store else "overview-tab"
         logger.info(f"   Active tab: {active_tab}")
         
-        # Create detail panel with preserved active tab
+        # Create detail panel with preserved state
         logger.info("   Creating detail panel...")
         detail_panel = create_service_detail_panel(
             service_data=metadata,
             health_data=health,
             openapi_schema=openapi_schema,
             active_tab=active_tab,
+            active_accordion_items=active_accordion_items,
+            test_console_response=test_console_response,
         )
         
         # Update title
@@ -355,7 +370,34 @@ def register_callbacks(app: dash.Dash) -> None:
         return detail_panel, title
     
     @app.callback(
-        Output("test-response-display", "children"),
+        Output("service-detail-active-tab", "data"),
+        Input("service-detail-tabs", "active_tab"),
+        prevent_initial_call=True,
+    )
+    def save_active_tab(active_tab):
+        """Save the active tab selection to preserve across health refreshes."""
+        if active_tab:
+            logger.info(f"📑 Tab changed to: {active_tab}")
+            return active_tab
+        raise PreventUpdate
+    
+    @app.callback(
+        Output("api-docs-active-items", "data"),
+        Input("api-docs-accordion", "active_item"),
+        prevent_initial_call=True,
+    )
+    def save_accordion_state(active_items):
+        """Save the active accordion items to preserve across health refreshes."""
+        if active_items is not None:
+            logger.info(f"📂 Accordion items changed to: {active_items}")
+            return active_items if isinstance(active_items, list) else [active_items]
+        return []
+    
+    @app.callback(
+        [
+            Output("test-response-display", "children"),
+            Output("test-console-response", "data"),
+        ],
         Input("test-send-request-btn", "n_clicks"),
         [
             State("selected-service-id", "data"),
@@ -388,7 +430,7 @@ def register_callbacks(app: dash.Dash) -> None:
             try:
                 request_data = json.loads(request_body)
             except json.JSONDecodeError as e:
-                return dbc.Alert(
+                error_response = dbc.Alert(
                     [
                         html.I(className="fas fa-exclamation-triangle me-2"),
                         html.Strong("Invalid JSON in request body"),
@@ -397,6 +439,7 @@ def register_callbacks(app: dash.Dash) -> None:
                     ],
                     color="danger",
                 )
+                return error_response, {"type": "error", "content": error_response}
         
         # Send request
         try:
@@ -433,7 +476,7 @@ def register_callbacks(app: dash.Dash) -> None:
                 response_text = response.text
             
             # Build response display
-            return html.Div(
+            response_display = html.Div(
                 [
                     dbc.Alert(
                         [
@@ -461,21 +504,27 @@ def register_callbacks(app: dash.Dash) -> None:
                 ]
             )
             
+            log_msg = f"🧪 Test request: {method} {endpoint} → {response.status_code}"
+            logger.info(log_msg)
+            
+            return response_display, {"type": "success", "content": response_display}
+            
         except requests.exceptions.Timeout:
-            return dbc.Alert(
+            error_response = dbc.Alert(
                 [
                     html.I(className="fas fa-clock me-2"),
                     html.Strong("Request Timeout"),
                     html.Br(),
                     html.Small(
-                        "The request took too long to respond",  # noqa: E501
+                        "The request took too long to respond",
                         className="text-muted",
                     ),
                 ],
                 color="warning",
             )
+            return error_response, {"type": "error", "content": error_response}
         except requests.exceptions.ConnectionError as e:
-            return dbc.Alert(
+            error_response = dbc.Alert(
                 [
                     html.I(className="fas fa-exclamation-triangle me-2"),
                     html.Strong("Connection Error"),
@@ -484,9 +533,10 @@ def register_callbacks(app: dash.Dash) -> None:
                 ],
                 color="danger",
             )
+            return error_response, {"type": "error", "content": error_response}
         except Exception as e:
             logger.error(f"Error sending test request: {e}")
-            return dbc.Alert(
+            error_response = dbc.Alert(
                 [
                     html.I(className="fas fa-exclamation-triangle me-2"),
                     html.Strong("Error"),
@@ -495,6 +545,7 @@ def register_callbacks(app: dash.Dash) -> None:
                 ],
                 color="danger",
             )
+            return error_response, {"type": "error", "content": error_response}
     
     @app.callback(
         Output("add-service-modal", "is_open"),

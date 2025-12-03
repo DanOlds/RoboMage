@@ -558,9 +558,10 @@ def register_execution_callbacks(app):
         Input("execute-workflow-btn", "n_clicks"),
         State("current-workflow-data", "data"),
         State("workflow-name-input", "value"),
+        State("current-session-id", "data"),
         prevent_initial_call=True,
     )
-    def execute_workflow(n_clicks, current_workflow, workflow_name):
+    def execute_workflow(n_clicks, current_workflow, workflow_name, current_session_id):
         """Execute the current workflow."""
         if not n_clicks:
             raise PreventUpdate
@@ -604,10 +605,23 @@ def register_execution_callbacks(app):
 
             # Execute workflow with inspection enabled
             logger.info(f"Executing workflow: {workflow_id}")
+
+            # Build context metadata with session_id
+            context_metadata = {}
+            if current_session_id:
+                context_metadata["active_session_id"] = current_session_id
+                logger.info(
+                    f"Passing active_session_id to workflow: "
+                    f"{current_session_id}"
+                )
+
+            # Send context as request body (FastAPI parses as 'context' param)
+            # enable_inspection goes in query params
             exec_response = requests.post(
                 f"{WORKFLOW_SERVICE_URL}/workflows/{workflow_id}/execute",
-                params={"enable_inspection": True},  # Enable inspection for debugging
-                timeout=60,  # Allow longer timeout for execution
+                json=context_metadata,  # This becomes the 'context' parameter
+                params={"enable_inspection": True},
+                timeout=60,
             )
 
             if exec_response.status_code == 200:

@@ -379,14 +379,84 @@ async def save_to_session_handler(
     results_saved = 0
     errors = []
 
+    # Strategy: Mirror the "Save results to current session" button behavior
+    # Instead of only looking at direct inputs, search ALL node outputs in context
+    # This matches user expectations and the button's behavior
+
     # Save DiffractionData files
     if include_files:
-        files = inputs.get("files", inputs.get("input", []))
-        if not isinstance(files, list):
-            files = [files]
+        # Search execution context for ALL DiffractionData objects
+        # This mimics what the dashboard button does
+        diffraction_files = []
+        analysis_results_data = []
 
-        for i, data in enumerate(files):
+        logger.info(
+            f"Searching execution context for DiffractionData objects. "
+            f"Context has {len(context.data)} node outputs."
+        )
+
+        for node_id, value in context.data.items():
+            logger.debug(
+                f"Checking node '{node_id}': type={type(value).__name__}, "
+                f"is_list={isinstance(value, list)}"
+            )
+
+            # Handle list outputs
+            if isinstance(value, list) and value:
+                for i, item in enumerate(value):
+                    # Check if it's DiffractionData (has q_values and intensities)
+                    if hasattr(item, "q_values") and hasattr(item, "intensities"):
+                        diffraction_files.append(item)
+                        logger.info(
+                            f"Found DiffractionData in node '{node_id}': "
+                            f"{getattr(item, 'filename', f'item_{i}')}"
+                        )
+                    # Check for analysis results
+                    elif (
+                        isinstance(item, dict)
+                        and "peaks_detected" in item
+                        and "peak_list" in item
+                    ):
+                        analysis_results_data.append(item)
+                        logger.info(
+                            f"Found analysis results in node '{node_id}': "
+                            f"{item.get('filename', 'unknown')}"
+                        )
+
+            # Handle single DiffractionData output
+            elif hasattr(value, "q_values") and hasattr(value, "intensities"):
+                diffraction_files.append(value)
+                logger.info(
+                    f"Found DiffractionData in node '{node_id}': "
+                    f"{getattr(value, 'filename', 'unknown')}"
+                )
+
+        if not diffraction_files:
+            logger.warning(
+                "No DiffractionData found in execution context. "
+                "Make sure your workflow has a load_files or similar node."
+            )
+            return {
+                "session_id": session_id,
+                "files_saved": 0,
+                "results_saved": 0,
+                "status": "error",
+                "errors": [
+                    "No DiffractionData found in workflow execution. "
+                    "Add a load_files node or similar data source."
+                ],
+            }
+
+        logger.info(
+            f"Found {len(diffraction_files)} DiffractionData object(s) to save"
+        )
+
+        # Save each DiffractionData object
+        for i, data in enumerate(diffraction_files):
             try:
+                # Data from context is already a DiffractionData object
+                # (no deserialization needed - we're in the same process)
+                
                 # Generate filename if not present
                 filename = getattr(data, "filename", None)
                 if not filename:

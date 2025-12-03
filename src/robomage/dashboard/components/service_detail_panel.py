@@ -16,6 +16,8 @@ def create_service_detail_panel(
     health_data: dict[str, Any],
     openapi_schema: dict[str, Any] | None = None,
     active_tab: str = "overview-tab",
+    active_accordion_items: list[str] | None = None,
+    test_console_response: dict[str, Any] | None = None,
 ) -> html.Div:
     """
     Create a detailed view panel for a selected service.
@@ -25,6 +27,8 @@ def create_service_detail_panel(
         health_data: Health check response data
         openapi_schema: OpenAPI/Swagger schema (optional)
         active_tab: Currently active tab ID (default: "overview-tab")
+        active_accordion_items: List of active accordion item IDs (optional)
+        test_console_response: Stored test console response (optional)
 
     Returns:
         Tabbed detail panel component
@@ -40,8 +44,10 @@ def create_service_detail_panel(
         create_overview_tab(service_data, health_data),
         create_endpoints_tab(service_data, base_url),
         create_health_tab(health_data, base_url),
-        create_api_docs_tab(openapi_schema, base_url),
-        create_testing_console_tab(service_data, base_url),
+        create_api_docs_tab(openapi_schema, base_url, active_accordion_items),
+        create_testing_console_tab(
+            service_data, base_url, test_console_response, openapi_schema
+        ),
     ]
 
     return dbc.Tabs(
@@ -380,7 +386,9 @@ def create_health_tab(health_data: dict[str, Any], base_url: str) -> dbc.Tab:
 
 
 def create_api_docs_tab(
-    openapi_schema: dict[str, Any] | None, base_url: str
+    openapi_schema: dict[str, Any] | None,
+    base_url: str,
+    active_items: list[str] | None = None,
 ) -> dbc.Tab:
     """Create API Documentation tab with OpenAPI schema display."""
     if not openapi_schema:
@@ -423,7 +431,7 @@ def create_api_docs_tab(
                 html.P(info.get("description", "N/A"), className="text-muted"),
                 html.Hr(),
                 html.H5("Available Endpoints", className="mb-3"),
-                create_openapi_paths_display(paths),
+                create_openapi_paths_display(paths, active_items),
                 html.Hr(),
                 html.Label("Full Schema:", className="fw-bold"),
                 html.Pre(
@@ -441,9 +449,15 @@ def create_api_docs_tab(
     )
 
 
-def create_openapi_paths_display(paths: dict[str, Any]) -> dbc.Accordion:
+def create_openapi_paths_display(
+    paths: dict[str, Any], active_items: list[str] | None = None
+) -> dbc.Accordion:
     """Create accordion display for OpenAPI paths."""
     accordion_items = []
+    
+    # Default to empty list if not provided
+    if active_items is None:
+        active_items = []
 
     for path, methods in paths.items():
         for method, details in methods.items():
@@ -459,6 +473,9 @@ def create_openapi_paths_display(paths: dict[str, Any]) -> dbc.Accordion:
                     "delete": "danger",
                     "patch": "info",
                 }
+                
+                # Create a unique item_id for this accordion item
+                item_id = f"{method}-{path}"
 
                 accordion_items.append(
                     dbc.AccordionItem(
@@ -494,11 +511,17 @@ def create_openapi_paths_display(paths: dict[str, Any]) -> dbc.Accordion:
                                 html.Small(summary, className="text-muted"),
                             ]
                         ),
+                        item_id=item_id,
                     )
                 )
 
     return (
-        dbc.Accordion(accordion_items, start_collapsed=True)
+        dbc.Accordion(
+            accordion_items, 
+            id="api-docs-accordion",
+            active_item=active_items,  # Preserve open items
+            always_open=True,  # Allow multiple items to be open
+        )
         if accordion_items
         else html.P("No endpoints found", className="text-muted")
     )
@@ -507,13 +530,43 @@ def create_openapi_paths_display(paths: dict[str, Any]) -> dbc.Accordion:
 def create_testing_console_tab(
     service_data: dict[str, Any],
     base_url: str,
+    stored_response: dict[str, Any] | None = None,
+    openapi_schema: dict[str, Any] | None = None,
 ) -> dbc.Tab:
     """Create Testing Console tab for interactive API testing."""
-    endpoints = service_data.get("endpoints", {})
-    endpoint_options = [
-        {"label": f"{name.upper()} {path}", "value": path}
-        for name, path in endpoints.items()
-    ]
+    # Build endpoint options from OpenAPI schema if available, otherwise use metadata
+    endpoint_options = []
+    
+    if openapi_schema and "paths" in openapi_schema:
+        # Use OpenAPI schema for comprehensive endpoint list
+        for path, methods in openapi_schema["paths"].items():
+            for method in methods.keys():
+                if method.upper() in ["GET", "POST", "PUT", "DELETE", "PATCH"]:
+                    summary = methods[method].get("summary", "")
+                    label = f"{method.upper()} {path}"
+                    if summary:
+                        label += f" - {summary}"
+                    endpoint_options.append({"label": label, "value": path})
+    else:
+        # Fallback to registered endpoints from metadata
+        endpoints = service_data.get("endpoints", {})
+        endpoint_options = [
+            {"label": f"{name.upper()} {path}", "value": path}
+            for name, path in endpoints.items()
+        ]
+    
+    # Use stored response or default message
+    if stored_response and isinstance(stored_response, dict):
+        # Extract the content from the stored response
+        response_display = stored_response.get("content", html.P(
+            "Response will appear here after sending a request",
+            className="text-muted",
+        ))
+    else:
+        response_display = html.P(
+            "Response will appear here after sending a request",
+            className="text-muted",
+        )
 
     return dbc.Tab(
         label="🧪 Test Console",
@@ -639,12 +692,7 @@ def create_testing_console_tab(
                                 [
                                     html.Div(
                                         id="test-response-display",
-                                        children=[
-                                            html.P(
-                                                "Response will appear here after sending a request",  # noqa: E501
-                                                className="text-muted",
-                                            )
-                                        ],
+                                        children=[response_display],
                                     )
                                 ]
                             ),

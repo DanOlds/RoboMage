@@ -236,6 +236,9 @@ def create_service_inspector_tab() -> html.Div:
             # Data stores
             dcc.Store(id="service-inspector-data"),  # All service metadata + health
             dcc.Store(id="selected-service-id"),  # Currently selected service
+            dcc.Store(id="service-detail-active-tab", data="overview-tab"),  # Track active tab
+            dcc.Store(id="api-docs-active-items", data=[]),  # Track open accordion items
+            dcc.Store(id="test-console-response", data=None),  # Track test console response
             # Auto-refresh interval (5 seconds)
             dcc.Interval(
                 id="service-health-interval",
