@@ -38,6 +38,11 @@ logger = logging.getLogger(__name__)
             },
         },
     },
+    coordinate_requirements={
+        "input_coordinates": "Q",  # Requires Q-space
+        "output_coordinates": "Q",  # Outputs Q-space results
+        "requires_wavelength": False,  # Doesn't need wavelength (works in Q)
+    },
 )
 async def peak_analysis_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
@@ -295,6 +300,14 @@ async def statistics_handler(
             },
         },
         "required": ["instrument_file", "cif_file", "phase_name"],
+    },
+    coordinate_requirements={
+        "input_coordinates": "Q",  # CRITICAL: Actually requires Q (not 2θ)!
+        # GSAS-II service expects Q values labeled as "two_theta" in the API
+        # The instrument parameter file (PDF_1m.instprm) handles Q ↔ 2θ conversion
+        # See docs/GSASII-DATA-FORMAT-REFERENCE.md for details
+        "output_coordinates": None,  # Outputs refinement results (not diffraction data)
+        "requires_wavelength": True,  # Wavelength needed for refinement
     },
 )
 async def gsasii_refinement_handler(

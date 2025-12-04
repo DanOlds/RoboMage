@@ -699,6 +699,17 @@ class WorkflowOrchestrator:
             # Collect inputs from predecessor nodes
             inputs = self._collect_node_inputs(node, context, workflow)
 
+            # === COORDINATE SYSTEM CONVERSION LOGIC ===
+            # Check if node has coordinate requirements
+            from robomage.workflow.nodes.registry import NodeRegistry
+
+            node_metadata = NodeRegistry.get_metadata(node.type)
+            if node_metadata and node_metadata.coordinate_requirements:
+                inputs = self._convert_inputs_for_node(
+                    inputs, node_metadata, node.id
+                )
+            # ==========================================
+
             # Capture input data if inspection enabled
             if self.enable_inspection:
                 self.inspection_data[
@@ -822,3 +833,151 @@ class WorkflowOrchestrator:
                 )
 
         return inputs
+
+    def _convert_inputs_for_node(
+        self, inputs: dict[str, Any], node_metadata: Any, node_id: str
+    ) -> dict[str, Any]:
+        """
+        Convert input data to match node's coordinate system requirements.
+        
+        This method implements the automatic coordinate conversion logic:
+        1. Check node's coordinate requirements
+        2. Inspect input data coordinate systems
+        3. Convert if mismatch detected
+        4. Log all conversions for transparency
+        
+        Args:
+            inputs: Dictionary of input data
+            node_metadata: Node metadata with coordinate_requirements
+            node_id: Node identifier for logging
+        
+        Returns:
+            Dictionary with converted inputs (or original if no conversion needed)
+        
+        Raises:
+            ValueError: If wavelength is missing for Q ↔ 2θ conversion
+        """
+        from robomage.coordinate_systems import (
+            CoordinateSystem,
+            ConversionError,
+        )
+        from robomage.data.models import DiffractionData
+
+        coord_reqs = node_metadata.coordinate_requirements
+        if not coord_reqs:
+            return inputs  # No requirements specified
+
+        required_input = coord_reqs.get("input_coordinates")
+        if not required_input:
+            return inputs  # Node accepts any coordinate system
+
+        # Convert string to enum
+        if isinstance(required_input, str):
+            required_input = CoordinateSystem(required_input)
+
+        logger.debug(
+            f"Node {node_id} requires input coordinates: {required_input.value}"
+        )
+
+        # Process each input
+        converted_inputs = {}
+        conversion_count = 0
+
+        for key, value in inputs.items():
+            # Check if input is DiffractionData or list of DiffractionData
+            if isinstance(value, DiffractionData):
+                converted_inputs[key] = self._convert_single_data(
+                    value, required_input, node_id
+                )
+                if converted_inputs[key] != value:
+                    conversion_count += 1
+
+            elif isinstance(value, list) and all(
+                isinstance(item, DiffractionData) for item in value
+            ):
+                converted_list = []
+                for i, data in enumerate(value):
+                    converted = self._convert_single_data(
+                        data, required_input, node_id, index=i
+                    )
+                    converted_list.append(converted)
+                    if converted != data:
+                        conversion_count += 1
+                converted_inputs[key] = converted_list
+
+            else:
+                # Not diffraction data, pass through unchanged
+                converted_inputs[key] = value
+
+        if conversion_count > 0:
+            logger.info(
+                f"✓ Converted {conversion_count} data object(s) for node {node_id}"
+            )
+
+        return converted_inputs
+
+    def _convert_single_data(
+        self,
+        data: Any,
+        target_system: Any,
+        node_id: str,
+        index: int | None = None,
+    ) -> Any:
+        """
+        Convert a single DiffractionData object to target coordinate system.
+        
+        Args:
+            data: DiffractionData object
+            target_system: Target CoordinateSystem
+            node_id: Node identifier for logging
+            index: Optional index in list (for logging)
+        
+        Returns:
+            Converted DiffractionData or original if no conversion needed
+        
+        Raises:
+            ValueError: If conversion fails (e.g., missing wavelength)
+        """
+        from robomage.coordinate_systems import ConversionError
+
+        current_system = data.coordinate_metadata.system
+
+        # Check if conversion is needed
+        if current_system == target_system:
+            logger.debug(
+                f"  No conversion needed for {data.filename or 'data'} "
+                f"(already in {current_system.value})"
+            )
+            return data
+
+        # Log conversion
+        file_label = f"[{index}] " if index is not None else ""
+        logger.info(
+            f"  {file_label}Converting {data.filename or 'data'}: "
+            f"{current_system.value} → {target_system.value}"
+        )
+
+        # Check wavelength requirement
+        if target_system.value == "two_theta" and data.wavelength is None:
+            raise ValueError(
+                f"Cannot convert to 2θ for node {node_id}: "
+                f"File {data.filename or 'unknown'} is missing wavelength. "
+                f"Please provide wavelength in the file or node configuration."
+            )
+
+        try:
+            # Perform conversion
+            converted = data.to_coordinate_system(target_system)
+            logger.debug(
+                f"    ✓ Conversion successful: "
+                f"{len(data.q_values)} points, "
+                f"range {data.q_values.min():.2f}-{data.q_values.max():.2f} → "
+                f"{converted.q_values.min():.2f}-{converted.q_values.max():.2f}"
+            )
+            return converted
+
+        except ConversionError as e:
+            logger.error(f"    ✗ Conversion failed: {e}")
+            raise ValueError(
+                f"Failed to convert {data.filename or 'data'} for node {node_id}: {e}"
+            )

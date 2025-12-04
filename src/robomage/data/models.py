@@ -46,6 +46,12 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from robomage.coordinate_systems import (
+    CoordinateMetadata,
+    CoordinateSystem,
+    convert_coordinate_system,
+)
+
 
 class DataStatistics(BaseModel):
     """
@@ -189,6 +195,14 @@ class DiffractionData(BaseModel):
         default=None, description="Sample temperature in K"
     )
 
+    # Coordinate system metadata
+    coordinate_metadata: CoordinateMetadata = Field(
+        default_factory=lambda: CoordinateMetadata(
+            system=CoordinateSystem.Q, units="Å⁻¹"
+        ),
+        description="Coordinate system and conversion metadata",
+    )
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: Any) -> None:
@@ -205,6 +219,12 @@ class DiffractionData(BaseModel):
             sort_indices = np.argsort(self.q_values)
             object.__setattr__(self, "q_values", self.q_values[sort_indices])
             object.__setattr__(self, "intensities", self.intensities[sort_indices])
+
+        # Sync wavelength to coordinate metadata
+        if self.wavelength is not None:
+            object.__setattr__(
+                self.coordinate_metadata, "wavelength", self.wavelength
+            )
 
     @computed_field
     def statistics(self) -> DataStatistics:
@@ -418,4 +438,159 @@ class DiffractionData(BaseModel):
             timestamp=self.timestamp,
             wavelength=self.wavelength,
             temperature=self.temperature,
+        )
+
+    def to_coordinate_system(
+        self, target_system: CoordinateSystem | str
+    ) -> "DiffractionData":
+        """
+        Convert data to a different coordinate system.
+        
+        This creates a new DiffractionData instance with coordinates transformed
+        to the target system. The original data is unchanged. Coordinate metadata
+        is updated to track the conversion.
+        
+        Args:
+            target_system: Target coordinate system (Q, two_theta, or d_spacing)
+        
+        Returns:
+            New DiffractionData with converted coordinates
+        
+        Raises:
+            ConversionError: If wavelength is missing for Q ↔ 2θ conversion
+        
+        Notes:
+            - Current system is always Q-space (canonical in RoboMage)
+            - Conversion to 2θ requires wavelength
+            - Conversion to d-spacing does not require wavelength
+            - All metadata and intensities are preserved
+        
+        Example:
+            >>> data = DiffractionData.from_arrays(
+            ...     q_values=np.array([2.0, 4.0, 6.0]),
+            ...     intensities=np.array([100, 200, 150]),
+            ...     wavelength=0.1665
+            ... )
+            >>> two_theta_data = data.to_coordinate_system("two_theta")
+            >>> print(two_theta_data.q_values)  # Now contains 2θ values!
+            [6.07, 12.15, 18.27]
+        """
+        from robomage.coordinate_systems import (
+            CoordinateMetadata,
+            CoordinateSystem,
+            convert_coordinate_system,
+        )
+
+        # Convert string to enum
+        if isinstance(target_system, str):
+            target_system = CoordinateSystem(target_system)
+
+        # Check if conversion is needed
+        current_system = self.coordinate_metadata.system
+        if current_system == target_system:
+            return self  # No conversion needed
+
+        # Convert coordinates
+        converted_x = convert_coordinate_system(
+            self.q_values,
+            current_system,
+            target_system,
+            self.coordinate_metadata.wavelength,
+        )
+
+        # Update units
+        units_map = {
+            CoordinateSystem.Q: "Å⁻¹",
+            CoordinateSystem.TWO_THETA: "degrees",
+            CoordinateSystem.D_SPACING: "Å",
+        }
+
+        # Create new coordinate metadata
+        new_metadata = CoordinateMetadata(
+            system=target_system,
+            units=units_map[target_system],
+            wavelength=self.coordinate_metadata.wavelength,
+            conversion_history=self.coordinate_metadata.conversion_history.copy(),
+        )
+        new_metadata.add_conversion(current_system, target_system)
+
+        # Create new instance with converted coordinates
+        # NOTE: We're overloading q_values to hold the new coordinate system!
+        # This is intentional for backward compatibility
+        return self.__class__(
+            q_values=converted_x,
+            intensities=self.intensities.copy(),
+            filename=self.filename,
+            sample_name=self.sample_name,
+            timestamp=self.timestamp,
+            wavelength=self.wavelength,
+            temperature=self.temperature,
+            coordinate_metadata=new_metadata,
+        )
+
+    @classmethod
+    def from_coordinate_system(
+        cls,
+        x_values: np.ndarray,
+        intensities: np.ndarray,
+        coordinate_system: CoordinateSystem | str,
+        wavelength: float | None = None,
+        **kwargs: Any,
+    ) -> "DiffractionData":
+        """
+        Create DiffractionData from any coordinate system.
+        
+        Automatically converts input coordinates to Q-space (RoboMage canonical form).
+        
+        Args:
+            x_values: Coordinate values in the specified system
+            intensities: Intensity values
+            coordinate_system: Coordinate system of x_values
+            wavelength: X-ray wavelength in Å (required for 2θ → Q conversion)
+            **kwargs: Additional metadata
+        
+        Returns:
+            DiffractionData with coordinates in Q-space
+        
+        Example:
+            >>> # Load data that's in 2θ space
+            >>> two_theta = np.array([10.0, 20.0, 30.0])
+            >>> intensities = np.array([100, 200, 150])
+            >>> data = DiffractionData.from_coordinate_system(
+            ...     two_theta, intensities, "two_theta", wavelength=1.54056
+            ... )
+            >>> print(data.coordinate_metadata.system)
+            CoordinateSystem.Q
+        """
+        from robomage.coordinate_systems import (
+            CoordinateMetadata,
+            CoordinateSystem,
+            convert_coordinate_system,
+        )
+
+        # Convert string to enum
+        if isinstance(coordinate_system, str):
+            coordinate_system = CoordinateSystem(coordinate_system)
+
+        # Convert to Q-space if needed
+        if coordinate_system == CoordinateSystem.Q:
+            q_values = x_values
+        else:
+            q_values = convert_coordinate_system(
+                x_values, coordinate_system, CoordinateSystem.Q, wavelength
+            )
+
+        # Create coordinate metadata
+        metadata = CoordinateMetadata(
+            system=CoordinateSystem.Q, units="Å⁻¹", wavelength=wavelength
+        )
+        if coordinate_system != CoordinateSystem.Q:
+            metadata.add_conversion(coordinate_system, CoordinateSystem.Q)
+
+        return cls(
+            q_values=q_values,
+            intensities=intensities,
+            wavelength=wavelength,
+            coordinate_metadata=metadata,
+            **kwargs,
         )
