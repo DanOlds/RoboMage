@@ -62,7 +62,10 @@ def create_gsasii_tab() -> html.Div:
                             dbc.Col(
                                 [
                                     dbc.Button(
-                                        [html.I(className="fas fa-sync me-1"), "Refresh"],
+                                        [
+                                            html.I(className="fas fa-sync me-1"),
+                                            "Refresh",
+                                        ],
                                         id="gsasii-health-check-btn",
                                         color="link",
                                         size="sm",
@@ -277,7 +280,8 @@ def create_gsasii_tab() -> html.Div:
                                                     dbc.Col(
                                                         [
                                                             html.Label(
-                                                                "Min:", className="small"
+                                                                "Min:",
+                                                                className="small",
                                                             ),
                                                             dbc.Input(
                                                                 id="gsasii-q-min",
@@ -293,7 +297,8 @@ def create_gsasii_tab() -> html.Div:
                                                     dbc.Col(
                                                         [
                                                             html.Label(
-                                                                "Max:", className="small"
+                                                                "Max:",
+                                                                className="small",
                                                             ),
                                                             dbc.Input(
                                                                 id="gsasii-q-max",
@@ -312,7 +317,9 @@ def create_gsasii_tab() -> html.Div:
                                             # Run button
                                             dbc.Button(
                                                 [
-                                                    html.I(className="fas fa-play me-2"),
+                                                    html.I(
+                                                        className="fas fa-play me-2"
+                                                    ),
                                                     "Run Refinement",
                                                 ],
                                                 id="gsasii-run-btn",
@@ -352,26 +359,40 @@ def create_gsasii_tab() -> html.Div:
                                     ),
                                     dbc.CardBody(
                                         [
-                                            html.H6("Getting Started:", className="fw-bold"),
+                                            html.H6(
+                                                "Getting Started:", className="fw-bold"
+                                            ),
                                             html.Ol(
                                                 [
-                                                    html.Li("Upload diffraction data (.chi or .xy)"),
-                                                    html.Li("Select structure file (CIF)"),
-                                                    html.Li("Select instrument parameters"),
-                                                    html.Li("Configure refinement settings"),
+                                                    html.Li(
+                                                        "Upload diffraction data (.chi or .xy)"
+                                                    ),
+                                                    html.Li(
+                                                        "Select structure file (CIF)"
+                                                    ),
+                                                    html.Li(
+                                                        "Select instrument parameters"
+                                                    ),
+                                                    html.Li(
+                                                        "Configure refinement settings"
+                                                    ),
                                                     html.Li("Click 'Run Refinement'"),
                                                 ],
                                                 className="small",
                                             ),
                                             html.Hr(),
-                                            html.H6("Default Settings:", className="fw-bold"),
+                                            html.H6(
+                                                "Default Settings:", className="fw-bold"
+                                            ),
                                             html.Ul(
                                                 [
                                                     html.Li(
                                                         "Phase: LaB6 (SRM 660c standard)",
                                                         className="small",
                                                     ),
-                                                    html.Li("Cycles: 5", className="small"),
+                                                    html.Li(
+                                                        "Cycles: 5", className="small"
+                                                    ),
                                                     html.Li(
                                                         "Q-range: 0.5 - 16.0 Å⁻¹",
                                                         className="small",
@@ -383,11 +404,14 @@ def create_gsasii_tab() -> html.Div:
                                                 ],
                                             ),
                                             html.Hr(),
-                                            html.H6("Expected Results:", className="fw-bold"),
+                                            html.H6(
+                                                "Expected Results:", className="fw-bold"
+                                            ),
                                             html.Ul(
                                                 [
                                                     html.Li(
-                                                        "LaB6: a ≈ 4.157 Å", className="small"
+                                                        "LaB6: a ≈ 4.157 Å",
+                                                        className="small",
                                                     ),
                                                     html.Li(
                                                         "Rwp ≈ 7-8%", className="small"
@@ -426,7 +450,9 @@ def create_gsasii_tab() -> html.Div:
                                             ),
                                             dbc.Button(
                                                 [
-                                                    html.I(className="fas fa-chevron-down me-1"),
+                                                    html.I(
+                                                        className="fas fa-chevron-down me-1"
+                                                    ),
                                                     "Show/Hide",
                                                 ],
                                                 id="gsasii-toggle-debug-btn",
@@ -529,6 +555,20 @@ def create_gsasii_tab() -> html.Div:
                                             ),
                                             dbc.ButtonGroup(
                                                 [
+                                                    dbc.Button(
+                                                        [
+                                                            html.I(
+                                                                className="fas fa-chart-line me-1"
+                                                            ),
+                                                            "Send to Visualization",
+                                                        ],
+                                                        id="gsasii-send-to-viz-button",
+                                                        color="primary",
+                                                        outline=True,
+                                                        size="sm",
+                                                        disabled=True,
+                                                        className="me-2",
+                                                    ),
                                                     dbc.Button(
                                                         [
                                                             html.I(

@@ -22,7 +22,7 @@ Example:
         "two_theta": [0.647, 0.651, ...],  # Q values from CHI file
         "intensity": [30.6, 29.8, ...]
     }
-  
+
   ❌ WRONG:
     two_theta = 2 * np.degrees(np.arcsin(q * λ / (4π)))  # Manual conversion
     diffraction_data = {
@@ -44,16 +44,15 @@ Successful refinement indicators:
 """
 
 import base64
-import io
 import json
 import traceback
+from datetime import datetime
 from typing import Any
 
 import dash_bootstrap_components as dbc
 import numpy as np
-import plotly.graph_objects as go
 import requests
-from dash import Input, Output, State, callback, html, no_update
+from dash import Input, Output, State, callback, html
 from dash.exceptions import PreventUpdate
 
 from robomage.clients.gsasii_client import GSASIIClient, GSASIIServiceError
@@ -61,7 +60,7 @@ from robomage.clients.gsasii_client import GSASIIClient, GSASIIServiceError
 
 def register_callbacks(app):
     """Register all GSAS-II tab callbacks."""
-    
+
     @callback(
         Output("gsasii-service-status-badge", "children"),
         Output("gsasii-service-status-badge", "color"),
@@ -75,7 +74,7 @@ def register_callbacks(app):
         try:
             client = GSASIIClient("http://localhost:8003")
             health = client.health_check()
-            
+
             if health.get("status") == "healthy":
                 badge_children = [
                     html.I(className="fas fa-check-circle me-1"),
@@ -92,18 +91,18 @@ def register_callbacks(app):
                 badge_color = "warning"
                 status_text = "Service responding but may have issues"
                 alert_color = "warning"
-                
-        except Exception as e:
+
+        except Exception:
             badge_children = [
                 html.I(className="fas fa-times-circle me-1"),
                 "Not Connected",
             ]
             badge_color = "danger"
-            status_text = f"Service unavailable • Start with: pixi run start-all"
+            status_text = "Service unavailable • Start with: pixi run start-all"
             alert_color = "danger"
-        
+
         return badge_children, badge_color, status_text, alert_color
-    
+
     @callback(
         Output("gsasii-chi-upload-status", "children"),
         Output("gsasii-chi-data-store", "data"),
@@ -114,17 +113,17 @@ def register_callbacks(app):
         """Handle CHI/XY file upload and parse data."""
         if contents is None:
             raise PreventUpdate
-        
+
         try:
             # Decode file contents
             content_type, content_string = contents.split(",")
             decoded = base64.b64decode(content_string)
             text_data = decoded.decode("utf-8")
-            
+
             # Parse data (simple two-column format)
             lines = [line.strip() for line in text_data.split("\n") if line.strip()]
             data_lines = [line for line in lines if not line.startswith("#")]
-            
+
             q_values = []
             intensities = []
             for line in data_lines:
@@ -135,7 +134,7 @@ def register_callbacks(app):
                         intensities.append(float(parts[1]))
                     except ValueError:
                         continue
-            
+
             if len(q_values) == 0:
                 return (
                     dbc.Alert(
@@ -147,14 +146,14 @@ def register_callbacks(app):
                     ),
                     None,
                 )
-            
+
             # Store data
             data = {
                 "filename": filename,
                 "q_values": q_values,
                 "intensities": intensities,
             }
-            
+
             status = dbc.Alert(
                 [
                     html.I(className="fas fa-check-circle me-2"),
@@ -162,9 +161,9 @@ def register_callbacks(app):
                 ],
                 color="success",
             )
-            
+
             return status, data
-            
+
         except Exception as e:
             return (
                 dbc.Alert(
@@ -176,10 +175,11 @@ def register_callbacks(app):
                 ),
                 None,
             )
-    
+
     @callback(
         Output("gsasii-results-container", "children"),
         Output("gsasii-refinement-result-store", "data"),
+        Output("gsasii-send-to-viz-button", "disabled"),
         Output("gsasii-download-gpx-btn", "disabled"),
         Output("gsasii-download-plot-btn", "disabled"),
         Output("gsasii-progress", "children"),
@@ -210,11 +210,11 @@ def register_callbacks(app):
         """Run GSAS-II refinement and display results."""
         if not n_clicks:
             raise PreventUpdate
-        
+
         # Initialize debug data
         request_payload = None
         response_data = None
-        
+
         # Validate inputs
         if chi_data is None:
             return (
@@ -228,11 +228,12 @@ def register_callbacks(app):
                 None,
                 True,
                 True,
+                True,
                 "",
                 None,
                 None,
             )
-        
+
         try:
             # Build recipe
             refine_flags = refine_flags or []
@@ -252,7 +253,7 @@ def register_callbacks(app):
                     "do": "refine",
                 },
             }
-            
+
             # Add size/strain if requested
             if "size_strain" in refine_flags:
                 recipe["refinement_dict"]["set"]["Size"] = True
@@ -260,15 +261,15 @@ def register_callbacks(app):
                     "type": "isotropic",
                     "refine": True,
                 }
-            
+
             # Call service
             client = GSASIIClient("http://localhost:8003")
-            
+
             # IMPORTANT: CHI files are in Q-space, but we send them as "two_theta" to GSAS-II
             # The instrument parameter file handles the coordinate system conversion internally
             # Do NOT convert Q to 2θ here - GSAS-II expects Q values labeled as "two_theta"
             q_array = np.array(chi_data["q_values"])
-            
+
             # Build request matching service API schema
             request_payload = {
                 "diffraction_data": {
@@ -279,7 +280,7 @@ def register_callbacks(app):
                 "sample_name": phase_name or "Sample",
                 "cycles": cycles or 5,
             }
-            
+
             # Make direct API call
             response = client.session.post(
                 f"{client.base_url}/refine",
@@ -289,12 +290,21 @@ def register_callbacks(app):
             response.raise_for_status()
             result = response.json()
             response_data = result
-            
+
             # Parse and display results
             results_display = create_results_display(result)
-            
-            return results_display, result, False, False, "", request_payload, response_data
-            
+
+            return (
+                results_display,
+                result,
+                False,
+                False,
+                False,
+                "",
+                request_payload,
+                response_data,
+            )
+
         except GSASIIServiceError as e:
             error_display = dbc.Alert(
                 [
@@ -318,8 +328,17 @@ def register_callbacks(app):
                 ],
                 color="danger",
             )
-            return error_display, None, True, True, "", request_payload, {"error": str(e)}
-        
+            return (
+                error_display,
+                None,
+                True,
+                True,
+                True,
+                "",
+                request_payload,
+                {"error": str(e)},
+            )
+
         except requests.exceptions.HTTPError as e:
             # Handle HTTP errors with response body
             error_msg = str(e)
@@ -335,7 +354,7 @@ def register_callbacks(app):
                         details = json.dumps(error_data, indent=2)
             except Exception:
                 pass
-            
+
             error_display = dbc.Alert(
                 [
                     html.H5(
@@ -357,8 +376,17 @@ def register_callbacks(app):
                 ],
                 color="danger",
             )
-            return error_display, None, True, True, "", request_payload, error_response
-            
+            return (
+                error_display,
+                None,
+                True,
+                True,
+                True,
+                "",
+                request_payload,
+                error_response,
+            )
+
         except Exception as e:
             error_display = dbc.Alert(
                 [
@@ -381,8 +409,17 @@ def register_callbacks(app):
                 ],
                 color="danger",
             )
-            return error_display, None, True, True, "", request_payload, {"error": str(e), "traceback": traceback.format_exc()}
-    
+            return (
+                error_display,
+                None,
+                True,
+                True,
+                True,
+                "",
+                request_payload,
+                {"error": str(e), "traceback": traceback.format_exc()},
+            )
+
     @callback(
         Output("gsasii-debug-collapse", "is_open"),
         Input("gsasii-toggle-debug-btn", "n_clicks"),
@@ -394,7 +431,147 @@ def register_callbacks(app):
         if n_clicks:
             return not is_open
         return is_open
-    
+
+    @callback(
+        Output("file-data-store", "data", allow_duplicate=True),
+        Output("gsasii-send-to-viz-button", "children"),
+        Output("gsasii-send-to-viz-button", "color"),
+        Input("gsasii-send-to-viz-button", "n_clicks"),
+        State("gsasii-refinement-result-store", "data"),
+        State("gsasii-chi-data-store", "data"),
+        State("file-data-store", "data"),
+        prevent_initial_call=True,
+    )
+    def send_gsasii_to_viz(n_clicks, refinement_result, chi_data, current_file_data):
+        """
+        Extract GSAS-II refinement results and add to file-data-store.
+
+        This follows the same pattern as workflow results - adding calculated
+        patterns as new "files" in file-data-store so they can be plotted
+        alongside raw data.
+
+        Args:
+            n_clicks: Button click count
+            refinement_result: GSAS-II refinement result dictionary
+            chi_data: Original CHI file data
+            current_file_data: Current files in file-data-store
+
+        Returns:
+            Tuple of (updated file_data, button content, button color)
+        """
+        if not n_clicks or not refinement_result:
+            raise PreventUpdate
+
+        try:
+            # Extract data from refinement result
+            fit_profile = refinement_result.get("fit_profile", {})
+            
+            # Get sample name from CHI data or refinement result
+            base_name = (
+                chi_data.get("filename", "GSAS-II Refinement")
+                if chi_data
+                else "GSAS-II Refinement"
+            )
+            
+            # Create copy of current file data (or empty dict)
+            updated_file_data = current_file_data.copy() if current_file_data else {}
+            
+            # Extract Q and intensity data
+            # CRITICAL: GSAS-II worker returns "two_theta" (actually Q), "y_obs", "y_calc", "y_diff"
+            q_values = fit_profile.get("two_theta", [])
+            calc_intensity = fit_profile.get("y_calc", [])
+            obs_intensity = fit_profile.get("y_obs", [])
+            residual = fit_profile.get("y_diff", [])
+            
+            # Ensure all arrays are lists (not numpy arrays)
+            if hasattr(q_values, 'tolist'):
+                q_values = q_values.tolist()
+            if hasattr(calc_intensity, 'tolist'):
+                calc_intensity = calc_intensity.tolist()
+            if hasattr(obs_intensity, 'tolist'):
+                obs_intensity = obs_intensity.tolist()
+            if hasattr(residual, 'tolist'):
+                residual = residual.tolist()
+            
+            # Validate we have data
+            if not q_values or not calc_intensity:
+                print("Error: No data in GSAS-II fit_profile")
+                raise PreventUpdate
+            
+            # Calculate metadata (must match file_upload.py structure)
+            num_points = len(q_values)
+            q_range = [min(q_values), max(q_values)]
+            calc_range = [min(calc_intensity), max(calc_intensity)]
+            obs_range = [min(obs_intensity), max(obs_intensity)]
+            diff_range = [min(residual), max(residual)]
+            
+            # Get refinement metadata for context
+            fit_quality = refinement_result.get("fit_quality", {})
+            metadata = {
+                "source": "GSAS-II Refinement",
+                "Rwp": fit_quality.get("Rwp"),
+                "chi2": fit_quality.get("chi2"),
+            }
+            
+            # Add calculated pattern as a new file
+            # CRITICAL: Must match file_upload.py structure exactly
+            calc_filename = f"{base_name} (Calculated)"
+            updated_file_data[calc_filename] = {
+                "filename": calc_filename,
+                "q": q_values,
+                "intensity": calc_intensity,
+                "metadata": metadata,
+                "num_points": num_points,
+                "q_range": q_range,
+                "intensity_range": calc_range,
+            }
+            
+            # Add observed pattern
+            obs_filename = f"{base_name} (Observed)"
+            updated_file_data[obs_filename] = {
+                "filename": obs_filename,
+                "q": q_values,
+                "intensity": obs_intensity,
+                "metadata": metadata,
+                "num_points": num_points,
+                "q_range": q_range,
+                "intensity_range": obs_range,
+            }
+            
+            # Add difference curve
+            diff_filename = f"{base_name} (Difference)"
+            updated_file_data[diff_filename] = {
+                "filename": diff_filename,
+                "q": q_values,
+                "intensity": residual,
+                "metadata": metadata,
+                "num_points": num_points,
+                "q_range": q_range,
+                "intensity_range": diff_range,
+            }
+
+            # Return updated data and success feedback
+            button_content = [
+                html.I(className="fas fa-check me-1"),
+                "Sent to Visualization!",
+            ]
+            button_color = "success"
+
+            return updated_file_data, button_content, button_color
+
+        except Exception as e:
+            print(f"Error sending GSAS-II data to viz: {e}")
+            traceback.print_exc()
+            
+            # Return error feedback
+            button_content = [
+                html.I(className="fas fa-exclamation-triangle me-1"),
+                "Error - Check Console",
+            ]
+            button_color = "danger"
+            
+            raise PreventUpdate from None
+
     @callback(
         Output("gsasii-debug-request", "children"),
         Output("gsasii-debug-response", "children"),
@@ -409,17 +586,17 @@ def register_callbacks(app):
             request_text = json.dumps(request_data, indent=2)
         else:
             request_text = "No request sent yet"
-        
+
         # Format response
         if response_data:
             response_text = json.dumps(response_data, indent=2)
         else:
             response_text = "No response received yet"
-        
+
         # Create summary
         if request_data and response_data:
             summary_items = []
-            
+
             # Request summary
             summary_items.append(
                 dbc.Card(
@@ -427,39 +604,66 @@ def register_callbacks(app):
                         dbc.CardHeader(html.Strong("Request Summary")),
                         dbc.CardBody(
                             [
-                                html.P([
-                                    html.Strong("Sample: "),
-                                    request_data.get("sample_name", "N/A"),
-                                ]),
-                                html.P([
-                                    html.Strong("Cycles: "),
-                                    str(request_data.get("cycles", "N/A")),
-                                ]),
-                                html.P([
-                                    html.Strong("Data Points: "),
-                                    str(len(request_data.get("diffraction_data", {}).get("intensity", []))),
-                                ]),
-                                html.P([
-                                    html.Strong("CIF File: "),
-                                    request_data.get("recipe", {}).get("cif_file", "N/A"),
-                                ]),
-                                html.P([
-                                    html.Strong("Instrument: "),
-                                    request_data.get("recipe", {}).get("instrument_file", "N/A"),
-                                ]),
+                                html.P(
+                                    [
+                                        html.Strong("Sample: "),
+                                        request_data.get("sample_name", "N/A"),
+                                    ]
+                                ),
+                                html.P(
+                                    [
+                                        html.Strong("Cycles: "),
+                                        str(request_data.get("cycles", "N/A")),
+                                    ]
+                                ),
+                                html.P(
+                                    [
+                                        html.Strong("Data Points: "),
+                                        str(
+                                            len(
+                                                request_data.get(
+                                                    "diffraction_data", {}
+                                                ).get("intensity", [])
+                                            )
+                                        ),
+                                    ]
+                                ),
+                                html.P(
+                                    [
+                                        html.Strong("CIF File: "),
+                                        request_data.get("recipe", {}).get(
+                                            "cif_file", "N/A"
+                                        ),
+                                    ]
+                                ),
+                                html.P(
+                                    [
+                                        html.Strong("Instrument: "),
+                                        request_data.get("recipe", {}).get(
+                                            "instrument_file", "N/A"
+                                        ),
+                                    ]
+                                ),
                             ]
                         ),
                     ],
                     className="mb-3",
                 )
             )
-            
+
             # Response summary
             if "error" in response_data:
                 summary_items.append(
                     dbc.Alert(
                         [
-                            html.H5([html.I(className="fas fa-exclamation-triangle me-2"), "Error"]),
+                            html.H5(
+                                [
+                                    html.I(
+                                        className="fas fa-exclamation-triangle me-2"
+                                    ),
+                                    "Error",
+                                ]
+                            ),
                             html.P(response_data.get("error", "Unknown error")),
                         ],
                         color="danger",
@@ -472,55 +676,70 @@ def register_callbacks(app):
                             dbc.CardHeader(html.Strong("Response Summary")),
                             dbc.CardBody(
                                 [
-                                    html.P([
-                                        html.Strong("Success: "),
-                                        "✅ Yes" if response_data.get("success") else "❌ No",
-                                    ]),
-                                    html.P([
-                                        html.Strong("Rwp: "),
-                                        f"{response_data.get('fit_quality', {}).get('Rwp', 'N/A')}%"
-                                        if isinstance(response_data.get('fit_quality', {}).get('Rwp'), (int, float))
-                                        else "N/A",
-                                    ]),
-                                    html.P([
-                                        html.Strong("Execution Time: "),
-                                        f"{response_data.get('execution_time_s', 'N/A')} seconds"
-                                        if response_data.get('execution_time_s')
-                                        else "N/A",
-                                    ]),
-                                    html.P([
-                                        html.Strong("Warnings: "),
-                                        str(len(response_data.get("warnings", []))),
-                                    ]),
+                                    html.P(
+                                        [
+                                            html.Strong("Success: "),
+                                            "✅ Yes"
+                                            if response_data.get("success")
+                                            else "❌ No",
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            html.Strong("Rwp: "),
+                                            f"{response_data.get('fit_quality', {}).get('Rwp', 'N/A')}%"
+                                            if isinstance(
+                                                response_data.get(
+                                                    "fit_quality", {}
+                                                ).get("Rwp"),
+                                                (int, float),
+                                            )
+                                            else "N/A",
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            html.Strong("Execution Time: "),
+                                            f"{response_data.get('execution_time_s', 'N/A')} seconds"
+                                            if response_data.get("execution_time_s")
+                                            else "N/A",
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            html.Strong("Warnings: "),
+                                            str(len(response_data.get("warnings", []))),
+                                        ]
+                                    ),
                                 ]
                             ),
                         ],
                         className="mb-3",
                     )
                 )
-            
+
             summary_content = html.Div(summary_items)
         else:
             summary_content = dbc.Alert(
                 "Run a refinement to see debug info",
                 color="info",
             )
-        
+
         return request_text, response_text, summary_content
 
 
 def create_results_display(result: dict[str, Any]) -> html.Div:
     """
     Create formatted results display from refinement result.
-    
+
     Args:
         result: Refinement result dictionary from GSAS-II service
-        
+
     Returns:
         HTML div with formatted results
     """
     components = []
-    
+
     # Fit quality metrics
     if "fit_quality" in result:
         fit_quality = result["fit_quality"]
@@ -528,7 +747,9 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
             dbc.Card(
                 [
                     dbc.CardHeader(
-                        html.H6([html.I(className="fas fa-chart-line me-2"), "Fit Quality"])
+                        html.H6(
+                            [html.I(className="fas fa-chart-line me-2"), "Fit Quality"]
+                        )
                     ),
                     dbc.CardBody(
                         [
@@ -540,7 +761,9 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                                             html.Br(),
                                             html.H4(
                                                 f"{fit_quality.get('Rwp', 'N/A'):.2f}%"
-                                                if isinstance(fit_quality.get('Rwp'), (int, float))
+                                                if isinstance(
+                                                    fit_quality.get("Rwp"), (int, float)
+                                                )
                                                 else "N/A",
                                                 className="text-primary",
                                             ),
@@ -553,7 +776,10 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                                             html.Br(),
                                             html.H4(
                                                 f"{fit_quality.get('chi2', 'N/A'):.3f}"
-                                                if isinstance(fit_quality.get('chi2'), (int, float))
+                                                if isinstance(
+                                                    fit_quality.get("chi2"),
+                                                    (int, float),
+                                                )
                                                 else "N/A",
                                                 className="text-info",
                                             ),
@@ -566,7 +792,9 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                                             html.Br(),
                                             html.H4(
                                                 f"{fit_quality.get('GoF', 'N/A'):.2f}"
-                                                if isinstance(fit_quality.get('GoF'), (int, float))
+                                                if isinstance(
+                                                    fit_quality.get("GoF"), (int, float)
+                                                )
                                                 else "N/A",
                                                 className="text-success",
                                             ),
@@ -581,11 +809,11 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                 className="mb-3",
             )
         )
-    
+
     # Cell parameters
     if "cell" in result:
         cell = result["cell"]
-        
+
         # Create table rows for cell parameters
         cell_rows = []
         for param in ["a", "b", "c", "alpha", "beta", "gamma"]:
@@ -599,24 +827,33 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                             [
                                 html.Td(html.Strong(param), style={"width": "20%"}),
                                 html.Td(
-                                    f"{value:.6f}" if isinstance(value, (int, float)) else str(value),
+                                    f"{value:.6f}"
+                                    if isinstance(value, (int, float))
+                                    else str(value),
                                     style={"width": "40%"},
                                 ),
                                 html.Td(
-                                    f"± {esd:.6f}" if isinstance(esd, (int, float)) and esd > 0 else "—",
+                                    f"± {esd:.6f}"
+                                    if isinstance(esd, (int, float)) and esd > 0
+                                    else "—",
                                     className="text-muted",
                                     style={"width": "40%"},
                                 ),
                             ]
                         )
                     )
-        
+
         if cell_rows:
             components.append(
                 dbc.Card(
                     [
                         dbc.CardHeader(
-                            html.H6([html.I(className="fas fa-cube me-2"), "Cell Parameters"])
+                            html.H6(
+                                [
+                                    html.I(className="fas fa-cube me-2"),
+                                    "Cell Parameters",
+                                ]
+                            )
                         ),
                         dbc.CardBody(
                             [
@@ -646,7 +883,7 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                     className="mb-3",
                 )
             )
-    
+
     # Refinement plot
     if "plot_image" in result and result["plot_image"]:
         try:
@@ -678,7 +915,7 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
             )
         except Exception:
             pass
-    
+
     # Metadata
     metadata_items = []
     if "execution_time_s" in result:
@@ -727,18 +964,20 @@ def create_results_display(result: dict[str, Any]) -> html.Div:
                 ]
             )
         )
-    
+
     if metadata_items:
         components.append(
             dbc.Card(
                 [
                     dbc.CardHeader(
-                        html.H6([html.I(className="fas fa-info-circle me-2"), "Metadata"])
+                        html.H6(
+                            [html.I(className="fas fa-info-circle me-2"), "Metadata"]
+                        )
                     ),
                     dbc.CardBody([html.Ul(metadata_items, className="mb-0")]),
                 ],
                 className="mb-3",
             )
         )
-    
+
     return html.Div(components)

@@ -35,7 +35,12 @@ def register_main_plot_callback(app):
         ],
     )
     def update_main_plot(
-        file_data, wavelength_data, x_axis, y_axis, plot_type, analysis_results
+        file_data,
+        wavelength_data,
+        x_axis,
+        y_axis,
+        plot_type,
+        analysis_results,
     ):
         """
         Update the main diffraction pattern plot with optional peak overlays.
