@@ -6,6 +6,12 @@ RoboMage now has a formal coordinate system contract that:
 - ✅ Automatically converts data when nodes require different coordinate systems
 - ✅ Tracks all conversions with complete metadata and history
 - ✅ Prevents field naming confusion (like the GSAS-II "two_theta" issue)
+- ✅ **Dashboard integration complete** - UI uses centralized utilities
+
+## Quick Links
+- **Full Documentation**: [COORDINATE-SYSTEM-CONTRACT-COMPLETE.md](COORDINATE-SYSTEM-CONTRACT-COMPLETE.md)
+- **Dashboard Integration**: [DASHBOARD-COORDINATE-INTEGRATION.md](DASHBOARD-COORDINATE-INTEGRATION.md)
+- **Example Code**: [examples/coordinate_system_demo.py](../examples/coordinate_system_demo.py)
 
 ## For Node Developers
 

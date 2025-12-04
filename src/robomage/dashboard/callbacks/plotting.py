@@ -12,6 +12,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, html
 
+from robomage.coordinate_systems import (
+    CoordinateSystem,
+    convert_q_to_two_theta,
+    convert_q_to_d_spacing,
+)
+
 
 def register_callbacks(app):
     """Register all plotting related callbacks."""
@@ -146,7 +152,7 @@ def register_main_plot_callback(app):
                         # Updated: use 'height' instead of 'intensity'
                         peak_height = peak.get("height", 0)
 
-                        # Convert to appropriate x-axis
+                        # Convert to appropriate x-axis using centralized utilities
                         if x_axis == "q":
                             peak_x = peak_q
                         elif x_axis == "two_theta":
@@ -157,12 +163,15 @@ def register_main_plot_callback(app):
                                 wavelength = wavelength_data["current_wavelength"]
                             else:
                                 wavelength = 0.1665
-                            sin_theta = np.clip(
-                                peak_q * wavelength / (4 * np.pi), -1.0, 1.0
-                            )
-                            peak_x = 2 * np.arcsin(sin_theta) * 180 / np.pi
+                            # Use centralized conversion utility
+                            peak_x = float(convert_q_to_two_theta(
+                                np.array([peak_q]), wavelength
+                            )[0])
                         elif x_axis == "d_spacing":
-                            peak_x = 2 * np.pi / peak_q
+                            # Use centralized conversion utility
+                            peak_x = float(convert_q_to_d_spacing(
+                                np.array([peak_q])
+                            )[0])
                         else:
                             peak_x = peak_q
 
@@ -259,11 +268,11 @@ def get_x_data(
     wavelength_data: dict[str, Any] | None = None,
 ) -> tuple[list[float], str]:
     """
-    Get X-axis data and label.
+    Get X-axis data and label using centralized coordinate system utilities.
 
     Args:
         data: File data dictionary
-        x_axis: X-axis selection
+        x_axis: X-axis selection (q, two_theta, d_spacing)
         wavelength_data: Wavelength settings from store
 
     Returns:
@@ -280,18 +289,12 @@ def get_x_data(
         else:
             wavelength = 0.1665  # Default to synchrotron as specified
 
-        # Convert Q to 2θ using actual wavelength
-        # Formula: Q = 4π sin(θ) / λ, so θ = arcsin(Q λ / 4π)
-        sin_theta = q_data * wavelength / (4 * np.pi)
-
-        # Clip values to valid range for arcsin to avoid warnings
-        sin_theta = np.clip(sin_theta, -1.0, 1.0)
-
-        two_theta = 2 * np.arcsin(sin_theta) * 180 / np.pi
+        # Use centralized conversion utility
+        two_theta = convert_q_to_two_theta(q_data, wavelength)
         return two_theta.tolist(), "2θ (degrees)"
     elif x_axis == "d_spacing":
-        # Convert Q to d-spacing: d = 2π/Q
-        d_spacing = 2 * np.pi / q_data
+        # Use centralized conversion utility
+        d_spacing = convert_q_to_d_spacing(q_data)
         return d_spacing.tolist(), "d-spacing (Å)"
     else:
         return q_data.tolist(), "Q (Å⁻¹)"
