@@ -7,6 +7,7 @@ Node handlers for scientific analysis operations.
 import logging
 from typing import Any
 
+from robomage.clients.gsasii_client import GSASIIClient
 from robomage.clients.peak_analysis_client import PeakAnalysisClient
 from robomage.workflow.nodes.registry import register_node
 
@@ -36,6 +37,11 @@ logger = logging.getLogger(__name__)
                 "default": "http://localhost:8001",
             },
         },
+    },
+    coordinate_requirements={
+        "input_coordinates": "Q",  # Requires Q-space
+        "output_coordinates": "Q",  # Outputs Q-space results
+        "requires_wavelength": False,  # Doesn't need wavelength (works in Q)
     },
 )
 async def peak_analysis_handler(
@@ -239,3 +245,225 @@ async def statistics_handler(
 
     logger.info(f"Computed statistics for {len(stats_results)} files")
     return stats_results
+
+
+@register_node(
+    type="gsasii_refinement",
+    category="analysis",
+    name="GSAS-II Refinement",
+    description="Perform Rietveld refinement with GSAS-II",
+    icon="fas fa-atom",
+    inputs=[{"name": "input", "type": "DiffractionData[]"}],
+    outputs=[{"name": "output", "type": "RefinementResults[]"}],
+    config_schema={
+        "type": "object",
+        "properties": {
+            "instrument_file": {
+                "type": "string",
+                "default": "PDF_1m.instprm",
+                "description": "Instrument parameter file (asset name or path)",
+            },
+            "cif_file": {
+                "type": "string",
+                "default": "LaB6_SRM_660c.CIF",
+                "description": "CIF file for phase (asset name or path)",
+            },
+            "phase_name": {
+                "type": "string",
+                "default": "LaB6",
+                "description": "Phase name for refinement",
+            },
+            "refinement_cycles": {
+                "type": "number",
+                "default": 5,
+                "description": "Number of refinement cycles",
+            },
+            "refine_background": {
+                "type": "boolean",
+                "default": True,
+                "description": "Refine background parameters",
+            },
+            "refine_cell": {
+                "type": "boolean",
+                "default": True,
+                "description": "Refine unit cell parameters",
+            },
+            "refine_size_strain": {
+                "type": "boolean",
+                "default": False,
+                "description": "Refine crystallite size and strain",
+            },
+            "service_url": {
+                "type": "string",
+                "default": "http://localhost:8003",
+                "description": "GSAS-II service URL",
+            },
+        },
+        "required": ["instrument_file", "cif_file", "phase_name"],
+    },
+    coordinate_requirements={
+        "input_coordinates": "Q",  # CRITICAL: Actually requires Q (not 2θ)!
+        # GSAS-II service expects Q values labeled as "two_theta" in the API
+        # The instrument parameter file (PDF_1m.instprm) handles Q ↔ 2θ conversion
+        # See docs/GSASII-DATA-FORMAT-REFERENCE.md for details
+        "output_coordinates": None,  # Outputs refinement results (not diffraction data)
+        "requires_wavelength": True,  # Wavelength needed for refinement
+    },
+)
+async def gsasii_refinement_handler(
+    config: dict[str, Any], inputs: dict[str, Any], context: Any
+) -> list:
+    """
+    Perform Rietveld refinement using GSAS-II.
+
+    Config Parameters:
+        - instrument_file: str (instrument parameter file)
+        - cif_file: str (CIF file for phase structure)
+        - phase_name: str (name of the phase)
+        - refinement_cycles: int (number of refinement cycles, default: 5)
+        - refine_background: bool (refine background, default: True)
+        - refine_cell: bool (refine unit cell, default: True)
+        - refine_size_strain: bool (refine size/strain, default: False)
+        - service_url: str (GSAS-II service URL, default: http://localhost:8002)
+
+    Inputs:
+        - input: List of DiffractionData objects (must contain 2θ data)
+
+    Outputs:
+        List of dictionaries with refinement results
+
+    Example:
+        config = {
+            "instrument_file": "PDF_1m.instprm",
+            "cif_file": "LaB6_SRM_660c.CIF",
+            "phase_name": "LaB6",
+            "refinement_cycles": 5,
+            "refine_background": True,
+            "refine_cell": True,
+            "service_url": "http://localhost:8002"
+        }
+    """
+    service_url = config.get("service_url", "http://localhost:8002")
+
+    # Extract recipe parameters
+    instrument_file = config["instrument_file"]
+    cif_file = config["cif_file"]
+    phase_name = config["phase_name"]
+    refinement_cycles = config.get("refinement_cycles", 5)
+    refine_background = config.get("refine_background", True)
+    refine_cell = config.get("refine_cell", True)
+    refine_size_strain = config.get("refine_size_strain", False)
+
+    logger.info(
+        f"Running GSAS-II refinement with phase={phase_name}, "
+        f"cycles={refinement_cycles}, cell={refine_cell}"
+    )
+
+    # Create client
+    client = GSASIIClient(service_url, timeout=300.0)
+
+    # Build refinement recipe
+    recipe = {
+        "instrument_file": instrument_file,
+        "cif_file": cif_file,
+        "phase_name": phase_name,
+        "refinement_dict": {
+            "Limits": [0.5, 16.0],  # 2θ range
+            "Background": {
+                "no. coeffs": 3,
+                "type": "chebyschev-1",
+                "refine": refine_background,
+            },
+            "Sample Parameters": ["Scale"],
+            "Instrument Parameters": [],
+            "Histograms": {},
+            "Phases": {
+                phase_name: {
+                    "Cell": refine_cell,
+                    "Size": refine_size_strain,
+                    "Mustrain": {"type": "isotropic", "refine": refine_size_strain},
+                }
+            },
+            "Cycles": refinement_cycles,
+        },
+    }
+
+    files = inputs.get("input", [])
+    if not files:
+        raise ValueError("No input files provided for refinement")
+
+    results = []
+    errors = []
+    for i, data in enumerate(files):
+        try:
+            logger.info(f"Refining file {i + 1}/{len(files)}: {data.filename}")
+            response = client.refine(data, recipe)
+
+            # Extract results from response
+            # Response structure: {cell: {...}, fit_quality: {...}, fit_profile: {...}, plot_image: "..."}
+            cell = response.get("cell", {})
+            fit_quality = response.get("fit_quality", {})
+            fit_profile = response.get("fit_profile", {})
+
+            # Store result as dict
+            result = {
+                "filename": data.filename,
+                "phase_name": phase_name,
+                "cell_parameters": {
+                    "a": cell.get("a", {}).get("value"),
+                    "a_esd": cell.get("a", {}).get("esd"),
+                    "b": cell.get("b", {}).get("value"),
+                    "b_esd": cell.get("b", {}).get("esd"),
+                    "c": cell.get("c", {}).get("value"),
+                    "c_esd": cell.get("c", {}).get("esd"),
+                    "alpha": cell.get("alpha", {}).get("value"),
+                    "beta": cell.get("beta", {}).get("value"),
+                    "gamma": cell.get("gamma", {}).get("value"),
+                    "volume": cell.get("volume", {}).get("value"),
+                },
+                "fit_quality": {
+                    "Rwp": fit_quality.get("Rwp"),
+                    "chi2": fit_quality.get("chi2"),
+                    "GoF": fit_quality.get("GoF"),
+                },
+                "convergence": response.get("convergence", "unknown"),
+                "num_data_points": len(fit_profile.get("y_obs", [])),
+            }
+            results.append(result)
+            logger.info(
+                f"File {i + 1}: Rwp={fit_quality.get('Rwp', 'N/A'):.3f}%, "
+                f"Cell a={cell.get('a', {}).get('value', 'N/A'):.6f} Å"
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Failed to refine file {i + 1}: {error_msg}")
+            errors.append(
+                f"File {i + 1} ({data.filename if hasattr(data, 'filename') else 'unknown'}): {error_msg}"
+            )
+
+    if not results:
+        # Provide detailed error message
+        error_details = "\n  - ".join(errors) if errors else "Unknown error"
+
+        # Check if it's likely a service connection issue
+        if errors and any(
+            "Connection" in err or "refused" in err.lower() or "timeout" in err.lower()
+            for err in errors
+        ):
+            raise ValueError(
+                f"No files were refined successfully. "
+                f"GSAS-II service may not be running.\n"
+                f"Start the service with:\n"
+                f"  cd /nsls2/users/dolds/dev/GSAS-II/pixi && "
+                f"pixi run python /nsls2/users/dolds/dev/RoboMage/services/gsasii_refinement/main.py\n\n"
+                f"Errors encountered:\n  - {error_details}"
+            )
+        else:
+            raise ValueError(
+                f"No files were refined successfully.\n"
+                f"Errors encountered:\n  - {error_details}"
+            )
+
+    logger.info(f"Successfully refined {len(results)} files")
+    return results

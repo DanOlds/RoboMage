@@ -45,6 +45,8 @@ import pkgutil
 from pathlib import Path
 from typing import Any, Callable
 
+from robomage.coordinate_systems import CoordinateSystem
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +63,7 @@ class NodeTypeMetadata:
         inputs: List of input specifications
         outputs: List of output specifications
         config_schema: JSON Schema for configuration parameters
+        coordinate_requirements: Coordinate system requirements (NEW in Sprint 9)
     """
     
     def __init__(
@@ -73,6 +76,7 @@ class NodeTypeMetadata:
         inputs: list[dict[str, str]] | None = None,
         outputs: list[dict[str, str]] | None = None,
         config_schema: dict[str, Any] | None = None,
+        coordinate_requirements: dict[str, Any] | None = None,
     ):
         self.type = type
         self.category = category
@@ -82,6 +86,11 @@ class NodeTypeMetadata:
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.config_schema = config_schema or {"type": "object", "properties": {}}
+        self.coordinate_requirements = coordinate_requirements or {
+            "input_coordinates": None,  # None means accepts any
+            "output_coordinates": None,  # None means same as input
+            "requires_wavelength": False,
+        }
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API serialization."""
@@ -94,6 +103,7 @@ class NodeTypeMetadata:
             "inputs": self.inputs,
             "outputs": self.outputs,
             "config_schema": self.config_schema,
+            "coordinate_requirements": self.coordinate_requirements,
         }
 
 
@@ -327,6 +337,7 @@ def register_node(
     inputs: list[dict[str, str]] | None = None,
     outputs: list[dict[str, str]] | None = None,
     config_schema: dict[str, Any] | None = None,
+    coordinate_requirements: dict[str, Any] | None = None,
 ) -> Callable:
     """
     Decorator to register a node handler with metadata.
@@ -345,6 +356,11 @@ def register_node(
                 "properties": {
                     "threshold": {"type": "number", "default": 0.5}
                 }
+            },
+            coordinate_requirements={
+                "input_coordinates": "Q",
+                "output_coordinates": "Q",
+                "requires_wavelength": False
             }
         )
         async def my_node_handler(config, inputs, context):
@@ -360,6 +376,10 @@ def register_node(
         inputs: Input specifications
         outputs: Output specifications
         config_schema: JSON Schema for configuration
+        coordinate_requirements: Coordinate system requirements (NEW)
+            - input_coordinates: Required input coordinate system (None = any)
+            - output_coordinates: Coordinate system of output (None = same as input)
+            - requires_wavelength: Whether wavelength is required
         
     Returns:
         Decorator function
@@ -375,6 +395,7 @@ def register_node(
             inputs=inputs,
             outputs=outputs,
             config_schema=config_schema,
+            coordinate_requirements=coordinate_requirements,
         )
         
         NodeRegistry.register(
@@ -399,6 +420,7 @@ def register_node_handler(
     inputs: list[dict[str, str]] | None = None,
     outputs: list[dict[str, str]] | None = None,
     config_schema: dict[str, Any] | None = None,
+    coordinate_requirements: dict[str, Any] | None = None,
 ) -> None:
     """
     Manually register a node handler (non-decorator approach).
@@ -416,6 +438,7 @@ def register_node_handler(
         inputs: Input specifications
         outputs: Output specifications
         config_schema: JSON Schema for configuration
+        coordinate_requirements: Coordinate system requirements
     """
     metadata = NodeTypeMetadata(
         type=type,
@@ -426,6 +449,7 @@ def register_node_handler(
         inputs=inputs,
         outputs=outputs,
         config_schema=config_schema,
+        coordinate_requirements=coordinate_requirements,
     )
     
     NodeRegistry.register(type=type, handler=handler, metadata=metadata)

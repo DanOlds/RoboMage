@@ -1,0 +1,302 @@
+"""GSAS-II Refinement Service - FastAPI Application
+
+REST API for Rietveld refinement using GSAS-II.
+"""
+
+import logging
+import sys
+import time
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Dict
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+# Add parent directory to path for imports
+service_dir = Path(__file__).parent
+sys.path.insert(0, str(service_dir))
+
+from models import (
+    HealthResponse,
+    RefinementRequest,
+    RefinementResult,
+    RecipeListResponse,
+    RecipeValidationResponse,
+)
+
+# ============================================================================
+# Logging Setup
+# ============================================================================
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("gsasii_service")
+
+
+# ============================================================================
+# Startup/Shutdown
+# ============================================================================
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown"""
+    logger.info("GSAS-II Refinement Service starting up...")
+
+    # Check GSAS-II environment availability at startup
+    from pathlib import Path
+    gsasii_env = Path("/nsls2/users/dolds/dev/GSAS-II/pixi")
+    
+    if gsasii_env.exists():
+        logger.info(f"✓ GSAS-II environment found: {gsasii_env}")
+    else:
+        logger.warning(f"✗ GSAS-II environment not found: {gsasii_env}")
+        logger.warning(
+            "Service will run in degraded mode (refinements will fail)"
+        )
+
+    yield  # Application runs here
+
+    logger.info("GSAS-II Refinement Service shutting down...")
+
+
+# ============================================================================
+# FastAPI Application
+# ============================================================================
+
+app = FastAPI(
+    title="GSAS-II Refinement Service",
+    description=(
+        "Rietveld refinement microservice for RoboMage powder diffraction analysis. "
+        "Wraps GSAS-II functionality in a REST API with structured JSON input/output."
+    ),
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS middleware for dashboard integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================================
+# Endpoints
+# ============================================================================
+
+
+@app.get("/")
+def root() -> dict[str, Any]:
+    """
+    Root endpoint - service information
+    """
+    return {
+        "service": "GSAS-II Refinement Service",
+        "version": "1.0.0",
+        "description": "Rietveld refinement for powder diffraction data",
+        "endpoints": {
+            "health": "GET /health - Service health and GSAS-II availability",
+            "refine": "POST /refine - Perform Rietveld refinement",
+            "recipes": "GET /recipes - List available recipe templates",
+            "validate_recipe": "POST /validate_recipe - Validate recipe schema",
+            "docs": "GET /docs - Interactive API documentation",
+        },
+    }
+
+
+@app.get("/health", response_model=HealthResponse)
+def health_check() -> HealthResponse:
+    """
+    Health check endpoint
+
+    Checks if the service is running and if GSAS-II environment is available.
+    Returns status, GSAS-II availability, and service version.
+    
+    Note: GSAS-II runs in separate environment via subprocess worker.
+    """
+    from pathlib import Path
+    
+    gsasii_env_path = Path("/nsls2/users/dolds/dev/GSAS-II/pixi")
+    gsasii_available = gsasii_env_path.exists()
+    
+    if gsasii_available:
+        status = "healthy"
+    else:
+        status = "degraded"
+
+    return HealthResponse(
+        status=status, gsasii_available=gsasii_available, version="1.0.0"
+    )
+
+
+@app.post("/refine", response_model=RefinementResult)
+def refine(request: RefinementRequest) -> RefinementResult:
+    """
+    Execute GSAS-II Rietveld refinement
+
+    **Input:**
+    - `diffraction_data`: Q and intensity arrays with metadata
+    - `recipe`: Refinement configuration (instrument, CIF, parameters)
+    - `sample_name`: Sample identifier for output labeling
+    - `cycles`: Number of refinement cycles (0 = calculate only, no refinement)
+    - `options`: Optional settings (save GPX, generate plot, working directory)
+
+    **Output:**
+    - `parameters`: All refined parameters (cell, background, etc.)
+    - `cell`: Refined unit cell parameters with ESDs
+    - `fit_quality`: Rwp, chi², goodness of fit
+    - `fit_profile`: Complete profile (obs, calc, diff, background)
+    - `plot_image`: Base64-encoded PNG (optional)
+    - `gpx_path`: Path to saved .gpx file (optional)
+    - `warnings`: Any warnings from refinement
+    - `execution_time_s`: Total execution time
+
+    **Example:**
+    ```json
+    {
+      "diffraction_data": {
+        "q": [0.5, 0.6, 0.7, ...],
+        "intensity": [100, 120, 95, ...]
+      },
+      "recipe": {
+        "instrument_file": "PDF_1m.instprm",
+        "cif_file": "LaB6_SRM_660c.CIF",
+        "phase_name": "LaB6",
+        "refinement_dict": {
+          "set": {
+            "Limits": {"low": 1, "high": 15},
+            "Background": {"type": "chebyschev-1", "no. coeffs": 4, "refine": true},
+            "Cell": true,
+            "Sample Parameters": ["Scale"]
+          }
+        }
+      },
+      "sample_name": "LaB6_test",
+      "cycles": 5
+    }
+    ```
+    """
+    start_time = time.time()
+
+    try:
+        # Import wrapper function (uses subprocess, no GSAS-II import needed)
+        from gsasii_wrapper import run_gsasii_refinement
+
+        # Prepare input data (use two_theta if available, otherwise Q)
+        if request.diffraction_data.two_theta is not None:
+            # GSAS-II expects 2θ data, so we'll write it directly
+            chi_data = (
+                request.diffraction_data.two_theta,
+                request.diffraction_data.intensity,
+            )
+        elif request.diffraction_data.q is not None:
+            # Convert Q to 2θ if needed (for now, just pass Q - worker will handle)
+            chi_data = (
+                request.diffraction_data.q,
+                request.diffraction_data.intensity,
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Must provide either 'q' or 'two_theta' values in diffraction_data"
+            )
+
+        recipe_dict = request.recipe.model_dump()
+
+        # Run refinement (via subprocess worker)
+        logger.info(
+            f"Starting refinement: sample={request.sample_name}, "
+            f"cycles={request.cycles}"
+        )
+
+        result = run_gsasii_refinement(
+            chi_data=chi_data,
+            recipe=recipe_dict,
+            sample_name=request.sample_name,
+            cycles=request.cycles,
+            temp_dir=None,  # Will create temp dir
+            save_gpx=request.options.save_gpx,
+            generate_plot=request.options.generate_plot,
+        )
+
+        # Add execution metadata
+        execution_time = time.time() - start_time
+        result["execution_time_s"] = execution_time
+
+        logger.info(
+            f"Refinement completed: Rwp={result['fit_quality']['Rwp']:.3f}%, "
+            f"time={execution_time:.2f}s"
+        )
+
+        return RefinementResult(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Refinement failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Refinement failed: {str(e)}"
+        ) from e
+
+
+@app.get("/recipes", response_model=RecipeListResponse)
+def list_recipes() -> RecipeListResponse:
+    """
+    List available recipe templates
+
+    Returns bundled recipe templates that can be used as starting points
+    for refinements.
+
+    **TODO:** Implement loading from assets/recipes/ directory
+    """
+    # Placeholder - will be implemented when we add recipe assets
+    return RecipeListResponse(recipes=[])
+
+
+@app.post("/validate_recipe", response_model=RecipeValidationResponse)
+def validate_recipe(recipe: Dict[str, Any]) -> RecipeValidationResponse:
+    """
+    Validate refinement recipe schema
+
+    Checks if a recipe has required keys and valid structure.
+    Returns validation errors and warnings.
+
+    **TODO:** Implement recipe validation logic
+    """
+    # Placeholder - will be implemented with validation logic
+    errors = []
+    warnings = []
+
+    # Basic check for required keys
+    required_keys = ["instrument_file", "cif_file", "phase_name", "refinement_dict"]
+    for key in required_keys:
+        if key not in recipe:
+            errors.append(f"Missing required key: {key}")
+
+    valid = len(errors) == 0
+
+    return RecipeValidationResponse(valid=valid, errors=errors, warnings=warnings)
+
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
+if __name__ == "__main__":
+    import argparse
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description="GSAS-II Refinement Service")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8003, help="Port to bind to")
+    parser.add_argument("--log-level", type=str, default="info", help="Log level")
+    args = parser.parse_args()
+
+    logger.info(f"Starting GSAS-II Refinement Service on http://{args.host}:{args.port}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)

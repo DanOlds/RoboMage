@@ -1,0 +1,401 @@
+"""
+GSAS-II Refinement HTTP Client - RoboMage Integration Library
+
+A robust HTTP client library for seamless integration with the GSAS-II refinement
+microservice. This client provides a Pythonic interface for Rietveld refinement
+workflows within the RoboMage framework.
+
+Architecture:
+    - HTTP/JSON communication with the GSAS-II refinement REST API
+    - Type-safe request/response handling with Pydantic validation
+    - Automatic retry logic with exponential backoff for reliability
+    - Connection pooling and session management for performance
+    - Comprehensive error handling with crystallographic context
+
+Key Features:
+    Data Integration:
+        - Native support for RoboMage DiffractionData objects
+        - Automatic data serialization and validation
+        - Support for both Q-space and 2θ data formats
+        - Preservation of metadata throughout refinement pipeline
+
+    Service Communication:
+        - RESTful API client with requests library
+        - JSON serialization optimized for scientific data
+        - Configurable timeouts and retry policies
+        - Service health monitoring and status checks
+
+    Error Handling:
+        - Custom exception hierarchy for different error types
+        - Detailed error messages with crystallographic context
+        - Connection error recovery and graceful degradation
+        - Validation error reporting with field-level details
+
+    Performance:
+        - Connection reuse for multiple refinement requests
+        - Efficient memory usage for large datasets
+        - Concurrent request support for batch processing
+        - Configurable timeout and retry parameters
+
+Usage Patterns:
+    Basic Refinement:
+        client = GSASIIClient("http://localhost:8002")
+        response = client.refine(data, recipe)
+
+    RoboMage Integration:
+        data = load_diffraction_file("sample.chi")
+        recipe = {
+            "instrument_file": "PDF_1m.instprm",
+            "cif_file": "LaB6_SRM_660c.CIF",
+            "phase_name": "LaB6",
+            "refinement_dict": {...}
+        }
+        result = client.refine_diffraction_data(data, recipe)
+
+    Service Management:
+        if client.health_check()["status"] == "healthy":
+            results = client.refine(data, recipe)
+
+    Configuration:
+        client = GSASIIClient(
+            base_url="http://refinement-server:8002",
+            timeout=300.0,  # Refinements can be slow
+            max_retries=3
+        )
+
+Scientific Workflow:
+    This client is designed for crystallographic Rietveld refinement workflows
+    where accurate structure determination is critical. It maintains full
+    scientific metadata and provides quality-of-fit metrics for validation.
+
+Integration Points:
+    - RoboMage data pipeline: Direct integration with loaders and models
+    - Workflow orchestrator: Backend for gsasii_refinement workflow nodes
+    - Jupyter notebooks: Interactive Rietveld refinement workflows
+    - Automated pipelines: High-throughput structure determination
+
+Error Recovery:
+    The client implements robust error handling for distributed scientific
+    computing environments, including network failures, service unavailability,
+    GSAS-II refinement failures, and data validation errors with appropriate
+    retry strategies.
+"""
+
+import json
+import time
+from typing import Any, cast
+
+import requests
+
+from ..data.models import DiffractionData
+
+
+class GSASIIServiceError(Exception):
+    """Exception raised for GSAS-II service errors."""
+
+    def __init__(self, error_type: str, message: str, details: str | None = None):
+        self.error_type = error_type
+        self.message = message
+        self.details = details
+        super().__init__(f"{error_type}: {message}")
+
+
+class GSASIIClient:
+    """
+    HTTP client for the GSAS-II refinement service.
+
+    Provides a Python interface for communicating with the GSAS-II refinement
+    service through REST API calls.
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:8003",
+        timeout: float = 300.0,  # Refinements can take several minutes
+        max_retries: int = 3,
+        retry_delay: float = 2.0,
+    ):
+        """
+        Initialize the GSAS-II client.
+
+        Args:
+            base_url: Base URL of the GSAS-II service
+            timeout: Request timeout in seconds (default: 300s for long refinements)
+            max_retries: Maximum number of retry attempts
+            retry_delay: Delay between retries in seconds
+        """
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+
+        # Create session for connection pooling
+        self.session = requests.Session()
+        self.session.headers.update(
+            {"Content-Type": "application/json", "Accept": "application/json"}
+        )
+
+    def __enter__(self) -> "GSASIIClient":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Context manager exit."""
+        self.close()
+
+    def close(self) -> None:
+        """Close the HTTP session."""
+        self.session.close()
+
+    def health_check(self) -> dict[str, Any]:
+        """
+        Check service health status.
+
+        Returns:
+            Service health information including GSAS-II availability
+
+        Raises:
+            GSASIIServiceError: If service is unhealthy or unreachable
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/health", timeout=10.0)
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
+
+        except requests.exceptions.RequestException as e:
+            raise GSASIIServiceError(
+                "ConnectionError",
+                f"Failed to connect to service at {self.base_url}",
+                str(e),
+            ) from e
+
+    def get_recipes(self) -> dict[str, Any]:
+        """
+        Get list of available recipe templates.
+
+        Returns:
+            Dictionary containing available recipes
+
+        Raises:
+            GSASIIServiceError: If recipes cannot be retrieved
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/recipes", timeout=self.timeout)
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
+
+        except requests.exceptions.RequestException as e:
+            raise GSASIIServiceError(
+                "ConnectionError", "Failed to retrieve recipes", str(e)
+            ) from e
+
+    def validate_recipe(self, recipe: dict[str, Any]) -> dict[str, Any]:
+        """
+        Validate a recipe configuration.
+
+        Args:
+            recipe: Recipe dictionary to validate
+
+        Returns:
+            Validation result
+
+        Raises:
+            GSASIIServiceError: If validation fails or service error occurs
+        """
+        try:
+            response = self.session.post(
+                f"{self.base_url}/validate_recipe",
+                json=recipe,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
+
+        except requests.exceptions.RequestException as e:
+            raise GSASIIServiceError(
+                "ValidationError", "Failed to validate recipe", str(e)
+            ) from e
+
+    def refine(
+        self,
+        data: DiffractionData,
+        recipe: dict[str, Any],
+        request_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Perform Rietveld refinement on diffraction data.
+
+        Args:
+            data: Diffraction data to refine (should contain 2θ data)
+            recipe: Refinement recipe configuration
+            request_id: Request identifier for tracking (optional)
+
+        Returns:
+            Refinement results including cell parameters, fit quality, and plot
+
+        Raises:
+            GSASIIServiceError: If refinement fails or service error occurs
+        """
+        # Convert DiffractionData to request format
+        request_data: dict[str, Any] = {
+            "data": {
+                "q_values": data.q_values.tolist(),
+                "intensities": data.intensities.tolist(),
+                "filename": data.filename,
+                "sample_name": data.sample_name,
+            },
+            "recipe": recipe,
+        }
+
+        if request_id is not None:
+            request_data["request_id"] = request_id
+
+        return self._make_request_with_retry(
+            "POST", f"{self.base_url}/refine", json=request_data
+        )
+
+    def refine_raw(
+        self,
+        two_theta: list[float],
+        intensities: list[float],
+        recipe: dict[str, Any],
+        filename: str | None = None,
+        sample_name: str | None = None,
+        request_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Perform refinement on raw data arrays.
+
+        Args:
+            two_theta: 2θ values in degrees (GSAS-II native format)
+            intensities: Diffraction intensities
+            recipe: Refinement recipe configuration
+            filename: Original filename (optional)
+            sample_name: Sample identifier (optional)
+            request_id: Request identifier for tracking (optional)
+
+        Returns:
+            Refinement results
+
+        Raises:
+            GSASIIServiceError: If refinement fails or service error occurs
+        """
+        request_data: dict[str, Any] = {
+            "data": {
+                "two_theta": two_theta,
+                "intensities": intensities,
+            },
+            "recipe": recipe,
+        }
+
+        if filename is not None:
+            request_data["data"]["filename"] = filename
+        if sample_name is not None:
+            request_data["data"]["sample_name"] = sample_name
+        if request_id is not None:
+            request_data["request_id"] = request_id
+
+        return self._make_request_with_retry(
+            "POST", f"{self.base_url}/refine", json=request_data
+        )
+
+    def _make_request_with_retry(
+        self, method: str, url: str, **kwargs: Any
+    ) -> dict[str, Any]:
+        """
+        Make HTTP request with retry logic.
+
+        Args:
+            method: HTTP method
+            url: Request URL
+            **kwargs: Additional request arguments
+
+        Returns:
+            Response JSON data
+
+        Raises:
+            GSASIIServiceError: If request fails after all retries
+        """
+        last_exception = None
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = self.session.request(
+                    method, url, timeout=self.timeout, **kwargs
+                )
+
+                # Handle HTTP errors
+                if response.status_code >= 400:
+                    try:
+                        error_data = response.json()
+                        if isinstance(error_data, dict) and "error_type" in error_data:
+                            raise GSASIIServiceError(
+                                error_data.get("error_type", "UnknownError"),
+                                error_data.get("message", "Service error"),
+                                error_data.get("details"),
+                            )
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+
+                    # Fall back to HTTP status error
+                    response.raise_for_status()
+
+                # Success - return JSON data
+                return cast(dict[str, Any], response.json())
+
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+
+                # Don't retry on client errors (4xx)
+                if hasattr(e, "response") and e.response is not None:
+                    if 400 <= e.response.status_code < 500:
+                        break
+
+                # Retry on connection/server errors
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay * (2**attempt))  # Exponential backoff
+                    continue
+
+                break
+
+        # All retries failed
+        raise GSASIIServiceError(
+            "ConnectionError",
+            f"Request failed after {self.max_retries + 1} attempts",
+            str(last_exception),
+        ) from last_exception
+
+    def ping(self) -> bool:
+        """
+        Simple ping to check if service is reachable.
+
+        Returns:
+            True if service responds, False otherwise
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/", timeout=5.0)
+            return response.status_code == 200
+        except Exception:
+            return False
+
+    def wait_for_service(
+        self, max_wait: float = 60.0, check_interval: float = 2.0
+    ) -> bool:
+        """
+        Wait for service to become available.
+
+        Args:
+            max_wait: Maximum time to wait in seconds
+            check_interval: Time between checks in seconds
+
+        Returns:
+            True if service becomes available, False if timeout
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            if self.ping():
+                return True
+            time.sleep(check_interval)
+
+        return False

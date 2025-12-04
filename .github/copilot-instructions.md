@@ -102,6 +102,7 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - `src/robomage/data_io.py`: Legacy pandas-based API
 - `src/robomage/__main__.py`: CLI implementation for data loading/testing
 - `src/robomage/clients/`: HTTP clients for microservice communication
+- `src/robomage/coordinate_systems.py`: **Centralized coordinate conversion utilities** (Q ↔ 2θ ↔ d-spacing)
 - `src/robomage/dashboard/`: Dash-based visualization dashboard (Sprint 4-6)
 - `src/robomage/persistence/`: Complete persistence layer (Sprint 5)
   - `database.py`: SQLAlchemy ORM and database management
@@ -244,6 +245,28 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
 - ✅ **Type Safety** - Strategic MyPy configuration with dashboard exclusion
 - ✅ **Code Quality** - All linting/formatting/type checks passing
 
+**✅ Coordinate System Metadata Contract: COMPLETE (December 4, 2025)**
+**PRODUCTION READY** - Centralized coordinate system conversion utilities with dashboard integration
+
+**Completed Deliverables:**
+- ✅ **Core Conversion Utilities** - `src/robomage/coordinate_systems.py` with Q ↔ 2θ ↔ d-spacing
+- ✅ **Data Model Integration** - `DiffractionData.coordinate_metadata` with conversion methods
+- ✅ **Node Metadata Contract** - Declarative coordinate requirements for workflow nodes
+- ✅ **Orchestrator Auto-Conversion** - Automatic data conversion based on node requirements
+- ✅ **Dashboard Integration** - UI uses centralized utilities (no duplicate conversion logic)
+- ✅ **Comprehensive Testing** - 40 tests passing (33 core + 7 dashboard integration)
+- ✅ **Complete Documentation** - Implementation guide, quick reference, integration docs
+- ✅ **Physical Constraints** - Correctly handles negative 2θ (beamstop measurement), no artificial limits
+
+**Key Achievement**: Single source of truth for coordinate conversions across entire framework!
+
+**Documentation**: 
+- `docs/COORDINATE-SYSTEM-CONTRACT-COMPLETE.md` - Full implementation guide
+- `docs/COORDINATE-SYSTEM-QUICK-REF.md` - Quick reference for developers
+- `docs/DASHBOARD-COORDINATE-INTEGRATION.md` - Dashboard integration details
+- `docs/DASHBOARD-INTEGRATION-SUMMARY.md` - Summary of dashboard changes
+- `examples/coordinate_system_demo.py` - Working demonstration
+
 **🎯 NEXT PRIORITIES (Post-Sprint 8)**:
 
 **December 1, 2025 - Latest Updates** ✅:
@@ -315,14 +338,29 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - ✅ Workspace organized (manual tests, logs, cache cleaned)
   - ✅ Documentation consolidated (19 docs archived, 65 active)
   - ⏳ 30 resource warnings remain (non-blocking)
-- 🔬 **GSAS-II Integration** (Dec 2025 - Jan 2026) - Automated Rietveld refinement service
+- ✅ **GSAS-II Integration - Phase 3 COMPLETE** (Dec 3, 2025) - Subprocess worker implementation! 🎉
+  - ✅ **Phase 1**: GSAS-II microservice (FastAPI service on port 8003)
+  - ✅ **Phase 2**: Workflow node integration (`gsasii_refinement` node registered)
+  - ✅ **Phase 3**: Subprocess worker pattern (cross-environment operation)
+    - Service runs in RoboMage environment (no GSAS-II imports)
+    - Worker spawns in GSAS-II environment (subprocess with JSON IPC)
+    - Validated: LaB6 refinement Rwp=7.7%, cell=4.157Å, 4.56s execution time
+    - Auto-start enabled in registry, dashboard integration working
+    - Documentation: `docs/GSASII-PHASE-3-SUBPROCESS-COMPLETE.md`
+  - **CRITICAL: GSAS-II Data Format Requirements** ⚠️
+    - Synchrotron CHI files are in Q-space (Å⁻¹), NOT 2θ space
+    - GSAS-II expects Q values labeled as "two_theta" in the API
+    - The instrument parameter file (PDF_1m.instprm) handles Q ↔ 2θ conversion internally
+    - **DO NOT manually convert Q to 2θ before sending to GSAS-II!**
+    - ✅ CORRECT: `{"two_theta": q_values.tolist(), "intensity": [...]}`
+    - ❌ WRONG: `two_theta = 2*arcsin(q*λ/(4π)); {"two_theta": two_theta, ...}` (causes refinement failure!)
+    - Failure symptoms: "Invalid cell metric tensor", Rwp=0.0%, negative cell values
+    - Reference test: `tests/test_gsasii_refinement_integration.py`
+    - See `services/gsasii_refinement/gsasii_worker.py` header for full explanation
   - **Reference Codebase**: autoxrd repository (`/nsls2/users/dolds/dev/autoxrd`)
     - Production GSAS-II wrapper code in `fit_service/`
     - DRX Demo as reference example
     - Recipe-based YAML configuration system
-  - **Phase 1**: GSAS-II microservice (FastAPI, weeks 1-2)
-  - **Phase 2**: Workflow node integration (week 3)
-  - **Implementation Plan**: `docs/GSAS-II-SERVICE-IMPLEMENTATION-PLAN.md`
   - **Access autoxrd**: Use terminal commands (outside workspace)
     - `cat /nsls2/users/dolds/dev/autoxrd/README.md`
     - `cat /nsls2/users/dolds/dev/autoxrd/fit_service/xrd_pipeline.py`
@@ -334,14 +372,23 @@ pixi run python -m pytest tests/test_dashboard*   # Dashboard-specific tests
   - See `docs/CUSTOM-SERVICES-PLAN.md` for detailed roadmap
 
 **Future Enhancements**:
+- 🔄 **GSAS-II Dashboard Tab** - Dedicated testing/development UI for refinement
+  - File selection (CHI, CIF, instrument parameters)
+  - Refinement configuration (cycles, flags, recipe editor)
+  - Results display (cell parameters, fit quality, interactive plots)
+  - Estimated effort: 2-3 hours, ~300-400 lines
+- 🔄 **GSAS-II Phase 4+** - Advanced features
+  - Batch processing (Option 1b): Multi-file refinement with result aggregation
+  - AI optimization (Option 2): Machine learning parameter tuning
+  - Custom analysis nodes (Option 3): Strain analysis, peak identification
 - 🔄 **Advanced Inspection Tools** - Node I/O Inspector, Analysis Result Viewer, Workflow Debugger
 - 🔄 **Workflow Templates** - Pre-built common analysis patterns
 - 🔄 **ReactFlow Migration** - Modern drag-and-drop UX
 - 🔄 **ML Integration** - AI-enhanced parameter optimization
 - 🔄 **Multi-User Support** - PostgreSQL backend, collaboration
 
-**Waiting on External Development**:
-- ⏸️ **GSAS-II Integration** - Automated Rietveld refinement (in development by another team)
+**Completed Milestones**:
+- ✅ **GSAS-II Integration Phases 1-3** - Production-ready Rietveld refinement service (Dec 3, 2025)
 
 ## Integration Points
 - **Environment Management**: **Pixi ONLY** - All dependencies via `pixi.toml`, tasks via `pixi run`

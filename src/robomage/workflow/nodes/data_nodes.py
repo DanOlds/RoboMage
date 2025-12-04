@@ -35,6 +35,11 @@ logger = logging.getLogger(__name__)
         },
         "required": ["directory", "pattern"],
     },
+    coordinate_requirements={
+        "input_coordinates": None,  # No inputs
+        "output_coordinates": "Q",  # Always outputs Q-space
+        "requires_wavelength": False,  # Optional (can be in file)
+    },
 )
 async def load_files_handler(
     config: dict[str, Any], inputs: dict[str, Any], context: Any
